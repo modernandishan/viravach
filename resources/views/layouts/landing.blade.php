@@ -35,6 +35,19 @@
         <link href="{{asset('theme/1/css/style.bundle.css')}}" rel="stylesheet" type="text/css"/>
     @endif
     <!--end::Global Stylesheets Bundle-->
+    <!--begin::Sticky header stacking fix-->
+    <!-- KTDrawer overlays (.drawer-overlay) are appended to <body> at z-index 109. Once the
+         header becomes sticky it switches to position:fixed with z-index 97, which creates a
+         stacking context that traps any drawer/menu rendered inside the header (e.g. the
+         toolbar's activities/chat/quick-links drawers) below that overlay. Raising the sticky
+         header's z-index above the overlay keeps those drawers visible while scrolled. -->
+    <style>
+        .header-fixed[data-kt-sticky-header=on] .header,
+        .header-tablet-and-mobile-fixed[data-kt-sticky-header=on] .header {
+            z-index: 111;
+        }
+    </style>
+    <!--end::Sticky header stacking fix-->
     <script>
         // Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }
     </script>
