@@ -10,7 +10,7 @@ new class extends Component
 
 <div class="d-flex align-items-center ms-1 ms-lg-3">
     <!--begin::Menu toggle-->
-    <a href="#" class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+    <a href="#" class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
         <i class="ki-duotone ki-night-day theme-light-show fs-1">
             <span class="path1"></span>
             <span class="path2"></span>

@@ -69,7 +69,7 @@ new class extends Component {
 
 <div class="d-flex align-items-center ms-1 ms-lg-3">
     <!--begin::Menu toggle-->
-    <a href="#" class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}" title="{{ $this->currentLocaleNative() }}">
+    <a href="#" class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}" title="{{ $this->currentLocaleNative() }}">
         <img class="w-20px h-20px rounded-1" src="theme/1/media/flags/{{ $this->currentFlag() }}.svg" alt="{{ $this->currentLocaleNative() }}" />
     </a>
     <!--end::Menu toggle-->

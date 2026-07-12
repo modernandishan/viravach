@@ -1,4 +1,5 @@
 *.log
+*.mmdb
 .DS_Store
 .env
 .env.backup

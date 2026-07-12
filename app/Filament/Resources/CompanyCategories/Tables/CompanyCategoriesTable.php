@@ -47,7 +47,7 @@ class CompanyCategoriesTable
                     ->boolean(),
                 TextColumn::make('created_at')
                     ->label('تاریخ ایجاد')
-                    ->dateTime()
+                    ->jalaliDateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

@@ -31,7 +31,7 @@ new class extends Component {
     <!--begin::user-->
     <div class="d-flex align-items-center me-lg-n2 ms-1 ms-lg-3" id="kt_header_user_menu_toggle">
         <!--begin::Menu wrapper-->
-        <div class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+        <div class="btn btn-icon btn-active-light-primary btn-custom w-30px h-30px w-md-40px h-md-40px" data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
             <img class="h-30px w-30px rounded" src="theme/1/media/avatars/300-2.jpg" alt="" />
         </div>
         <!--begin::کاربر account menu-->
@@ -73,7 +73,7 @@ new class extends Component {
             </div>
             <!--end::Menu item-->
             <!--begin::Menu item-->
-            <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" data-kt-menu-offset="-15px, 0">
+            <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}" data-kt-menu-offset="-15px, 0">
                 <a href="#" class="menu-link px-5">
                     <span class="menu-title">اشتراک من</span>
                     <span class="menu-arrow"></span>
@@ -133,7 +133,7 @@ new class extends Component {
             <div class="separator my-2"></div>
             <!--end::Menu separator-->
             <!--begin::Menu item-->
-            <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" data-kt-menu-offset="-15px, 0">
+            <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}" data-kt-menu-offset="-15px, 0">
                 <a href="#" class="menu-link px-5">
 													<span class="menu-title position-relative">زبان
 													<span class="fs-8 rounded bg-light px-3 py-2 position-absolute translate-middle-y top-50 end-0">انگلیسی

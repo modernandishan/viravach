@@ -48,7 +48,7 @@ new class extends Component
             <!--begin::Wrapper-->
             <div class="me-4">
                 <!--begin::Menu-->
-                <a href="#" class="btn btn-custom btn-active-white btn-flex btn-color-white btn-active-color-white" data-kt-menu-trigger="click" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+                <a href="#" class="btn btn-custom btn-active-white btn-flex btn-color-white btn-active-color-white" data-kt-menu-trigger="click" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
                     <i class="ki-duotone ki-filter fs-5 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>

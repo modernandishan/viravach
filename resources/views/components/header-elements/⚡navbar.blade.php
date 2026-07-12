@@ -18,27 +18,33 @@ new class extends Component {
         <div
             class="menu menu-rounded menu-column menu-lg-row menu-active-bg menu-title-gray-700 menu-state-primary menu-arrow-gray-500 fw-semibold my-5 my-lg-0 align-items-stretch px-2 px-lg-0"
             id="#kt_header_menu" data-kt-menu="true">
-            <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
-                 class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
+
+            <!--begin:Menu item (simple)-->
+            <div
+                data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+                class="menu-item {{ request()->routeIs('home') ? 'here show menu-here-bg' : '' }} me-0 me-lg-2">
                 <!--begin:Menu link-->
                 <a href="{{route('home')}}" class="menu-link py-3">
-													<span class="menu-title">
-                                                        Viravach
-                                                    </span>
-													<span class="menu-arrow d-lg-none"></span>
-												</a>
+                    <span class="menu-title">
+                        {{ __('globals.viravach') }}
+                    </span>
+                    <span class="menu-arrow d-lg-none"></span>
+                </a>
                 <!--end:Menu link-->
             </div>
-            <!--end:Menu item-->
+            <!--end:Menu item (simple)-->
+
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
-                 class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
+            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+                 class="menu-item menu-lg-down-accordion me-0 me-lg-2">
                 <!--begin:Menu link-->
                 <span class="menu-link py-3">
-													<span class="menu-title">داشبورد ها</span>
-													<span class="menu-arrow d-lg-none"></span>
-												</span>
+                    <span class="menu-title">
+                        {{ __('menu.export_directory') }}
+                    </span>
+                    <span class="menu-arrow d-lg-none"></span>
+                </span>
                 <!--end:Menu link-->
                 <!--begin:Menu sub-->
                 <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown p-0 w-100 w-lg-850px">
@@ -48,253 +54,7 @@ new class extends Component {
                         <!--begin:Row-->
                         <div class="row">
                             <!--begin:Col-->
-                            <div class="col-lg-8 mb-3 mb-lg-0 py-3 px-3 py-lg-6 px-lg-6">
-                                <!--begin:Row-->
-                                <div class="row">
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="index.html" class="menu-link active">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-element-11 text-primary fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																						<span class="path3"></span>
-																						<span class="path4"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">پیش فرض</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">گزارشات و آمارها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/ecommerce.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-basket text-danger fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																						<span class="path3"></span>
-																						<span class="path4"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">تجارت</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">فروش گزارشات</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/projects.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-abstract-44 text-info fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">پروژه ها</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">گراف ها و نمودارها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/online-courses.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-color-swatch text-success fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																						<span class="path3"></span>
-																						<span class="path4"></span>
-																						<span class="path5"></span>
-																						<span class="path6"></span>
-																						<span class="path7"></span>
-																						<span class="path8"></span>
-																						<span class="path9"></span>
-																						<span class="path10"></span>
-																						<span class="path11"></span>
-																						<span class="path12"></span>
-																						<span class="path13"></span>
-																						<span class="path14"></span>
-																						<span class="path15"></span>
-																						<span class="path16"></span>
-																						<span class="path17"></span>
-																						<span class="path18"></span>
-																						<span class="path19"></span>
-																						<span class="path20"></span>
-																						<span class="path21"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">آنلاین دوره ها</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">پیشرفت دانش آموز</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/marketing.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-chart-simple text-gray-900 fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																						<span class="path3"></span>
-																						<span class="path4"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">بازاریابی</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">کمپین ها و تبدیل ها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/bidding.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-switch text-warning fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">مناقصه</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">کمپین ها و تبدیل ها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/pos.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-abstract-42 text-danger fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">سیستم پوز</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">کمپین ها و تبدیل ها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                    <!--begin:Col-->
-                                    <div class="col-lg-6 mb-3">
-                                        <!--begin:Menu item-->
-                                        <div class="menu-item p-0 m-0">
-                                            <!--begin:Menu link-->
-                                            <a href="dashboards/call-center.html" class="menu-link">
-																				<span
-                                                                                    class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																					<i class="ki-duotone ki-call text-primary fs-1">
-																						<span class="path1"></span>
-																						<span class="path2"></span>
-																						<span class="path3"></span>
-																						<span class="path4"></span>
-																						<span class="path5"></span>
-																						<span class="path6"></span>
-																						<span class="path7"></span>
-																						<span class="path8"></span>
-																					</i>
-																				</span>
-                                                <span class="d-flex flex-column">
-																					<span
-                                                                                        class="fs-6 fw-bold text-gray-800">مرکز تماس</span>
-																					<span
-                                                                                        class="fs-7 fw-semibold text-muted">کمپین ها و تبدیل ها</span>
-																				</span>
-                                            </a>
-                                            <!--end:Menu link-->
-                                        </div>
-                                        <!--end:Menu item-->
-                                    </div>
-                                    <!--end:Col-->
-                                </div>
-                                <!--end:Row-->
-                                <div class="separator separator-dashed mx-5 my-5"></div>
-                                <!--begin:صفحه فرود-->
-                                <div class="d-flex flex-stack flex-wrap flex-lg-nowrap gap-2 mx-5">
-                                    <div class="d-flex flex-column me-5">
-                                        <div class="fs-6 fw-bold text-gray-800">صفحه فرود</div>
-                                        <div class="fs-7 fw-semibold text-muted">تک صفحه فرود نمونه با قیمت</div>
-                                    </div>
-                                    <a href="landing.html" class="btn btn-sm btn-primary fw-bold">کاوش کنید</a>
-                                </div>
-                                <!--end:صفحه فرود-->
-                            </div>
+                            <livewire:header-elements.menu-items.main-company-categories />
                             <!--end:Col-->
                             <!--begin:Col-->
                             <div class="menu-more bg-light col-lg-4 py-3 px-3 py-lg-6 px-lg-6 rounded-end">
@@ -393,7 +153,8 @@ new class extends Component {
             </div>
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion me-0 me-lg-2">
                 <!--begin:Menu link-->
                 <span class="menu-link py-3">
@@ -1678,7 +1439,8 @@ new class extends Component {
             </div>
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
                 <!--begin:Menu link-->
                 <span class="menu-link py-3">
@@ -1689,7 +1451,8 @@ new class extends Component {
                 <!--begin:Menu sub-->
                 <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-250px">
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -1807,7 +1570,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -1823,7 +1587,8 @@ new class extends Component {
                             class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2112,7 +1877,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2143,7 +1909,8 @@ new class extends Component {
                             <!--end:Menu item-->
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2186,7 +1953,8 @@ new class extends Component {
                             <!--end:Menu item-->
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2268,7 +2036,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2287,7 +2056,8 @@ new class extends Component {
                             class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2330,7 +2100,8 @@ new class extends Component {
                             <!--end:Menu item-->
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2388,7 +2159,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2458,7 +2230,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2530,7 +2303,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2588,7 +2362,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2607,7 +2382,8 @@ new class extends Component {
                             class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
                             <!--begin:Menu item-->
                             <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
-                                 data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}" class="menu-item menu-lg-down-accordion">
+                                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
+                                 class="menu-item menu-lg-down-accordion">
                                 <!--begin:Menu link-->
                                 <span class="menu-link py-3">
 																	<span class="menu-bullet">
@@ -2677,7 +2453,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2747,7 +2524,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2808,7 +2586,8 @@ new class extends Component {
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}"
+                    <div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+                         data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
                          class="menu-item menu-lg-down-accordion">
                         <!--begin:Menu link-->
                         <span class="menu-link py-3">
@@ -2890,7 +2669,8 @@ new class extends Component {
             </div>
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
                 <!--begin:Menu link-->
                 <span class="menu-link py-3">

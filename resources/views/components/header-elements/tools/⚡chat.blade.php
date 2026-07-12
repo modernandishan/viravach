@@ -44,7 +44,7 @@ new class extends Component
                 <div class="card-toolbar">
                     <!--begin::Menu-->
                     <div class="me-0">
-                        <button class="btn btn-sm btn-icon btn-active-color-primary" data-kt-menu-trigger="click" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+                        <button class="btn btn-sm btn-icon btn-active-color-primary" data-kt-menu-trigger="click" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
                             <i class="ki-duotone ki-dots-square fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
@@ -77,7 +77,7 @@ new class extends Component
                             </div>
                             <!--end::Menu item-->
                             <!--begin::Menu item-->
-                            <div class="menu-item px-3" data-kt-menu-trigger="hover" data-kt-menu-placement="{{ app()->getLocale() === 'rtl' ? 'left-start' : 'right-start' }}">
+                            <div class="menu-item px-3" data-kt-menu-trigger="hover" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}">
                                 <a href="#" class="menu-link px-3">
                                     <span class="menu-title">گروه ها</span>
                                     <span class="menu-arrow"></span>

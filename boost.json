@@ -1,0 +1,20 @@
+{
+    "agents": [
+        "claude_code"
+    ],
+    "cloud": true,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "filament/filament",
+        "spatie/laravel-translatable"
+    ],
+    "sail": false,
+    "skills": [
+        "laravel-best-practices",
+        "livewire-development",
+        "tailwindcss-development",
+        "translatable-development"
+    ]
+}
