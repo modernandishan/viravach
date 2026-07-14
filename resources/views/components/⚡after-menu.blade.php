@@ -4,7 +4,7 @@ use Livewire\Component;
 
 new class extends Component
 {
-    //
+    public string $heading1;
 };
 ?>
 
@@ -14,45 +14,25 @@ new class extends Component
         <!--begin::Page title-->
         <div class="page-title d-flex flex-column me-3">
             <!--begin::Title-->
-            <h1 class="d-flex text-white fw-bold my-1 fs-3">داشبورد</h1>
+            <livewire:header-elements.heading1 />
             <!--end::Title-->
             <!--begin::Breadcrumb-->
-            <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-1">
-                <!--begin::item-->
-                <li class="breadcrumb-item text-white opacity-75">
-                    <a href="index.html" class="text-white text-hover-primary">خانه</a>
-                </li>
-                <!--end::item-->
-                <!--begin::item-->
-                <li class="breadcrumb-item">
-                    <span class="bullet bg-white opacity-75 w-5px h-2px"></span>
-                </li>
-                <!--end::item-->
-                <!--begin::item-->
-                <li class="breadcrumb-item text-white opacity-75">داشبورد ها</li>
-                <!--end::item-->
-                <!--begin::item-->
-                <li class="breadcrumb-item">
-                    <span class="bullet bg-white opacity-75 w-5px h-2px"></span>
-                </li>
-                <!--end::item-->
-                <!--begin::item-->
-                <li class="breadcrumb-item text-white opacity-75">پیش فرض</li>
-                <!--end::item-->
-            </ul>
+            <livewire:header-elements.breadcrumb/>
             <!--end::Breadcrumb-->
         </div>
         <!--end::Page title-->
         <!--begin::Actions-->
         <div class="d-flex align-items-center py-3 py-md-1">
             <!--begin::Wrapper-->
-            <div class="me-4">
+            {{--<div class="me-4">
                 <!--begin::Menu-->
                 <a href="#" class="btn btn-custom btn-active-white btn-flex btn-color-white btn-active-color-white" data-kt-menu-trigger="click" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
                     <i class="ki-duotone ki-filter fs-5 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
-                    </i>فیلتر</a>
+                    </i>
+                    فیلتر
+                </a>
                 <!--begin::Menu 1-->
                 <div class="menu menu-sub menu-sub-dropdown w-250px w-md-300px" data-kt-menu="true" id="kt_menu_6606389eb7168">
                     <!--begin::Header-->
@@ -130,10 +110,10 @@ new class extends Component
                 </div>
                 <!--end::Menu 1-->
                 <!--end::Menu-->
-            </div>
+            </div>--}}
             <!--end::Wrapper-->
             <!--begin::Button-->
-            <a href="#" data-bs-theme="light" class="btn bg-body btn-active-color-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_create_app" id="kt_toolbar_primary_button">ساختن</a>
+            <livewire:dashboard-elements.create-company />
             <!--end::Button-->
         </div>
         <!--end::Actions-->

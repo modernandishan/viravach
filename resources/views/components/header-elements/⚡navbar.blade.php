@@ -28,7 +28,6 @@ new class extends Component {
                     <span class="menu-title">
                         {{ __('globals.viravach') }}
                     </span>
-                    <span class="menu-arrow d-lg-none"></span>
                 </a>
                 <!--end:Menu link-->
             </div>
@@ -486,7 +485,7 @@ new class extends Component {
                                     <!--end:Col-->
                                     <!--begin:Col-->
                                     <div class="col-lg-4">
-                                        <img src="theme/1/media/stock/600x600/img-82.jpg" class="rounded mw-100"
+                                        <img src="{{ asset('theme/1/media/stock/600x600/img-82.jpg') }}" class="rounded mw-100"
                                              alt=""/>
                                     </div>
                                     <!--end:Col-->
@@ -597,7 +596,7 @@ new class extends Component {
                                     <!--end:Col-->
                                     <!--begin:Col-->
                                     <div class="col-lg-7">
-                                        <img src="theme/1/media/stock/900x600/46.jpg" class="rounded mw-100" alt=""/>
+                                        <img src="{{ asset('theme/1/media/stock/900x600/46.jpg') }}" class="rounded mw-100" alt=""/>
                                     </div>
                                     <!--end:Col-->
                                 </div>
@@ -1351,7 +1350,7 @@ new class extends Component {
                                     <!--end:Col-->
                                     <!--begin:Col-->
                                     <div class="col-lg-5 pe-lg-5">
-                                        <img src="theme/1/media/stock/600x600/img-84.jpg" class="rounded mw-100"
+                                        <img src="{{ asset('theme/1/media/stock/600x600/img-84.jpg') }}" class="rounded mw-100"
                                              alt=""/>
                                     </div>
                                     <!--end:Col-->
@@ -1423,7 +1422,7 @@ new class extends Component {
                                     <!--end:Col-->
                                     <!--begin:Col-->
                                     <div class="col-lg-8">
-                                        <img src="theme/1/media/stock/900x600/44.jpg" class="rounded mw-100" alt=""/>
+                                        <img src="{{ asset('theme/1/media/stock/900x600/44.jpg') }}" class="rounded mw-100" alt=""/>
                                     </div>
                                     <!--end:Col-->
                                 </div>

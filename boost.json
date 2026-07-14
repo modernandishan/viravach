@@ -8,13 +8,16 @@
     "nightwatch": false,
     "packages": [
         "filament/filament",
-        "spatie/laravel-translatable"
+        "spatie/laravel-translatable",
+        "spatie/laravel-medialibrary"
     ],
     "sail": false,
     "skills": [
         "laravel-best-practices",
         "livewire-development",
         "tailwindcss-development",
-        "translatable-development"
+        "medialibrary-development",
+        "translatable-development",
+        "deploying-laravel-cloud"
     ]
 }

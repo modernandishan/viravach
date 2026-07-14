@@ -18,6 +18,10 @@
         </include>
     </source>
     <php>
+        <!-- Filament resources with large translatable forms (e.g. Plan + SeoMetaSection: 5 locale
+             tabs each) exceed PHP's default 128M CLI memory_limit when multiple schemas are built
+             within the same test process. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

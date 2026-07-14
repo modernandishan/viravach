@@ -34,15 +34,20 @@ class State extends Model
     {
         return [
             'country_id' => 'integer',
-            'is_active'  => 'boolean',
-            'latitude'   => 'decimal:6',
-            'longitude'  => 'decimal:6',
+            'is_active' => 'boolean',
+            'latitude' => 'decimal:6',
+            'longitude' => 'decimal:6',
         ];
     }
 
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
+    }
+
+    public function cities(): HasMany
+    {
+        return $this->hasMany(City::class);
     }
 
     public function scopeActive($query)

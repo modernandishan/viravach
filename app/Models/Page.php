@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSeo;
+use CyrildeWit\EloquentViewable\Contracts\Viewable;
+use CyrildeWit\EloquentViewable\InteractsWithViews;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -13,25 +15,26 @@ use Spatie\Translatable\HasTranslations;
 #[Fillable([
     'slug',
     'title',
-    //'content',
+    // 'content',
     'is_active',
     'published_at',
-    //'renderer',
+    // 'renderer',
     'sort_order',
 ])]
 #[Translatable([
     'title',
-    //'content',
+    // 'content',
 ])]
-class Page extends Model
+class Page extends Model implements Viewable
 {
     use HasSeo, HasTranslations, InteractsWithRichContent, SoftDeletes;
+    use InteractsWithViews;
 
     protected function casts(): array
     {
         return [
-            'is_active'     => 'boolean',
-            'published_at'  => 'datetime',
+            'is_active' => 'boolean',
+            'published_at' => 'datetime',
         ];
     }
 

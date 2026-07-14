@@ -136,7 +136,7 @@ new class extends Component
                             <div class="d-flex align-items-center mb-2">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Details-->
@@ -168,7 +168,7 @@ new class extends Component
                                 <!--end::Details-->
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                             </div>
@@ -188,7 +188,7 @@ new class extends Component
                             <div class="d-flex align-items-center mb-2">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Details-->
@@ -220,7 +220,7 @@ new class extends Component
                                 <!--end::Details-->
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                             </div>
@@ -240,7 +240,7 @@ new class extends Component
                             <div class="d-flex align-items-center mb-2">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Details-->
@@ -273,7 +273,7 @@ new class extends Component
                                 <!--end::Details-->
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                             </div>
@@ -293,7 +293,7 @@ new class extends Component
                             <div class="d-flex align-items-center mb-2">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Details-->
@@ -325,7 +325,7 @@ new class extends Component
                                 <!--end::Details-->
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                             </div>
@@ -345,7 +345,7 @@ new class extends Component
                             <div class="d-flex align-items-center mb-2">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Details-->
@@ -450,7 +450,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-1.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-1.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -485,7 +485,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-3.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-3.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -520,7 +520,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-8.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-8.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -555,7 +555,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-26.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-26.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -590,7 +590,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-21.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-21.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -625,7 +625,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-34.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-34.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -660,7 +660,7 @@ new class extends Component
                     <!--end::Wrapper-->
                     <!--begin::Pic-->
                     <div class="symbol symbol-70px symbol-2by3 flex-shrink-0">
-                        <img src="theme/1/media/stock/600x400/img-27.jpg" alt="" />
+                        <img src="{{ asset('theme/1/media/stock/600x400/img-27.jpg') }}" alt="" />
                     </div>
                     <!--end::Pic-->
                 </div>
@@ -725,7 +725,7 @@ new class extends Component
                     <!--end::Heading-->
                     <!--begin::Google Contacts دعوت-->
                     <div class="btn btn-light-primary fw-bold w-100 mb-8">
-                        <img alt="Logo" src="theme/1/media/svg/brand-logos/google-icon.svg" class="h-20px me-3" />دعوت از مخاطبین جمیل</div>
+                        <img alt="Logo" src="{{ asset('theme/1/media/svg/brand-logos/google-icon.svg') }}" class="h-20px me-3" />دعوت از مخاطبین جمیل</div>
                     <!--end::Google Contacts دعوت-->
                     <!--begin::separator-->
                     <div class="separator d-flex flex-center mb-8">
@@ -748,7 +748,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-6.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-6.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -804,7 +804,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -832,7 +832,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-5.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-5.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -860,7 +860,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -916,7 +916,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-9.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-9.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -1000,7 +1000,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-23.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-23.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -1056,7 +1056,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-12.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-12.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -1112,7 +1112,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-13.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-13.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -1168,7 +1168,7 @@ new class extends Component
                                 <div class="d-flex align-items-center">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-35px symbol-circle">
-                                        <img alt="Pic" src="theme/1/media/avatars/300-21.jpg" />
+                                        <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-21.jpg') }}" />
                                     </div>
                                     <!--end::Avatar-->
                                     <!--begin::Details-->
@@ -1316,7 +1316,7 @@ new class extends Component
                                     <a href="#" class="d-flex align-items-center p-3 rounded bg-state-light bg-state-opacity-50 mb-1">
                                         <!--begin::Avatar-->
                                         <div class="symbol symbol-35px symbol-circle me-5">
-                                            <img alt="Pic" src="theme/1/media/avatars/300-6.jpg" />
+                                            <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-6.jpg') }}" />
                                         </div>
                                         <!--end::Avatar-->
                                         <!--begin::Info-->
@@ -1346,7 +1346,7 @@ new class extends Component
                                     <a href="#" class="d-flex align-items-center p-3 rounded bg-state-light bg-state-opacity-50 mb-1">
                                         <!--begin::Avatar-->
                                         <div class="symbol symbol-35px symbol-circle me-5">
-                                            <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                            <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                         </div>
                                         <!--end::Avatar-->
                                         <!--begin::Info-->
@@ -1361,7 +1361,7 @@ new class extends Component
                                     <a href="#" class="d-flex align-items-center p-3 rounded bg-state-light bg-state-opacity-50 mb-1">
                                         <!--begin::Avatar-->
                                         <div class="symbol symbol-35px symbol-circle me-5">
-                                            <img alt="Pic" src="theme/1/media/avatars/300-5.jpg" />
+                                            <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-5.jpg') }}" />
                                         </div>
                                         <!--end::Avatar-->
                                         <!--begin::Info-->
@@ -1376,7 +1376,7 @@ new class extends Component
                                     <a href="#" class="d-flex align-items-center p-3 rounded bg-state-light bg-state-opacity-50 mb-1">
                                         <!--begin::Avatar-->
                                         <div class="symbol symbol-35px symbol-circle me-5">
-                                            <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                            <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                         </div>
                                         <!--end::Avatar-->
                                         <!--begin::Info-->
@@ -1406,7 +1406,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-6.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-6.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1478,7 +1478,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-1.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1514,7 +1514,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-5.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-5.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1550,7 +1550,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-25.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1622,7 +1622,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-9.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-9.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1730,7 +1730,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-23.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-23.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1802,7 +1802,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-12.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-12.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1874,7 +1874,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-13.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-13.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -1946,7 +1946,7 @@ new class extends Component
                                             <!--end::Checkbox-->
                                             <!--begin::Avatar-->
                                             <div class="symbol symbol-35px symbol-circle">
-                                                <img alt="Pic" src="theme/1/media/avatars/300-21.jpg" />
+                                                <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-21.jpg') }}" />
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Details-->
@@ -2024,7 +2024,7 @@ new class extends Component
                                 <!--end::Message-->
                                 <!--begin::Illustration-->
                                 <div class="text-center px-5">
-                                    <img src="theme/1/media/illustrations/sigma-1/1.png" alt="" class="w-100 h-200px h-sm-325px" />
+                                    <img src="{{ asset('theme/1/media/illustrations/sigma-1/1.png') }}" alt="" class="w-100 h-200px h-sm-325px" />
                                 </div>
                                 <!--end::Illustration-->
                             </div>

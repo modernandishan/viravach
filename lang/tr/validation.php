@@ -162,6 +162,14 @@ return [
         ],
     ],
 
-    'attributes' => [],
+    'attributes' => [
+        'login' => 'e-posta veya telefon numarası',
+        'password' => 'şifre',
+        'name' => 'isim',
+        'family' => 'soyisim',
+        'email' => 'e-posta adresi',
+        'phone' => 'telefon numarası',
+        'toc' => 'şartlar ve koşullar',
+    ],
 
 ];

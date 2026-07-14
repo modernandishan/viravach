@@ -79,7 +79,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Nina Nilson">
-                                            <img src="theme/1/media/avatars/300-14.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-14.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>
@@ -105,12 +105,12 @@ new class extends Component {
                                         <div class="symbol-group symbol-hover flex-nowrap flex-grow-1 min-w-100px pe-2">
                                             <!--begin::user-->
                                             <div class="symbol symbol-circle symbol-25px">
-                                                <img src="theme/1/media/avatars/300-2.jpg" alt="img"/>
+                                                <img src="{{ asset('theme/1/media/avatars/300-2.jpg') }}" alt="img"/>
                                             </div>
                                             <!--end::user-->
                                             <!--begin::user-->
                                             <div class="symbol symbol-circle symbol-25px">
-                                                <img src="theme/1/media/avatars/300-14.jpg" alt="img"/>
+                                                <img src="{{ asset('theme/1/media/avatars/300-14.jpg') }}" alt="img"/>
                                             </div>
                                             <!--end::user-->
                                             <!--begin::user-->
@@ -151,7 +151,7 @@ new class extends Component {
                                         <div class="symbol-group symbol-hover flex-nowrap flex-grow-1 min-w-100px">
                                             <!--begin::user-->
                                             <div class="symbol symbol-circle symbol-25px">
-                                                <img src="theme/1/media/avatars/300-20.jpg" alt="img"/>
+                                                <img src="{{ asset('theme/1/media/avatars/300-20.jpg') }}" alt="img"/>
                                             </div>
                                             <!--end::user-->
                                             <!--begin::user-->
@@ -211,7 +211,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Alan Nilson">
-                                            <img src="theme/1/media/avatars/300-1.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>
@@ -254,7 +254,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Jan Hummer">
-                                            <img src="theme/1/media/avatars/300-23.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-23.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>
@@ -268,7 +268,7 @@ new class extends Component {
                                         <!--begin::item-->
                                         <div class="d-flex flex-aligns-center pe-10 pe-lg-20">
                                             <!--begin::Icon-->
-                                            <img alt="" class="w-30px me-3" src="theme/1/media/svg/files/pdf.svg"/>
+                                            <img alt="" class="w-30px me-3" src="{{ asset('theme/1/media/svg/files/pdf.svg') }}"/>
                                             <!--end::Icon-->
                                             <!--begin::Info-->
                                             <div class="ms-1 fw-semibold">
@@ -288,7 +288,7 @@ new class extends Component {
                                         <div class="d-flex flex-aligns-center pe-10 pe-lg-20">
                                             <!--begin::Icon-->
                                             <img alt="apps/projects/project.html" class="w-30px me-3"
-                                                 src="theme/1/media/svg/files/doc.svg"/>
+                                                 src="{{ asset('theme/1/media/svg/files/doc.svg') }}"/>
                                             <!--end::Icon-->
                                             <!--begin::Info-->
                                             <div class="ms-1 fw-semibold">
@@ -306,7 +306,7 @@ new class extends Component {
                                         <div class="d-flex flex-aligns-center">
                                             <!--begin::Icon-->
                                             <img alt="apps/projects/project.html" class="w-30px me-3"
-                                                 src="theme/1/media/svg/files/css.svg"/>
+                                                 src="{{ asset('theme/1/media/svg/files/css.svg') }}"/>
                                             <!--end::Icon-->
                                             <!--begin::Info-->
                                             <div class="ms-1 fw-semibold">
@@ -359,7 +359,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Nina Nilson">
-                                            <img src="theme/1/media/avatars/300-14.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-14.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>
@@ -398,7 +398,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Marcus Dotson">
-                                            <img src="theme/1/media/avatars/300-2.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-2.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>
@@ -414,7 +414,7 @@ new class extends Component {
                                             <!--begin::Image-->
                                             <div class="overlay-wrapper">
                                                 <img alt="img" class="rounded w-150px"
-                                                     src="theme/1/media/stock/600x400/img-29.jpg"/>
+                                                     src="{{ asset('theme/1/media/stock/600x400/img-29.jpg') }}"/>
                                             </div>
                                             <!--end::Image-->
                                             <!--begin::Link-->
@@ -429,7 +429,7 @@ new class extends Component {
                                             <!--begin::Image-->
                                             <div class="overlay-wrapper">
                                                 <img alt="img" class="rounded w-150px"
-                                                     src="theme/1/media/stock/600x400/img-31.jpg"/>
+                                                     src="{{ asset('theme/1/media/stock/600x400/img-31.jpg') }}"/>
                                             </div>
                                             <!--end::Image-->
                                             <!--begin::Link-->
@@ -444,7 +444,7 @@ new class extends Component {
                                             <!--begin::Image-->
                                             <div class="overlay-wrapper">
                                                 <img alt="img" class="rounded w-150px"
-                                                     src="theme/1/media/stock/600x400/img-40.jpg"/>
+                                                     src="{{ asset('theme/1/media/stock/600x400/img-40.jpg') }}"/>
                                             </div>
                                             <!--end::Image-->
                                             <!--begin::Link-->
@@ -532,7 +532,7 @@ new class extends Component {
                                         <!--begin::user-->
                                         <div class="symbol symbol-circle symbol-25px" data-bs-toggle="tooltip"
                                              data-bs-boundary="window" data-bs-placement="top" title="Robert Rich">
-                                            <img src="theme/1/media/avatars/300-4.jpg" alt="img"/>
+                                            <img src="{{ asset('theme/1/media/avatars/300-4.jpg') }}" alt="img"/>
                                         </div>
                                         <!--end::user-->
                                     </div>

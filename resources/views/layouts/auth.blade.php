@@ -15,9 +15,12 @@
     <meta property="og:site_name" content="Viravach"/>
     <link rel="canonical" href=""/>
 
-    <link rel="shortcut icon" href="{{asset('favicon.ico')}}"/>
+    @php
+        $faviconPath = \App\Models\GeneralSetting::current()->favicon;
+    @endphp
+    <link rel="shortcut icon" href="{{ $faviconPath ? \Illuminate\Support\Facades\Storage::disk('s3')->url($faviconPath) : asset('favicon.ico') }}"/>
 
-    <title>{{ $title ?? config('app.name') }}</title>
+    <title>{{ $title ?? __('globals.viravach') }}</title>
 
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="{{asset('theme/1/plugins/global/plugins.bundle.rtl.css')}}" rel="stylesheet" type="text/css"/>
@@ -54,7 +57,7 @@
     }
 </script>
 <!--end::Theme mode setup on page load-->
-<!--begin::اصلی-->
+<!--begin::main-->
 <!--begin::Root-->
 <div class="d-flex flex-column flex-root">
     <!--begin::Page bg image-->
@@ -68,9 +71,9 @@
         }
     </style>
     <!--end::Page bg image-->
-    <!--begin::احراز هویت - ورود -->
+    <!--begin::auth -->
     {{ $slot }}
-    <!--end::احراز هویت - ورود-->
+    <!--end::auth-->
 </div>
 <!--end::Root-->
 <!--end::اصلی-->
@@ -80,9 +83,15 @@
 <script src="{{asset('theme/1/plugins/global/plugins.bundle.js')}}"></script>
 <script src="{{asset('theme/1/js/scripts.bundle.js')}}"></script>
 <!--end::Global Javascript Bundle-->
-<!--begin::سفارشی Javascript(used for this page only)-->
-<script src="{{asset('theme/1/js/custom/authentication/sign-in/general.js')}}"></script>
-<!--end::سفارشی Javascript-->
+<!--begin::custom Javascript(used for this page only)-->
+{{--@if(Route::is('auth.sign-in'))
+    <script src="{{asset('theme/1/js/custom/authentication/sign-in/general.js')}}"></script>
+@elseif(Route::is('auth.sign-up'))
+    <script src="{{asset('theme/1/js/custom/authentication/sign-up/general.js')}}"></script>
+@elseif(Route::is('auth.secure-login'))
+    <script src="{{asset('theme/1/js/custom/authentication/sign-in/two-factor.js')}}"></script>
+@endif--}}
+<!--end::custom Javascript-->
 <!--end::Javascript-->
 
 @livewireScripts

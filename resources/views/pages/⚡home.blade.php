@@ -1,15 +1,16 @@
 <?php
 
+use App\Livewire\Concerns\RecordsPageView;
 use App\Models\GeneralSetting;
 use App\Models\Page;
 use Livewire\Attributes\Layout;
-
-//use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new
 #[Layout('layouts::landing')]
 class extends Component {
+
+    use RecordsPageView;
 
     public Page $page;
     public GeneralSetting $gs;
@@ -18,6 +19,7 @@ class extends Component {
     {
         $this->page = Page::where('slug', '/')->firstOrFail();
         $this->gs = GeneralSetting::current();
+        $this->recordPageView($this->page);
     }
 
     public function render()
@@ -25,14 +27,13 @@ class extends Component {
         $pageTitle = $this->page->getTranslation('title', app()->getLocale());
         $tagline = $this->gs->getTranslation('site_tagline', app()->getLocale());
 
-        // نام ویو (livewire.home) را بر اساس مسیر واقعی فایل خود تنظیم کنید
-        return $this->view()->title("{$pageTitle} | {$tagline}");    }
+        return $this->view()->title("{$pageTitle} | {$tagline}");
+    }
 
 };
 ?>
 
 <div id="kt_content_container" class="d-flex flex-column-fluid align-items-start container-xxl">
-
     <!--begin::Post-->
     <div class="content flex-row-fluid" id="kt_content">
         <!--begin::Row-->

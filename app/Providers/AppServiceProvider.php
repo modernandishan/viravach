@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,5 +28,6 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        Authenticate::redirectUsing(fn () => route('auth.sign-in'));
     }
 }

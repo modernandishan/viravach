@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,9 +17,13 @@ class DatabaseSeeder extends Seeder
         $this->call(GeneralSettingSeeder::class);
         $this->call(RoleSeeder::class);
         $this->call(SuperAdminSeeder::class);
+
         $this->call(CountrySeeder::class);
         $this->call(StateSeeder::class);
+        $this->call(IsfahanCitiesSeeder::class);
+
         $this->call(CompanyCategorySeeder::class);
         $this->call(HomePageSeeder::class);
+        $this->call(PlanSeeder::class);
     }
 }

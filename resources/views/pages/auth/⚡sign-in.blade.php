@@ -1,14 +1,70 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new
 #[Layout('layouts::auth')]
-#[Title('Viravach')]
 class extends Component {
-    //
+
+    public string $login = '';
+    public string $password = '';
+
+    public function authenticate(): void
+    {
+        $this->validate([
+            'login' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $this->ensureIsNotRateLimited();
+
+        $field = filter_var($this->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+        if (! Auth::attempt([$field => $this->login, 'password' => $this->password])) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'login' => __('auth.failed'),
+            ]);
+        }
+
+        RateLimiter::clear($this->throttleKey());
+        session()->regenerate();
+
+        $this->redirect(
+            Auth::user()->hasAnyRole(['super_admin', 'shareholder'])
+                ? route('filament.admin.pages.dashboard')
+                : route('dashboard'),
+        );
+    }
+
+    protected function ensureIsNotRateLimited(): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'login' => __('auth.throttle', [
+                'seconds' => RateLimiter::availableIn($this->throttleKey()),
+            ]),
+        ]);
+    }
+
+    protected function throttleKey(): string
+    {
+        return Str::transliterate(Str::lower($this->login) . '|' . request()->ip());
+    }
+
+    public function render()
+    {
+        return $this->view()->title(__('auth.sign-in') . ' - ' . __('auth.user-dashboard') . ' | ' . __('globals.viravach'));
+    }
 };
 ?>
 
@@ -24,7 +80,7 @@ class extends Component {
             <!--end::Logo-->
             <!--begin::Title-->
             <h2 class="text-white fw-normal m-0">
-                ابزاری جامع برای کسب و کار های بزرگ
+                {{ __('auth.comprehensive-tool-for-large-businesses') }}
             </h2>
             <!--end::Title-->
         </div>
@@ -39,106 +95,102 @@ class extends Component {
             <!--begin::Wrapper-->
             <div class="d-flex flex-center flex-column flex-column-fluid px-lg-10 pb-15 pb-lg-20">
                 <!--begin::form-->
-                <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form"
-                      data-kt-redirect-url="index.html" action="#">
+                <form class="form w-100" novalidate="novalidate" wire:submit="authenticate"> {{-- id="kt_sign_in_form" --}}
                     <!--begin::Heading-->
                     <div class="text-center mb-11">
                         <!--begin::Title-->
-                        <h1 class="text-gray-900 fw-bolder mb-3">ورود</h1>
+                        <h1 class="text-gray-900 fw-bolder mb-3">
+                            {{ __('auth.sign-in') }}
+                        </h1>
                         <!--end::Title-->
                         <!--begin::Subtitle-->
-                        <div class="text-gray-500 fw-semibold fs-6">ورود با شبکه های اجتماعی</div>
+                        {{--<div class="text-gray-500 fw-semibold fs-6">ورود با شبکه های اجتماعی</div>--}}
                         <!--end::Subtitle=-->
                     </div>
                     <!--begin::Heading-->
-                    <!--begin::Login options-->
-                    <div class="row g-3 mb-9">
-                        <!--begin::Col-->
-                        <div class="col-md-6">
-                            <!--begin::گوگل link=-->
-                            <a href="#"
-                               class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100">
-                                <img alt="Logo" src="{{asset('theme/1/media/svg/brand-logos/google-icon.svg')}}"
-                                     class="h-15px me-3"/>ورود از طریق گوگل</a>
-                            <!--end::گوگل link=-->
-                        </div>
-                        <!--end::Col-->
-                        <!--begin::Col-->
-                        <div class="col-md-6">
-                            <!--begin::گوگل link=-->
-                            <a href="#"
-                               class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100">
-                                <img alt="Logo" src="{{asset('theme/1/media/svg/brand-logos/apple-black.svg')}}"
-                                     class="theme-light-show h-15px me-3"/>
-                                <img alt="Logo" src="{{asset('theme/1/media/svg/brand-logos/apple-black-dark.svg')}}"
-                                     class="theme-dark-show h-15px me-3"/>با اپلیکیشن وارد شوید</a>
-                            <!--end::گوگل link=-->
-                        </div>
-                        <!--end::Col-->
-                    </div>
-                    <!--end::Login options-->
                     <!--begin::separator-->
                     <div class="separator separator-content my-14">
-                        <span class="w-125px text-gray-500 fw-semibold fs-7">
-                            یا با ایمیل
-                            <br>
-                            (شماره تماس)
+                        <span class="w-300px text-gray-500 fw-semibold fs-7">
+                            {{ __('auth.email-or-phone') }}
                         </span>
                     </div>
                     <!--end::separator-->
                     <!--begin::Input group=-->
                     <div class="fv-row mb-8">
-                        <!--begin::ایمیل-->
-                        <input type="text" placeholder="ایمیل" name="email" autocomplete="off"
-                               class="form-control bg-transparent"/>
-                        <!--end::ایمیل-->
+                        <!--begin::email or phone-->
+                        <input type="text" placeholder="info@gmail.com | 09123456789" wire:model="login"
+                               autocomplete="off" class="form-control bg-transparent @error('login') is-invalid @enderror"/>
+                        <!--end::email or phone-->
+                        @error('login')
+                            <div class="fv-plugins-message-container invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                     <!--end::Input group=-->
                     <div class="fv-row mb-3">
                         <!--begin::password-->
-                        <input type="password" placeholder="کلمه عبور" name="password" autocomplete="off"
-                               class="form-control bg-transparent"/>
+                        <input type="password" placeholder="{{ __('auth.pass') }}" wire:model="password"
+                               autocomplete="off" class="form-control bg-transparent @error('password') is-invalid @enderror"/>
                         <!--end::password-->
+                        @error('password')
+                            <div class="fv-plugins-message-container invalid-feedback d-block">
+                                {{ $message }}
+                            </div>
+                        @enderror
                     </div>
                     <!--end::Input group=-->
                     <!--begin::Wrapper-->
                     <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
-                        <div></div>
                         <!--begin::Link-->
-                        <a href="{{route('auth.reset-password')}}" class="link-primary">فراموشی
-                            رمز</a>
+                        <a href="{{route('auth.reset-password')}}" class="link-primary">
+                            {{ __('auth.forget-password') }}
+                        </a>
                         <!--end::Link-->
                     </div>
                     <!--end::Wrapper-->
-                    <!--begin::ثبت button-->
-                    <div class="d-grid mb-10">
-                        <button type="submit" id="kt_sign_in_submit" class="btn btn-primary">
+                    <!--begin::sign up button-->
+                    <div class="d-grid mb-1">
+                        <button type="submit" class="btn btn-primary"
+                                wire:loading.attr="disabled" wire:target="authenticate"> {{-- id="kt_sign_in_submit" --}}
                             <!--begin::Indicatیا label-->
-                            <span class="indicator-label">ورود</span>
+                            <span class="indicator-label" wire:loading.remove wire:target="authenticate">
+                                {{ __('auth.sign-in') }}
+                            </span>
                             <!--end::Indicatیا label-->
                             <!--begin::Indicatیا progress-->
-                            <span class="indicator-progress">لطفا صبر کنید...
-										<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                            <span class="indicator-progress" wire:loading.flex wire:target="authenticate"
+                                  style="display: none;">
+                                {{ __('auth.please-wait') }}
+                                <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
                             <!--end::Indicatیا progress-->
                         </button>
                     </div>
-                    <!--end::ثبت button-->
-                    <!--begin::ثبت نام-->
-                    <div class="text-gray-500 text-center fw-semibold fs-6">آیا هنوز عضو نشده
-                        <a href="{{route('auth.sign-up')}}" class="link-primary">ثبت نام</a>
+                    <div class="d-grid mb-10">
+                        <a href="{{ route('auth.secure-login') }}" class="btn btn-outline btn-outline-primary">
+                            {{ __('auth.two-factor-auth') }}
+                        </a>
                     </div>
-                    <!--end::ثبت نام-->
+                    <!--end::sign up button-->
+                    <!--begin::sign up-->
+                    <div class="text-gray-500 text-center fw-semibold fs-6">
+                        {{ __('auth.not-a-member-yet') }}
+                        <a href="{{route('auth.sign-up')}}" class="link-primary">
+                            {{ __('auth.sign-up') }}
+                        </a>
+                    </div>
+                    <!--end::sign up-->
                 </form>
                 <!--end::form-->
             </div>
             <!--end::Wrapper-->
             <!--begin::Footer-->
             <div class="d-flex flex-stack px-lg-10">
-                <!--begin::زبانs-->
-                <div class="me-0">
+                <!--begin::languages-->
+                <livewire:header-elements.tools.language-switcher />
+                {{--<div class="me-0">
                     <!--begin::Toggle-->
                     <button class="btn btn-flex btn-link btn-color-gray-700 btn-active-color-primary rotate fs-base"
-                            data-kt-menu-trigger="click" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'left-start' }}"
+                            data-kt-menu-trigger="click"
+                            data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                             data-kt-menu-offset="0px, 0px">
                         <img data-kt-element="current-lang-flag" class="w-20px h-20px rounded me-3"
                              src="{{asset('theme/1/media/flags/united-states.svg')}}" alt=""/>
@@ -207,8 +259,8 @@ class extends Component {
                         <!--end::Menu item-->
                     </div>
                     <!--end::Menu-->
-                </div>
-                <!--end::زبانs-->
+                </div>--}}
+                <!--end::languages-->
                 <!--begin::Links-->
                 <div class="d-flex fw-semibold text-primary fs-base gap-5">
                     <a href="pages/team.html" target="_blank">تیم ها</a>

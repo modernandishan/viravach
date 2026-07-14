@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\FilamentAuthenticate;
 use App\Http\Middleware\SetFilamentLocale;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -27,9 +28,11 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->default()
+            // ->domain('viravach.com')
             ->id('admin')
             ->path('admin')
             ->login()
+            ->unsavedChangesAlerts()
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -44,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
+                FilamentAuthenticate::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

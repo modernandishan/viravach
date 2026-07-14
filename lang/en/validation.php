@@ -159,5 +159,13 @@ return [
             'rule-name' => 'custom-message',
         ],
     ],
-    'attributes' => [],
+    'attributes' => [
+        'login' => 'email or phone number',
+        'password' => 'password',
+        'name' => 'name',
+        'family' => 'last name',
+        'email' => 'email address',
+        'phone' => 'phone number',
+        'toc' => 'terms and conditions',
+    ],
 ];

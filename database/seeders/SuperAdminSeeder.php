@@ -16,9 +16,15 @@ class SuperAdminSeeder extends Seeder
     public function run(): void
     {
         $user = User::create([
-            'name' => 'محمد جواد',
-            'family' => 'قانع دستجردی',
-            'phone' => '09120000000',
+            'name' => [
+                'fa' => 'محمد جواد',
+                'en' => 'Mohammad Javad',
+            ],
+            'family' => [
+                'fa' => 'قانع دستجردی',
+                'en' => 'Ghane Dastgerdy',
+            ],
+            'phone' => '09332253169',
             'email' => 'info@viravach.com',
             'password' => '1qazxsw2',
         ]);
