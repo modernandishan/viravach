@@ -14,7 +14,9 @@ class extends Component {
     }
 };
 ?>
-
-<div>
-    {{-- Happiness is not something readymade. It comes from your own actions. - Dalai Lama --}}
+<div class="d-flex flex-column-fluid align-items-start container-xxl">
+    <div class="content flex-row-fluid">
+        <livewire:dashboard-elements.infobar />
+    </div>
 </div>
+

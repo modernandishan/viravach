@@ -30,7 +30,6 @@ use Spatie\Translatable\HasTranslations;
     'address',
     'biography',
     'job_title',
-    'skills',
 ])]
 class Profile extends Model
 {
@@ -42,6 +41,8 @@ class Profile extends Model
             'user_id' => 'integer',
             'country_id' => 'integer',
             'state_id' => 'integer',
+            // A flat list of tags, not per-locale — must not also be Translatable
+            // (HasTranslations would otherwise intercept it and return a string).
             'skills' => 'array',
             'gender' => Gender::class,
             'birth_date' => 'date',

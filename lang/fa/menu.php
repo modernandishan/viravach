@@ -12,4 +12,17 @@ return [
     'logout' => 'خروج',
     'more_options' => 'گزینه‌های بیشتر',
 
+    'user_area' => 'ناحیه کاربری',
+    'my_companies' => 'شرکت‌های من',
+    'subscriptions_and_plans' => 'اشتراک و پلن‌ها',
+    'payment_history' => 'تاریخچه‌ی پرداخت‌ها',
+    'profile_and_security' => 'پروفایل و امنیت',
+    'company_visit_statistics' => 'آمار بازدید شرکت',
+    'chat' => 'چت',
+
+    'not_registered' => 'ثبت نشده',
+    'complete_profile' => 'تکمیل پروفایل',
+    'edit_profile' => 'ویرایش پروفایل',
+    'create_new_company' => 'ایجاد شرکت جدید',
+
 ];

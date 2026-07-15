@@ -34,6 +34,19 @@ class MediaResourceTest extends TestCase
             ->assertCanSeeTableRecords(Media::all());
     }
 
+    public function test_user_avatars_appear_in_the_media_list(): void
+    {
+        $this->createMedia();
+
+        $avatar = User::factory()->create()
+            ->addMedia(UploadedFile::fake()->image('avatar.jpg', 10, 10))
+            ->toMediaCollection('avatar', 'public');
+
+        Livewire::test(ListMedia::class)
+            ->assertCanSeeTableRecords(Media::all())
+            ->assertCanSeeTableRecords([$avatar]);
+    }
+
     public function test_it_can_update_media_translations(): void
     {
         $media = $this->createMedia();

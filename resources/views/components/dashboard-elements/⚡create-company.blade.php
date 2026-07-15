@@ -10,7 +10,7 @@ new class extends Component
 
 <div class="me-4">
     <span href="#" data-bs-theme="light" class="btn bg-body btn-active-color-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_create_app" id="kt_toolbar_primary_button">
-        لیست کردن
+        {{ __('menu.create_new_company') }}
     </span>
     <!--begin::Modal - create app-->
     <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">

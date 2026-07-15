@@ -29,7 +29,7 @@ new class extends Component
                 <!--begin:Menu item-->
                 <div class="menu-item p-0 m-0">
                     <!--begin:Menu link-->
-                    <a href="#" class="menu-link active">
+                    <a href="{{route('companies.category', ['slug' => $category->slug])}}" class="menu-link active">
                         <span
                             class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
                             @if ($category->hasMedia('logo'))

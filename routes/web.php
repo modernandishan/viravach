@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\test;
+use App\Http\Controllers\EditorUploadController;
 use App\Http\Middleware\DetectLocaleFromIp;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
@@ -30,9 +31,13 @@ use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 // `/lang/{locale}` path itself (e.g. `/tr/lang/fa`), which isn't a real
 // route and 404s.
 Route::get('/haha', function () {
-    $response = (new \App\Ai\Agents\test)->prompt('مدل user در لاراول را برای من بنویس');
+    $response = (new test)->prompt('hello, how are you?');
     dd($response->text);
 });
+
+Route::post('/editor/upload', [EditorUploadController::class, 'store'])
+    ->name('editor.upload')
+    ->middleware('auth');
 
 Route::get('/lang/{locale}', function (string $locale) {
     abort_unless(
@@ -62,6 +67,12 @@ Route::group(
 
         Route::livewire('/', 'pages::home')->name('home');
         Route::livewire('/terms-and-conditions', 'pages::rules.terms-and-conditions')->name('terms-and-conditions');
+
+        Route::livewire('/companies/category/{slug}', 'pages::company-category')
+            ->name('companies.category');
+
+        Route::livewire('/companies/{slug}', 'pages::company')
+            ->name('companies.show');
 
         // auth routes
         Route::middleware('guest')->group(function () {
@@ -98,8 +109,15 @@ Route::group(
                     ->name('settings')
                     ->middleware('auth');
 
-            });
+                Route::livewire('/subscriptions', 'pages::dashboard.subscriptions')
+                    ->name('subscriptions')
+                    ->middleware('auth');
 
+                Route::livewire('/payment-history', 'pages::dashboard.payment-history')
+                    ->name('payment-history')
+                    ->middleware('auth');
+
+            });
 
     },
 );
