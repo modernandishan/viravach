@@ -7,6 +7,7 @@ new class extends Component
     //
 };
 ?>
+
 <div class="card mb-5 mb-xl-10">
     <div class="card-body pt-9 pb-0">
         <!--begin::Details-->
@@ -153,7 +154,7 @@ new class extends Component
             <!--end::Nav item-->
             <!--begin::Nav item-->
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('my-companies') ? 'active' : '' }}" href="{{ route('my-companies') }}">
                     {{ __('menu.my_companies') }}
                 </a>
             </li>
@@ -167,7 +168,7 @@ new class extends Component
             <!--end::Nav item-->
             <!--begin::Nav item-->
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('payment-history') ? 'active' : '' }}" href="{{ route('payment-history') }}">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('payments') ? 'active' : '' }}" href="{{ route('payments') }}">
                     {{ __('menu.payment_history') }}
                 </a>
             </li>
@@ -181,14 +182,14 @@ new class extends Component
             <!--end::Nav item-->
             <!--begin::Nav item-->
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('company-views') ? 'active' : '' }}" href="{{ route('company-views') }}">
                     {{ __('menu.company_visit_statistics') }}
                 </a>
             </li>
             <!--end::Nav item-->
             <!--begin::Nav item-->
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('chat') ? 'active' : '' }}" href="{{ route('chat') }}">
                     {{ __('menu.chat') }}
                 </a>
             </li>

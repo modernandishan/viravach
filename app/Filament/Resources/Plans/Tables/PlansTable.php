@@ -40,7 +40,7 @@ class PlansTable
                     ->label('قیمت')
                     ->formatStateUsing(fn (Plan $record) => $record->isFree()
                         ? 'رایگان'
-                        : number_format((float) $record->price, 2).' '.$record->currency)
+                        : number_format((float) $record->price).' '.$record->currency)
                     ->sortable(),
                 IconColumn::make('trial_period')
                     ->label('دوره آزمایشی')

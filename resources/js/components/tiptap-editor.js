@@ -1,7 +1,6 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 
 function readXsrfToken() {
@@ -10,20 +9,30 @@ function readXsrfToken() {
     return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Editor instances are deliberately kept OUTSIDE Alpine's reactive proxy:
+// wrapping a Tiptap/ProseMirror editor in a Proxy corrupts its internal
+// state comparisons and produces "Applying a mismatched transaction"
+// errors. Keyed by the component's root element so each instance resolves
+// its own editor, and garbage-collected together with the DOM node.
+const editors = new WeakMap();
+
 export default function tiptapEditor(content, dir = 'ltr', placeholder = '') {
     return {
         content,
-        editor: null,
         updatedAt: 0,
         dir,
 
         init() {
-            this.editor = new Editor({
+            const editor = new Editor({
                 element: this.$refs.element,
                 extensions: [
-                    StarterKit,
+                    // StarterKit already ships the Link extension in Tiptap
+                    // v3 — configure it here instead of registering the
+                    // standalone extension a second time.
+                    StarterKit.configure({
+                        link: { openOnClick: false },
+                    }),
                     Image,
-                    Link.configure({ openOnClick: false }),
                     Placeholder.configure({ placeholder }),
                 ],
                 content: this.content ?? '',
@@ -37,40 +46,65 @@ export default function tiptapEditor(content, dir = 'ltr', placeholder = '') {
                     this.updatedAt++;
                 },
             });
+
+            editors.set(this.$root, editor);
+        },
+
+        // Alpine calls this automatically when the element is removed from
+        // the DOM (Livewire morphs, wire:navigate page swaps, ...).
+        destroy() {
+            editors.get(this.$root)?.destroy();
+            editors.delete(this.$root);
+        },
+
+        /**
+         * Always re-resolve the current instance instead of closing over a
+         * stale reference; returns null once the editor is gone.
+         */
+        getEditor() {
+            const editor = editors.get(this.$root);
+
+            return editor && ! editor.isDestroyed ? editor : null;
         },
 
         isActive(name, attrs = {}) {
             this.updatedAt;
 
-            return this.editor?.isActive(name, attrs) ?? false;
+            return this.getEditor()?.isActive(name, attrs) ?? false;
         },
 
         toggleBold() {
-            this.editor.chain().focus().toggleBold().run();
+            this.getEditor()?.chain().focus().toggleBold().run();
         },
 
         toggleItalic() {
-            this.editor.chain().focus().toggleItalic().run();
+            this.getEditor()?.chain().focus().toggleItalic().run();
         },
 
         toggleHeading(level) {
-            this.editor.chain().focus().toggleHeading({ level }).run();
+            this.getEditor()?.chain().focus().toggleHeading({ level }).run();
         },
 
         toggleBulletList() {
-            this.editor.chain().focus().toggleBulletList().run();
+            this.getEditor()?.chain().focus().toggleBulletList().run();
         },
 
         toggleOrderedList() {
-            this.editor.chain().focus().toggleOrderedList().run();
+            this.getEditor()?.chain().focus().toggleOrderedList().run();
         },
 
         toggleBlockquote() {
-            this.editor.chain().focus().toggleBlockquote().run();
+            this.getEditor()?.chain().focus().toggleBlockquote().run();
         },
 
         setLink() {
-            const previousUrl = this.editor.getAttributes('link').href;
+            const editor = this.getEditor();
+
+            if (! editor) {
+                return;
+            }
+
+            const previousUrl = editor.getAttributes('link').href;
             const url = window.prompt('URL', previousUrl ?? '');
 
             if (url === null) {
@@ -78,18 +112,19 @@ export default function tiptapEditor(content, dir = 'ltr', placeholder = '') {
             }
 
             if (url === '') {
-                this.editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                editor.chain().focus().extendMarkRange('link').unsetLink().run();
 
                 return;
             }
 
-            this.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+            editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
         },
 
         async uploadImage(event) {
-            const file = event.target.files[0];
+            const input = event.target;
+            const file = input.files[0];
 
-            if (!file) {
+            if (! file) {
                 return;
             }
 
@@ -106,27 +141,33 @@ export default function tiptapEditor(content, dir = 'ltr', placeholder = '') {
                 body: formData,
             });
 
-            event.target.value = '';
+            input.value = '';
 
-            if (!response.ok) {
+            if (! response.ok) {
                 return;
             }
 
             const { url } = await response.json();
 
-            this.editor.chain().focus().setImage({ src: url }).run();
+            // The upload is async: by the time it resolves, Livewire may
+            // have morphed the page and replaced/destroyed the editor.
+            // Re-resolve the live instance and bail out if it is gone so we
+            // never dispatch a transaction against a stale editor state.
+            const editor = this.getEditor();
+
+            if (! editor) {
+                return;
+            }
+
+            editor.chain().focus().setImage({ src: url }).run();
         },
 
         undo() {
-            this.editor.chain().focus().undo().run();
+            this.getEditor()?.chain().focus().undo().run();
         },
 
         redo() {
-            this.editor.chain().focus().redo().run();
-        },
-
-        destroy() {
-            this.editor?.destroy();
+            this.getEditor()?.chain().focus().redo().run();
         },
     };
 }

@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'libretranslate' => [
+        'url' => env('LIBRETRANSLATE_URL', 'https://translate.hktp.ir'),
+        'key' => env('LIBRETRANSLATE_API_KEY'),
+        'basic_user' => env('LIBRETRANSLATE_BASIC_USER'),
+        'basic_pass' => env('LIBRETRANSLATE_BASIC_PASS'),
+    ],
+
 ];

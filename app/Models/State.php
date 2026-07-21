@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSeo;
+use CyrildeWit\EloquentViewable\Contracts\Viewable;
+use CyrildeWit\EloquentViewable\InteractsWithViews;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\Attributes\Translatable;
 use Spatie\Translatable\HasTranslations;
@@ -24,10 +28,12 @@ use Spatie\Translatable\HasTranslations;
     'name',
     'type',
 ])]
-class State extends Model
+class State extends Model implements Viewable
 {
     use HasFactory,
+        HasSeo,
         HasTranslations,
+        InteractsWithViews,
         SoftDeletes;
 
     protected function casts(): array

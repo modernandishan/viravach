@@ -19,4 +19,3 @@ class extends Component {
         <livewire:dashboard-elements.infobar />
     </div>
 </div>
-

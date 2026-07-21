@@ -32,13 +32,13 @@ return new class extends Migration
             $table->string('og_type')->default('website');   // website, article, product, profile...
             $table->json('og_title')->nullable();             // خالی = fallback به meta_title
             $table->json('og_description')->nullable();       // خالی = fallback به meta_description
-            $table->string('og_image')->nullable();           // مستقل از logo/featured_image شرکت
+            // $table->string('og_image')->nullable();           // مستقل از logo/featured_image شرکت
 
             // --- Twitter Card ---
             $table->string('twitter_card_type')->default('summary_large_image');
             $table->json('twitter_title')->nullable();
             $table->json('twitter_description')->nullable();
-            $table->string('twitter_image')->nullable();
+            // $table->string('twitter_image')->nullable();
 
             // --- JSON-LD / Structured Data ---
             $table->string('schema_type')->nullable();  // Organization, LocalBusiness, Product, Article...

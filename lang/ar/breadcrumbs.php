@@ -1,4 +1,5 @@
 <?php
+
 return [
     'home' => 'الصفحة الرئيسية',
     'terms_and_conditions' => 'الشروط والأحكام',
@@ -9,5 +10,12 @@ return [
     'dashboard' => 'لوحة التحكم',
     'profile' => 'الملف الشخصي',
     'settings' => 'الإعدادات',
+    'my_companies' => 'شركاتي',
+    'create_company' => 'إنشاء شركة',
+    'edit_company' => 'تعديل الشركة',
+    'subscriptions' => 'الاشتراكات والباقات',
+    'payments' => 'سجل المدفوعات',
+    'company_views' => 'إحصائيات زيارات الشركات',
+    'pricing' => 'الأسعار',
     'home_headline' => 'ويراواتش | تجارة بلا حدود',
 ];

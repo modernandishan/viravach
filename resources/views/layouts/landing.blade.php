@@ -4,22 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content=""/>
-    <meta name="keywords" content=""/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <meta property="og:locale" content="en_US"/>
-    <meta property="og:type" content="article"/>
-    <meta property="og:title" content=""/>
-    <meta property="og:url" content="https://viravach.com"/>
-    <meta property="og:site_name" content="Viravach"/>
-    <link rel="canonical" href=""/>
 
     @php
         $faviconPath = \App\Models\GeneralSetting::current()->favicon;
     @endphp
     <link rel="shortcut icon" href="{{ $faviconPath ? \Illuminate\Support\Facades\Storage::disk('s3')->url($faviconPath) : asset('favicon.ico') }}"/>
 
-    <title>{{ $title ?? __('globals.viravach') }}</title>
+    {{-- Pages that call the SEOTools facade (SEO::setTitle()/setDescription()/setCanonical())
+         get their <title>/meta/og/twitter tags generated below. Pages that don't (most of the
+         app, e.g. dashboard) fall back to Livewire's per-view ->title() mechanism, since
+         SEOTools::getTitle() is falsy (config/seotools.php disables its joke placeholder
+         defaults) when nothing was explicitly set. --}}
+    @unless (\Artesaos\SEOTools\Facades\SEOTools::getTitle())
+        <title>{{ $title ?? __('globals.viravach') }}</title>
+    @endunless
+    {!! \Artesaos\SEOTools\Facades\SEOTools::generate() !!}
 
     <!--begin::Fonts(mandatory for all pages)-->
     {{--<link rel="stylesheet" href="https://fonts.googleapis.com/cssfamily=Inter:300,400,500,600,700" />--}}
@@ -51,11 +52,8 @@
         }
     </style>
     <!--end::Sticky header stacking fix-->
-    <script>
-        // Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }
-    </script>
 
-    {{--@vite(['resources/css/app.css', 'resources/js/app.js'])--}}
+    @vite(['resources/js/app.js'])
 
     @livewireStyles
 

@@ -11,9 +11,15 @@
     {{ $attributes->whereDoesntStartWith('wire:model') }}
     wire:ignore
     x-data="tiptapEditor(@entangle($attributes->wire('model')), @js($dir), @js($placeholder))"
-    x-on:destroy="destroy"
     dir="{{ $dir }}"
 >
+    <style>
+        .tiptap img,
+        .tiptap video,
+        .tiptap iframe{
+            width: 100%;
+        }
+    </style>
     <div class="btn-toolbar border border-bottom-0 rounded-top p-2 bg-light d-flex flex-wrap gap-1" role="toolbar">
         <button type="button" class="btn btn-sm btn-icon fw-bold" :class="isActive('bold') ? 'btn-light-primary' : 'btn-light'" @click="toggleBold" title="Bold">B</button>
         <button type="button" class="btn btn-sm btn-icon fst-italic" :class="isActive('italic') ? 'btn-light-primary' : 'btn-light'" @click="toggleItalic" title="Italic">I</button>

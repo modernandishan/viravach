@@ -24,5 +24,6 @@ return [
     'complete_profile' => 'إكمال الملف الشخصي',
     'edit_profile' => 'تعديل الملف الشخصي',
     'create_new_company' => 'إنشاء شركة جديدة',
+    'admin_dashboard' => 'لوحة تحكم المسؤول',
 
 ];

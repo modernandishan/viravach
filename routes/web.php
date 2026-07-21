@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\test;
 use App\Http\Controllers\EditorUploadController;
+use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Middleware\DetectLocaleFromIp;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
@@ -68,11 +69,17 @@ Route::group(
         Route::livewire('/', 'pages::home')->name('home');
         Route::livewire('/terms-and-conditions', 'pages::rules.terms-and-conditions')->name('terms-and-conditions');
 
-        Route::livewire('/companies/category/{slug}', 'pages::company-category')
+        Route::livewire('/category/{slug}', 'pages::company-category')
             ->name('companies.category');
+
+        Route::livewire('/country/state/{slug}', 'pages::company-state')
+            ->name('companies.state');
 
         Route::livewire('/companies/{slug}', 'pages::company')
             ->name('companies.show');
+
+        Route::livewire('/pricing', 'pages::pricing')
+            ->name('pricing');
 
         // auth routes
         Route::middleware('guest')->group(function () {
@@ -91,31 +98,45 @@ Route::group(
             )->name('auth.reset-password');
         });
 
-        Route::group(
-            [
-                'prefix' => 'dashboard',
-            ],
+        Route::middleware('auth')->prefix('dashboard')->group(
             function () {
 
                 Route::livewire('/', 'pages::dashboard')
-                    ->name('dashboard')
-                    ->middleware('auth');
+                    ->name('dashboard');
 
                 Route::livewire('/profile', 'pages::dashboard.profile')
-                    ->name('profile')
-                    ->middleware('auth');
+                    ->name('profile');
 
                 Route::livewire('/settings', 'pages::dashboard.settings')
-                    ->name('settings')
-                    ->middleware('auth');
+                    ->name('settings');
 
-                Route::livewire('/subscriptions', 'pages::dashboard.subscriptions')
-                    ->name('subscriptions')
-                    ->middleware('auth');
+                Route::livewire('/my-companies', 'pages::dashboard.my-companies')
+                    ->name('my-companies');
 
-                Route::livewire('/payment-history', 'pages::dashboard.payment-history')
-                    ->name('payment-history')
-                    ->middleware('auth');
+                Route::livewire('/create-company', 'pages::dashboard.create-company')
+                    ->name('create.company');
+
+                Route::livewire('/edit-company/{company}', 'pages::dashboard.edit-company')
+                    ->name('edit.company');
+
+                Route::livewire('/subscriptions/{company?}', 'pages::dashboard.subscriptions')
+                    ->name('subscriptions');
+
+                Route::livewire('/chat', 'pages::dashboard.chat')
+                    ->name('chat');
+
+                Route::livewire('/payments', 'pages::dashboard.payments')
+                    ->name('payments');
+
+                Route::livewire('/company-views', 'pages::dashboard.company-views')
+                    ->name('company-views');
+
+                Route::livewire('/support-chats', 'pages::dashboard.support-chats')
+                    ->name('support-chats')
+                    ->middleware('role:support');
+
+                Route::get('/payment/callback', PaymentCallbackController::class)
+                    ->name('payment.callback');
 
             });
 

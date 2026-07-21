@@ -1,4 +1,5 @@
 <?php
+
 return [
     'home' => 'Ana Sayfa',
     'terms_and_conditions' => 'Şartlar ve Koşullar',
@@ -9,5 +10,12 @@ return [
     'dashboard' => 'Kontrol Paneli',
     'profile' => 'Profil',
     'settings' => 'Ayarlar',
+    'my_companies' => 'Şirketlerim',
+    'create_company' => 'Şirket Oluştur',
+    'edit_company' => 'Şirketi Düzenle',
+    'subscriptions' => 'Abonelikler ve Planlar',
+    'payments' => 'Ödeme Geçmişi',
+    'company_views' => 'Şirket Ziyaret İstatistikleri',
+    'pricing' => 'Fiyatlandırma',
     'home_headline' => 'Viravaç | Sınırsız Ticaret',
 ];

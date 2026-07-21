@@ -19,7 +19,7 @@ new class extends Component {
             class="menu menu-rounded menu-column menu-lg-row menu-active-bg menu-title-gray-700 menu-state-primary menu-arrow-gray-500 fw-semibold my-5 my-lg-0 align-items-stretch px-2 px-lg-0"
             id="#kt_header_menu" data-kt-menu="true">
 
-            <!--begin:Menu item (simple)-->
+            <!--begin:Menu item - Home page (simple)-->
             <div
                 data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                 class="menu-item {{ request()->routeIs('home') ? 'here show menu-here-bg' : '' }} me-0 me-lg-2">
@@ -27,6 +27,20 @@ new class extends Component {
                 <a href="{{route('home')}}" class="menu-link py-3">
                     <span class="menu-title">
                         {{ __('globals.viravach') }}
+                    </span>
+                </a>
+                <!--end:Menu link-->
+            </div>
+            <!--end:Menu item - Home page (simple)-->
+
+            <!--begin:Menu item (simple)-->
+            <div
+                data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
+                class="menu-item {{ request()->routeIs('pricing') ? 'here show menu-here-bg' : '' }} me-0 me-lg-2">
+                <!--begin:Menu link-->
+                <a href="{{route('pricing')}}" class="menu-link py-3">
+                    <span class="menu-title">
+                        {{ __('breadcrumbs.pricing') }}
                     </span>
                 </a>
                 <!--end:Menu link-->
@@ -58,85 +72,15 @@ new class extends Component {
                             <!--begin:Col-->
                             <div class="menu-more bg-light col-lg-4 py-3 px-3 py-lg-6 px-lg-6 rounded-end">
                                 <!--begin:Heading-->
-                                <h4 class="fs-6 fs-lg-4 text-gray-800 fw-bold mt-3 mb-3 ms-4">بیشتر داشبورد ها</h4>
+                                <h4 class="fs-6 fs-lg-4 text-gray-800 fw-bold mt-3 mb-3 ms-4">دسته های پر بازدید</h4>
                                 <!--end:Heading-->
                                 <!--begin:Menu item-->
                                 <div class="menu-item p-0 m-0">
                                     <!--begin:Menu link-->
                                     <a href="dashboards/logistics.html" class="menu-link py-2">
-                                        <span class="menu-title">جابجایی</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/website-analytics.html" class="menu-link py-2">
-                                        <span class="menu-title">وب سایت آنالیتیکس</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/finance-performance.html" class="menu-link py-2">
-                                        <span class="menu-title">دارایی، مالیه، سرمایه گذاری کارایی</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/store-analytics.html" class="menu-link py-2">
-                                        <span class="menu-title">آنالیتیکس</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/social.html" class="menu-link py-2">
-                                        <span class="menu-title">سوشیال</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/delivery.html" class="menu-link py-2">
-                                        <span class="menu-title">تحویل</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/crypto.html" class="menu-link py-2">
-                                        <span class="menu-title">کریپتو</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/school.html" class="menu-link py-2">
-                                        <span class="menu-title">مدرسه</span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/podcast.html" class="menu-link py-2">
-                                        <span class="menu-title">پادکست</span>
+                                        <span class="menu-title">
+
+                                        </span>
                                     </a>
                                     <!--end:Menu link-->
                                 </div>
@@ -152,7 +96,7 @@ new class extends Component {
             </div>
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+            {{--<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                  data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion me-0 me-lg-2">
                 <!--begin:Menu link-->
@@ -1435,10 +1379,10 @@ new class extends Component {
                     <!--end:صفحات menu-->
                 </div>
                 <!--end:Menu sub-->
-            </div>
+            </div>--}}
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+            {{--<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                  data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
                 <!--begin:Menu link-->
@@ -2665,10 +2609,10 @@ new class extends Component {
                     <!--end:Menu item-->
                 </div>
                 <!--end:Menu sub-->
-            </div>
+            </div>--}}
             <!--end:Menu item-->
             <!--begin:Menu item-->
-            <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+            {{--<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                  data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}"
                  class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
                 <!--begin:Menu link-->
@@ -2755,7 +2699,7 @@ new class extends Component {
                     <!--end:Menu item-->
                 </div>
                 <!--end:Menu sub-->
-            </div>
+            </div>--}}
             <!--end:Menu item-->
         </div>
         <!--end::Menu-->

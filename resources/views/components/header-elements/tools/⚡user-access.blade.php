@@ -56,6 +56,14 @@ new class extends Component {
             <div class="separator my-2"></div>
             <!--end::Menu separator-->
             <!--begin::Menu item-->
+            @hasanyrole(['super_admin', 'shareholder'])
+            <div class="menu-item px-5">
+                <a href="/admin" class="menu-link px-5">
+                    {{ __('menu.admin_dashboard') }}
+                </a>
+            </div>
+            @endhasanyrole
+
             <div class="menu-item px-5">
                 <a href="{{route('dashboard')}}" class="menu-link px-5">
                     {{ __('menu.user_dashboard') }}

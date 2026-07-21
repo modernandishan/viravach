@@ -1,10 +1,298 @@
 <?php
 
+use App\Livewire\Concerns\InteractsWithChatMessages;
+use App\Services\Chat\AiChatService;
+use App\Services\Chat\Exceptions\SupportTransferException;
+use App\Services\Chat\Exceptions\SupportTransferFailureReason;
+use App\Services\Chat\SupportTransferService;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
+use Musonza\Chat\Facades\ChatFacade as Chat;
+use Musonza\Chat\Models\Conversation;
 
 new class extends Component
 {
-    //
+    use InteractsWithChatMessages;
+
+    /**
+     * Stop polling for an AI reply after this many seconds even if none
+     * arrives, so a stuck queue worker doesn't leave the typing indicator
+     * forever.
+     */
+    protected const POLL_TIMEOUT_SECONDS = 60;
+
+    public bool $open = false;
+
+    /**
+     * Which conversation the drawer is currently showing: 'ai' or 'support'.
+     */
+    public string $activeConversation = 'ai';
+
+    public bool $aiLoaded = false;
+
+    public ?int $aiConversationId = null;
+
+    /**
+     * @var array<int, array{id: int, body: string, senderName: string, senderType: ?string, isOwn: bool, time: ?string, type: string}>
+     */
+    public array $aiMessages = [];
+
+    public bool $awaitingReply = false;
+
+    public ?int $pollDeadline = null;
+
+    public bool $supportLoaded = false;
+
+    public ?int $supportConversationId = null;
+
+    /**
+     * @var array<int, array{id: int, body: string, senderName: string, senderType: ?string, isOwn: bool, time: ?string, type: string}>
+     */
+    public array $supportMessages = [];
+
+    /**
+     * Whether the participant has chatted with the AI enough to be offered
+     * a human transfer. Computed once when the drawer opens.
+     */
+    public bool $supportEligible = false;
+
+    public ?string $transferError = null;
+
+    public string $body = '';
+
+    public ?string $sendError = null;
+
+    /**
+     * Resolve the AI conversation (and any existing support conversation)
+     * the first time the drawer is opened. Kept out of mount() so nothing
+     * is queried on pages where the visitor never opens the chat.
+     */
+    public function openDrawer(): void
+    {
+        $this->open = true;
+
+        if ($this->aiLoaded) {
+            return;
+        }
+
+        $participant = $this->participant();
+
+        $this->loadAiConversation($participant);
+        $this->refreshSupportState($participant);
+    }
+
+    /**
+     * Triggered from the drawer's "kt.drawer.hide" event so background
+     * polling (support mode) stops once the visitor closes it.
+     */
+    public function closeDrawer(): void
+    {
+        $this->open = false;
+    }
+
+    public function switchConversation(string $conversation): void
+    {
+        if (in_array($conversation, ['ai', 'support'], true)) {
+            $this->activeConversation = $conversation;
+        }
+    }
+
+    public function transferToSupport(): void
+    {
+        $this->transferError = null;
+
+        $participant = $this->participant();
+
+        try {
+            $conversation = app(SupportTransferService::class)->transfer($participant);
+        } catch (SupportTransferException $e) {
+            $this->transferError = $e->reason === SupportTransferFailureReason::NoAgentAvailable
+                ? __('chat.no_agent_available')
+                : __('chat.transfer_not_eligible');
+
+            return;
+        }
+
+        $this->supportConversationId = $conversation->id;
+        $this->supportMessages = $this->fetchMessages($conversation, $participant);
+        $this->supportLoaded = true;
+        $this->activeConversation = 'support';
+    }
+
+    public function sendMessage(): void
+    {
+        $this->sendError = null;
+
+        $this->validate(
+            ['body' => ['required', 'string', 'max:2000']],
+            [
+                'body.required' => __('chat.message_required'),
+                'body.max' => __('chat.message_too_long'),
+            ],
+        );
+
+        $participant = $this->participant();
+
+        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($participant), 10)) {
+            $this->sendError = __('chat.rate_limited_send');
+
+            return;
+        }
+
+        RateLimiter::hit($this->sendRateLimitKey($participant), 60);
+
+        $body = strip_tags(trim($this->body));
+
+        if ($body === '') {
+            return;
+        }
+
+        if ($this->activeConversation === 'support') {
+            if ($this->supportConversationId === null) {
+                return;
+            }
+
+            $this->sendSupportMessage($participant, $body);
+        } else {
+            $this->sendAiMessage($participant, $body);
+        }
+
+        $this->body = '';
+    }
+
+    protected function sendAiMessage(Model $participant, string $body): void
+    {
+        if ($this->aiConversationId === null) {
+            $this->loadAiConversation($participant);
+        }
+
+        $message = app(AiChatService::class)->sendUserMessage($participant, $body);
+
+        $this->aiMessages[] = $this->presentMessage(
+            $message->load('participation.messageable'),
+            $participant,
+        );
+
+        $this->awaitingReply = true;
+        $this->pollDeadline = now()->addSeconds(self::POLL_TIMEOUT_SECONDS)->timestamp;
+    }
+
+    protected function sendSupportMessage(Model $participant, string $body): void
+    {
+        $conversation = Conversation::findOrFail($this->supportConversationId);
+
+        $message = Chat::message($body)->from($participant)->to($conversation)->send();
+
+        $this->supportMessages[] = $this->presentMessage(
+            $message->load('participation.messageable'),
+            $participant,
+        );
+    }
+
+    /**
+     * Polled while awaiting an AI reply (3s, stops itself once it lands or
+     * times out — see the template), and every 5s while the support tab is
+     * open, since agent replies can arrive anytime with no push channel
+     * until Reverb lands.
+     */
+    public function pollForReply(): void
+    {
+        $participant = $this->participant();
+
+        if ($this->awaitingReply && $this->aiConversationId !== null) {
+            $this->pollAiReply($participant);
+        }
+
+        if ($this->activeConversation === 'support' && $this->supportConversationId !== null) {
+            $this->pollSupportReply($participant);
+        }
+    }
+
+    protected function pollAiReply(Model $participant): void
+    {
+        if ($this->pollDeadline !== null && now()->timestamp >= $this->pollDeadline) {
+            $this->awaitingReply = false;
+
+            return;
+        }
+
+        $lastKnownId = (int) (collect($this->aiMessages)->max('id') ?? 0);
+
+        $newMessages = Conversation::findOrFail($this->aiConversationId)
+            ->messages()
+            ->with('participation.messageable')
+            ->where('id', '>', $lastKnownId)
+            ->orderBy('id')
+            ->get();
+
+        if ($newMessages->isEmpty()) {
+            return;
+        }
+
+        foreach ($newMessages as $newMessage) {
+            $this->aiMessages[] = $this->presentMessage($newMessage, $participant);
+        }
+
+        $this->awaitingReply = false;
+    }
+
+    protected function pollSupportReply(Model $participant): void
+    {
+        $lastKnownId = (int) (collect($this->supportMessages)->max('id') ?? 0);
+
+        $newMessages = Conversation::findOrFail($this->supportConversationId)
+            ->messages()
+            ->with('participation.messageable')
+            ->where('id', '>', $lastKnownId)
+            ->orderBy('id')
+            ->get();
+
+        foreach ($newMessages as $newMessage) {
+            $this->supportMessages[] = $this->presentMessage($newMessage, $participant);
+        }
+    }
+
+    /**
+     * Locates the body of a previously presented message for
+     * InteractsWithChatMessages::toggleTranslation() — message ids are
+     * globally unique, so a single lookup across both tabs is safe.
+     */
+    protected function locateMessageBody(int $messageId): ?string
+    {
+        $message = collect($this->aiMessages)->firstWhere('id', $messageId)
+            ?? collect($this->supportMessages)->firstWhere('id', $messageId);
+
+        return $message['body'] ?? null;
+    }
+
+    protected function loadAiConversation(?Model $participant = null): void
+    {
+        $participant ??= $this->participant();
+
+        $conversation = app(AiChatService::class)->startOrGetConversation($participant);
+
+        $this->aiConversationId = $conversation->id;
+        $this->aiMessages = $this->fetchMessages($conversation, $participant);
+        $this->aiLoaded = true;
+    }
+
+    protected function refreshSupportState(Model $participant): void
+    {
+        $transferService = app(SupportTransferService::class);
+
+        $this->supportEligible = $transferService->isEligible($participant);
+
+        $existing = $transferService->existingConversation($participant);
+
+        if (! $existing) {
+            return;
+        }
+
+        $this->supportConversationId = $existing->id;
+        $this->supportMessages = $this->fetchMessages($existing, $participant);
+        $this->supportLoaded = true;
+    }
 };
 ?>
 
@@ -20,98 +308,73 @@ new class extends Component
     </div>
     <!--end::Menu wrapper-->
     <!--begin::chat drawer-->
-    <div id="kt_drawer_chat" class="bg-body" data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'300px', 'md': '500px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close">
+    {{--
+        wire:ignore.self keeps Livewire from morphing this element's own
+        attributes. Metronic's KTDrawer adds/removes a "drawer-on" class
+        directly on this node when it opens/closes; without ignoring it,
+        Livewire's DOM diffing on every action (send/poll/translate) wipes
+        that class the instant a response comes back, snapping the drawer
+        shut. openDrawer()/closeDrawer() are triggered from Metronic's own
+        "kt.drawer.shown"/"kt.drawer.hide" events (fired on this element)
+        instead of wire:click on the toggle button, so the lazy-load fires
+        exactly once per open, support polling stops once closed, and
+        neither fights the drawer's own open/close toggling.
+    --}}
+    <div
+        id="kt_drawer_chat"
+        class="bg-body"
+        wire:ignore.self
+        x-data
+        x-init="typeof KTEventHandler !== 'undefined' && (() => {
+            KTEventHandler.on($el, 'kt.drawer.shown', () => $wire.openDrawer());
+            KTEventHandler.on($el, 'kt.drawer.hide', () => $wire.closeDrawer());
+        })()"
+        data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'300px', 'md': '500px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close">
         <!--begin::Messenger-->
         <div class="card w-100 border-0 rounded-0" id="kt_drawer_chat_messenger">
             <!--begin::کارت header-->
             <div class="card-header pe-5" id="kt_drawer_chat_messenger_header">
                 <!--begin::Title-->
                 <div class="card-title">
-                    <!--begin::user-->
+                    <!--begin::assistant-->
                     <div class="d-flex justify-content-center flex-column me-3">
-                        <a href="#" class="fs-4 fw-bold text-gray-900 text-hover-primary me-1 mb-2 lh-1">رضا علی ابادی</a>
+                        <span class="fs-4 fw-bold text-gray-900 me-1 mb-2 lh-1">
+                            {{ $activeConversation === 'support' ? __('chat.tab_support') : __('chat.header_title') }}
+                        </span>
                         <!--begin::Info-->
                         <div class="mb-0 lh-1">
                             <span class="badge badge-success badge-circle w-10px h-10px me-1"></span>
-                            <span class="fs-7 fw-semibold text-muted">فعال</span>
+                            <span class="fs-7 fw-semibold text-muted">
+                                {{ $activeConversation === 'support' ? __('chat.support_header_status') : __('chat.header_status') }}
+                            </span>
                         </div>
                         <!--end::Info-->
+
+                        @if($supportConversationId !== null)
+                            <!--begin::Tabs-->
+                            <div class="btn-group btn-group-sm mt-2" role="group">
+                                <button type="button" class="btn btn-sm {{ $activeConversation === 'ai' ? 'btn-primary' : 'btn-light' }}" wire:click="switchConversation('ai')">
+                                    {{ __('chat.tab_ai') }}
+                                </button>
+                                <button type="button" class="btn btn-sm {{ $activeConversation === 'support' ? 'btn-primary' : 'btn-light' }}" wire:click="switchConversation('support')">
+                                    {{ __('chat.tab_support') }}
+                                </button>
+                            </div>
+                            <!--end::Tabs-->
+                        @endif
                     </div>
-                    <!--end::user-->
+                    <!--end::assistant-->
                 </div>
                 <!--end::Title-->
                 <!--begin::کارت toolbar-->
                 <div class="card-toolbar">
-                    <!--begin::Menu-->
-                    <div class="me-0">
-                        <button class="btn btn-sm btn-icon btn-active-color-primary" data-kt-menu-trigger="click" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
-                            <i class="ki-duotone ki-dots-square fs-2">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                            </i>
+                    @if($supportEligible && $supportConversationId === null)
+                        <!--begin::اتصال به پشتیبان-->
+                        <button type="button" class="btn btn-sm btn-light-primary me-2" wire:click="transferToSupport" wire:target="transferToSupport" wire:loading.attr="disabled">
+                            {{ __('chat.connect_to_support') }}
                         </button>
-                        <!--begin::Menu 3-->
-                        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-3" data-kt-menu="true">
-                            <!--begin::Heading-->
-                            <div class="menu-item px-3">
-                                <div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">مخاطبین</div>
-                            </div>
-                            <!--end::Heading-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link px-3" data-bs-toggle="modal" data-bs-target="#kt_modal_users_search">افزودن مخاطب</a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link flex-stack px-3" data-bs-toggle="modal" data-bs-target="#kt_modal_invite_friends">دعوت مخاطبین
-                                    <span class="ms-2" data-bs-toggle="tooltip" title="برای ارسال دعوت نامه یک ایمیل تماس مشخص کنید">
-										<i class="ki-duotone ki-information fs-7">
-											<span class="path1"></span>
-											<span class="path2"></span>
-											<span class="path3"></span>
-										</i>
-									</span></a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3" data-kt-menu-trigger="hover" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}">
-                                <a href="#" class="menu-link px-3">
-                                    <span class="menu-title">گروه ها</span>
-                                    <span class="menu-arrow"></span>
-                                </a>
-                                <!--begin::Menu sub-->
-                                <div class="menu-sub menu-sub-dropdown w-175px py-4">
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-3" data-bs-toggle="tooltip" title="بزودی">ساختن گروه</a>
-                                    </div>
-                                    <!--end::Menu item-->
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-3" data-bs-toggle="tooltip" title="بزودی">دعوت کاربران</a>
-                                    </div>
-                                    <!--end::Menu item-->
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-3" data-bs-toggle="tooltip" title="بزودی">تنظیمات</a>
-                                    </div>
-                                    <!--end::Menu item-->
-                                </div>
-                                <!--end::Menu sub-->
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3 my-1">
-                                <a href="#" class="menu-link px-3" data-bs-toggle="tooltip" title="بزودی">تنظیمات</a>
-                            </div>
-                            <!--end::Menu item-->
-                        </div>
-                        <!--end::Menu 3-->
-                    </div>
-                    <!--end::Menu-->
+                        <!--end::اتصال به پشتیبان-->
+                    @endif
                     <!--begin::Close-->
                     <div class="btn btn-sm btn-icon btn-active-color-primary" id="kt_drawer_chat_close">
                         <i class="ki-duotone ki-cross-square fs-2">
@@ -124,271 +387,61 @@ new class extends Component
                 <!--end::کارت toolbar-->
             </div>
             <!--end::کارت header-->
+            @if($transferError)
+                <div class="text-danger fs-8 px-9 pt-3">{{ $transferError }}</div>
+            @endif
             <!--begin::کارت body-->
             <div class="card-body" id="kt_drawer_chat_messenger_body">
                 <!--begin::پیام ها-->
-                <div class="scroll-y me-n5 pe-5" data-kt-element="messages" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px">
-                    <!--begin::پیام(in)-->
-                    <div class="d-flex justify-content-start mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-start">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                                <!--begin::Details-->
-                                <div class="ms-3">
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary me-1">رضا علی ابادی</a>
-                                    <span class="text-muted fs-7 mb-1">دو دقیقه پیش</span>
-                                </div>
-                                <!--end::Details-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">چقدر احتمال دارد که شرکت ما را به دوستان و خانواده خود پیشنهاد دهید </div>
-                            <!--end::Text-->
+                <div class="scroll-y me-n5 pe-5" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px">
+                    @php $activeMessages = $activeConversation === 'support' ? $supportMessages : $aiMessages; @endphp
+
+                    @if($activeConversation === 'ai' && $aiLoaded && empty($activeMessages) && ! $awaitingReply)
+                        <!--begin::Empty state-->
+                        <div class="text-center text-muted fs-6 py-10 px-5">
+                            {{ __('chat.empty_state') }}
                         </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(in)-->
-                    <!--begin::پیام(out)-->
-                    <div class="d-flex justify-content-end mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-end">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Details-->
-                                <div class="me-3">
-                                    <span class="text-muted fs-7 mb-1">5دقیقه پیش</span>
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary ms-1">شما</a>
-                                </div>
-                                <!--end::Details-->
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
+                        <!--end::Empty state-->
+                    @endif
+
+                    @foreach($activeMessages as $msg)
+                        @include('components.chat-elements.message-item', ['msg' => $msg, 'translations' => $translations])
+                    @endforeach
+
+                    @if($activeConversation === 'ai' && $awaitingReply)
+                        <!--begin::Typing indicator-->
+                        <div class="d-flex justify-content-start mb-10" wire:poll.3s="pollForReply">
+                            <div class="p-3 rounded bg-light-info text-muted fs-7 fst-italic">
+                                {{ __('chat.typing') }}
                             </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-primary text-gray-900 fw-semibold mw-lg-400px text-end" data-kt-element="message-text">سلام ، ما فقط در حال نوشتن هستیم تا به شما اطلاع دهیم که در مخزن گیت هاب مشترک شده اید.</div>
-                            <!--end::Text-->
                         </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(out)-->
-                    <!--begin::پیام(in)-->
-                    <div class="d-flex justify-content-start mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-start">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                                <!--begin::Details-->
-                                <div class="ms-3">
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary me-1">رضا علی ابادی</a>
-                                    <span class="text-muted fs-7 mb-1">یکساعت پیش</span>
-                                </div>
-                                <!--end::Details-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">بله فهمیدم</div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(in)-->
-                    <!--begin::پیام(out)-->
-                    <div class="d-flex justify-content-end mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-end">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Details-->
-                                <div class="me-3">
-                                    <span class="text-muted fs-7 mb-1">2 ساعت</span>
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary ms-1">شما</a>
-                                </div>
-                                <!--end::Details-->
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-primary text-gray-900 fw-semibold mw-lg-400px text-end" data-kt-element="message-text">شما برای همه موارد اعلان دریافت خواهید کرد ، درخواستها را بکشید!</div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(out)-->
-                    <!--begin::پیام(in)-->
-                    <div class="d-flex justify-content-start mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-start">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                                <!--begin::Details-->
-                                <div class="ms-3">
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary me-1">رضا علی ابادی</a>
-                                    <span class="text-muted fs-7 mb-1">3 ساعت</span>
-                                </div>
-                                <!--end::Details-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">شما می توانید با کلیک بر روی اینجا فوراً این مخزن را تماشا کنید:
-                                <a href="https://keenthemes.com">satrasweb.ir</a></div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(in)-->
-                    <!--begin::پیام(out)-->
-                    <div class="d-flex justify-content-end mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-end">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Details-->
-                                <div class="me-3">
-                                    <span class="text-muted fs-7 mb-1">4 ساعت</span>
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary ms-1">شما</a>
-                                </div>
-                                <!--end::Details-->
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-primary text-gray-900 fw-semibold mw-lg-400px text-end" data-kt-element="message-text">بیشتر دوره های بازرگانی خریداری شده در طول این فروش!</div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(out)-->
-                    <!--begin::پیام(in)-->
-                    <div class="d-flex justify-content-start mb-10">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-start">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                                <!--begin::Details-->
-                                <div class="ms-3">
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary me-1">رضا علی ابادی</a>
-                                    <span class="text-muted fs-7 mb-1">5 ساعت</span>
-                                </div>
-                                <!--end::Details-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">شرکت BBQ برای جشن گرفتن دستاوردها و اهداف سه ماهه آخر. غذا و نوشیدنی ارائه شده است</div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(in)-->
-                    <!--begin::پیام(template for out)-->
-                    <div class="d-flex justify-content-end mb-10 d-none" data-kt-element="template-out">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-end">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Details-->
-                                <div class="me-3">
-                                    <span class="text-muted fs-7 mb-1">فقط</span>
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary ms-1">شما</a>
-                                </div>
-                                <!--end::Details-->
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-1.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-primary text-gray-900 fw-semibold mw-lg-400px text-end" data-kt-element="message-text"></div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(template for out)-->
-                    <!--begin::پیام(template for in)-->
-                    <div class="d-flex justify-content-start mb-10 d-none" data-kt-element="template-in">
-                        <!--begin::Wrapper-->
-                        <div class="d-flex flex-column align-items-start">
-                            <!--begin::user-->
-                            <div class="d-flex align-items-center mb-2">
-                                <!--begin::Avatar-->
-                                <div class="symbol symbol-35px symbol-circle">
-                                    <img alt="Pic" src="{{ asset('theme/1/media/avatars/300-25.jpg') }}" />
-                                </div>
-                                <!--end::Avatar-->
-                                <!--begin::Details-->
-                                <div class="ms-3">
-                                    <a href="#" class="fs-5 fw-bold text-gray-900 text-hover-primary me-1">رضا علی ابادی</a>
-                                    <span class="text-muted fs-7 mb-1">فقط</span>
-                                </div>
-                                <!--end::Details-->
-                            </div>
-                            <!--end::user-->
-                            <!--begin::Text-->
-                            <div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">Right before vacation season we have the next Bigمعامله for you.</div>
-                            <!--end::Text-->
-                        </div>
-                        <!--end::Wrapper-->
-                    </div>
-                    <!--end::پیام(template for in)-->
+                        <!--end::Typing indicator-->
+                    @endif
+
+                    @if($open && $activeConversation === 'support' && $supportConversationId !== null)
+                        <div wire:poll.5s="pollForReply" class="d-none"></div>
+                    @endif
                 </div>
                 <!--end::پیام ها-->
             </div>
             <!--end::کارت body-->
             <!--begin::کارت footer-->
             <div class="card-footer pt-4" id="kt_drawer_chat_messenger_footer">
+                @error('body')
+                    <div class="text-danger fs-8 mb-2">{{ $message }}</div>
+                @enderror
+                @if($sendError)
+                    <div class="text-danger fs-8 mb-2">{{ $sendError }}</div>
+                @endif
                 <!--begin::Input-->
-                <textarea class="form-control form-control-flush mb-3" rows="1" data-kt-element="input" placeholder="نوشتن پیام"></textarea>
+                <textarea class="form-control form-control-flush mb-3" rows="1" wire:model="body" wire:keydown.enter.prevent="sendMessage" placeholder="{{ __('chat.placeholder') }}"></textarea>
                 <!--end::Input-->
                 <!--begin:Toolbar-->
-                <div class="d-flex flex-stack">
-                    <!--begin::Actions-->
-                    <div class="d-flex align-items-center me-2">
-                        <button class="btn btn-sm btn-icon btn-active-light-primary me-1" type="button" data-bs-toggle="tooltip" title="بزودی">
-                            <i class="ki-duotone ki-paper-clip fs-3"></i>
-                        </button>
-                        <button class="btn btn-sm btn-icon btn-active-light-primary me-1" type="button" data-bs-toggle="tooltip" title="بزودی">
-                            <i class="ki-duotone ki-cloud-add fs-3">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                        </button>
-                    </div>
-                    <!--end::Actions-->
+                <div class="d-flex flex-stack justify-content-end">
                     <!--begin::ارسال-->
-                    <button class="btn btn-primary" type="button" data-kt-element="send">ارسال</button>
+                    <button class="btn btn-primary" type="button" wire:click="sendMessage" wire:target="sendMessage" wire:loading.attr="disabled">
+                        {{ __('chat.send') }}
+                    </button>
                     <!--end::ارسال-->
                 </div>
                 <!--end::Toolbar-->

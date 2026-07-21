@@ -2,11 +2,15 @@
 
 namespace App\Filament\Resources\Companies\Schemas;
 
-use App\Enums\CompanyStatus;
+use App\Enums\CompanyReviewStatus;
+use App\Enums\CompanyType;
 use App\Filament\Schemas\Components\SeoMetaSection;
+use App\Models\Company;
 use App\Models\CompanyCategory;
 use App\Models\Country;
+use App\Models\Plan;
 use App\Models\User;
+use App\Services\CompanySubscriptionService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
@@ -48,9 +52,10 @@ class CompanyForm
                             ->unique(ignoreRecord: true)
                             ->maxLength(255)
                             ->helperText('فقط انگلیسی — برای آدرس‌های سئوپسند'),
-                        TextInput::make('legal_type')
+                        Select::make('legal_type')
                             ->label('نوع حقوقی')
-                            ->maxLength(255),
+                            ->options(CompanyType::class)
+                            ->native(false),
                         TextInput::make('registration_number')
                             ->label('شماره ثبت')
                             ->maxLength(255),
@@ -122,18 +127,65 @@ class CompanyForm
                     ])
                     ->columns(2),
 
-                Section::make('وضعیت')
+                Section::make('اشتراک و پلن')
                     ->schema([
-                        Select::make('status')
-                            ->label('وضعیت')
-                            ->options(CompanyStatus::class)
-                            ->default(CompanyStatus::Draft)
+                        Select::make('plan_id')
+                            ->label('پلن فعال')
+                            ->options(fn () => Plan::query()
+                                ->where('is_active', true)
+                                ->orderBy('sort_order')
+                                ->pluck('name', 'id'))
+                            ->default(fn () => Plan::where('slug', 'free')->value('id'))
+                            ->required()
+                            ->searchable()
+                            ->native(false)
+                            // Not a real column — Company has no plan_id;
+                            // subscriptions live in the package's
+                            // `plan_subscriptions` table. Loaded/saved via
+                            // the same hooks Filament uses for actual
+                            // relationships (see the categories field
+                            // above), routed through
+                            // CompanySubscriptionService::switchToPlan() so
+                            // both admin and user-facing subscription
+                            // changes go through one code path.
+                            ->dehydrated(false)
+                            ->loadStateFromRelationshipsUsing(function (Select $component) {
+                                $component->state($component->getRecord()->activeSubscription()?->plan_id);
+                            })
+                            ->saveRelationshipsUsing(function (Select $component) {
+                                $planId = $component->getState();
+
+                                if (! $planId) {
+                                    return;
+                                }
+
+                                /** @var Company $record */
+                                $record = $component->getRecord();
+                                $plan = Plan::findOrFail($planId);
+
+                                if ($record->activeSubscription()?->plan_id === $plan->id) {
+                                    return;
+                                }
+
+                                app(CompanySubscriptionService::class)->switchToPlan($record, $plan);
+                            }),
+                    ])
+                    ->columns(1),
+
+                Section::make('وضعیت بررسی')
+                    ->schema([
+                        Select::make('review_status')
+                            ->label('وضعیت بررسی')
+                            ->options(CompanyReviewStatus::class)
+                            ->default(CompanyReviewStatus::PendingReview)
                             ->live()
                             ->native(false)
                             ->required(),
-                        DateTimePicker::make('published_at')
-                            ->label('تاریخ انتشار')
-                            ->jalali(),
+                        DateTimePicker::make('reviewed_at')
+                            ->label('تاریخ بررسی')
+                            ->jalali()
+                            ->disabled()
+                            ->dehydrated(false),
                         Toggle::make('is_verified')
                             ->label('تأیید شده'),
                         Toggle::make('is_featured')
@@ -142,7 +194,7 @@ class CompanyForm
                             ->label('دلیل رد')
                             ->rows(3)
                             ->columnSpanFull()
-                            ->visible(fn (Get $get): bool => $get('status') === CompanyStatus::Rejected->value),
+                            ->visible(fn (Get $get): bool => $get('review_status') === CompanyReviewStatus::Rejected->value),
                     ])
                     ->columns(2),
 
@@ -204,10 +256,6 @@ class CompanyForm
                                         ->fileAttachmentsDisk('s3')
                                         ->fileAttachmentsDirectory("companies/{$code}")
                                         ->fileAttachmentsVisibility('public')
-                                        ->columnSpanFull(),
-                                    Textarea::make("main_products.{$code}")
-                                        ->label('محصولات اصلی')
-                                        ->rows(3)
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)

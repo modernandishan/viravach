@@ -24,5 +24,6 @@ return [
     'complete_profile' => 'Profili tamamla',
     'edit_profile' => 'Profili düzenle',
     'create_new_company' => 'Yeni şirket oluştur',
+    'admin_dashboard' => 'Yönetici Paneli',
 
 ];

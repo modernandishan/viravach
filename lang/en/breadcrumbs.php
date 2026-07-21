@@ -1,4 +1,5 @@
 <?php
+
 return [
     'home' => 'Home',
     'terms_and_conditions' => 'Terms and Conditions',
@@ -9,4 +10,11 @@ return [
     'dashboard' => 'Dashboard',
     'profile' => 'Profile',
     'settings' => 'Settings',
-    'home_headline' => 'Virawatch | Trade Without Borders',];
+    'my_companies' => 'My Companies',
+    'create_company' => 'Create Company',
+    'edit_company' => 'Edit Company',
+    'subscriptions' => 'Subscriptions & Plans',
+    'payments' => 'Payment History',
+    'company_views' => 'Company Visit Statistics',
+    'pricing' => 'Pricing',
+    'home_headline' => 'Virawatch | Trade Without Borders', ];

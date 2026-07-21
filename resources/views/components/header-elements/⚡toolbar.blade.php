@@ -8,19 +8,19 @@ new class extends Component {
 ?>
 <div class="topbar d-flex align-items-stretch flex-shrink-0">
     <!--begin::search-->
-    <livewire:header-elements.tools.search />
+    {{--<livewire:header-elements.tools.search />--}}
     <!--end::search-->
     <!--begin::activities-->
-    <livewire:header-elements.tools.activities />
+    {{--<livewire:header-elements.tools.activities />--}}
     <!--end::activities-->
     <!--begin::notifications-->
-    <livewire:header-elements.tools.notifications />
+    {{--<livewire:header-elements.tools.notifications />--}}
     <!--end::notifications-->
     <!--begin::chat-->
     <livewire:header-elements.tools.chat />
     <!--end::chat-->
     <!--begin::Quick links-->
-    <livewire:header-elements.tools.quick-links />
+    {{--<livewire:header-elements.tools.quick-links />--}}
     <!--end::Quick links-->
     <!--begin::Theme mode-->
     <livewire:header-elements.tools.theme-mode />

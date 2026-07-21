@@ -24,5 +24,6 @@ return [
     'complete_profile' => 'تکمیل پروفایل',
     'edit_profile' => 'ویرایش پروفایل',
     'create_new_company' => 'ایجاد شرکت جدید',
+    'admin_dashboard' => 'پیشخوان مدیریت',
 
 ];

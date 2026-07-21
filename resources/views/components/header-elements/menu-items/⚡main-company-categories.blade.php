@@ -63,10 +63,10 @@ new class extends Component
     <!--begin:صفحه فرود-->
     <div class="d-flex flex-stack flex-wrap flex-lg-nowrap gap-2 mx-5">
         <div class="d-flex flex-column me-5">
-            <div class="fs-6 fw-bold text-gray-800">صفحه فرود</div>
-            <div class="fs-7 fw-semibold text-muted">تک صفحه فرود نمونه با قیمت</div>
+            <div class="fs-6 fw-bold text-gray-800">اشتراک ها</div>
+            {{--<div class="fs-7 fw-semibold text-muted">تک صفحه فرود نمونه با قیمت</div>--}}
         </div>
-        <a href="landing.html" class="btn btn-sm btn-primary fw-bold">کاوش کنید</a>
+        <a href="{{route('pricing')}}" class="btn btn-sm btn-primary fw-bold">پلن ها</a>
     </div>
     <!--end:صفحه فرود-->
 </div>

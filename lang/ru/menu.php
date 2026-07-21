@@ -24,5 +24,6 @@ return [
     'complete_profile' => 'Заполнить профиль',
     'edit_profile' => 'Редактировать профиль',
     'create_new_company' => 'Создать новую компанию',
+    'admin_dashboard' => 'Панель администратора',
 
 ];

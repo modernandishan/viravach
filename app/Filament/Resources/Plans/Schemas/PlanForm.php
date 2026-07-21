@@ -83,8 +83,8 @@ class PlanForm
                             ->label('واحد پول')
                             ->required()
                             ->length(3)
-                            ->default('USD')
-                            ->helperText('کد سه‌حرفی واحد پول، مطابق استاندارد ISO 4217 (مثلا USD، IRR).'),
+                            ->default('IRT')
+                            ->helperText('واحد پول سایت همیشه تومان است؛ کد سه‌حرفی IRT را تغییر ندهید مگر برای مقاصد آرشیوی.'),
                     ])
                     ->columns(3),
 

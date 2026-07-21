@@ -2,8 +2,9 @@
 
 namespace App\Filament\Resources\Companies\Tables;
 
-use App\Enums\CompanyStatus;
+use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
+use App\Services\CompanyPublicationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -45,9 +46,12 @@ class CompaniesTable
                     ->label('کاربر')
                     ->state(fn (Company $record) => trim($record->user->name.' '.$record->user->family))
                     ->searchable(false),
-                TextColumn::make('status')
-                    ->label('وضعیت')
+                TextColumn::make('review_status')
+                    ->label('وضعیت بررسی')
                     ->badge(),
+                TextColumn::make('plan')
+                    ->label('پلن')
+                    ->state(fn (Company $record) => $record->activeSubscription()?->plan?->name ?? '—'),
                 IconColumn::make('is_verified')
                     ->label('تأیید شده')
                     ->boolean(),
@@ -62,53 +66,14 @@ class CompaniesTable
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                SelectFilter::make('status')
-                    ->label('وضعیت')
-                    ->options(CompanyStatus::class),
+                SelectFilter::make('review_status')
+                    ->label('وضعیت بررسی')
+                    ->options(CompanyReviewStatus::class),
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                Action::make('approve')
-                    ->label('تأیید')
-                    ->icon(Heroicon::CheckCircle)
-                    ->color('success')
-                    ->visible(fn (Company $record): bool => $record->status !== CompanyStatus::Approved)
-                    ->authorize('update')
-                    ->requiresConfirmation()
-                    ->action(function (Company $record) {
-                        $record->update([
-                            'status' => CompanyStatus::Approved,
-                            'published_at' => $record->published_at ?? now(),
-                        ]);
-
-                        Notification::make()
-                            ->title('شرکت تأیید شد')
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('reject')
-                    ->label('رد')
-                    ->icon(Heroicon::XCircle)
-                    ->color('danger')
-                    ->visible(fn (Company $record): bool => $record->status !== CompanyStatus::Rejected)
-                    ->authorize('update')
-                    ->schema([
-                        Textarea::make('rejection_reason')
-                            ->label('دلیل رد')
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->action(function (array $data, Company $record) {
-                        $record->update([
-                            'status' => CompanyStatus::Rejected,
-                            'rejection_reason' => $data['rejection_reason'],
-                        ]);
-
-                        Notification::make()
-                            ->title('شرکت رد شد')
-                            ->success()
-                            ->send();
-                    }),
+                static::approveAction(),
+                static::rejectAction(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -118,5 +83,70 @@ class CompaniesTable
                     RestoreBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Approving stamps the review fields and (re)publishes the public
+     * snapshot. Guarded by the Approve:Company Shield permission via
+     * CompanyPolicy::approve().
+     */
+    public static function approveAction(): Action
+    {
+        return Action::make('approve')
+            ->label('تأیید')
+            ->icon(Heroicon::CheckCircle)
+            ->color('success')
+            ->visible(fn (Company $record): bool => $record->review_status === CompanyReviewStatus::PendingReview)
+            ->authorize('approve')
+            ->requiresConfirmation()
+            ->modalHeading('تأیید شرکت')
+            ->modalDescription('با تأیید، نسخه فعلی شرکت به‌عنوان نسخه عمومی منتشر می‌شود.')
+            ->action(function (Company $record) {
+                $record->update([
+                    'review_status' => CompanyReviewStatus::Approved,
+                    'reviewed_at' => now(),
+                    'rejection_reason' => null,
+                ]);
+
+                app(CompanyPublicationService::class)->publish($record);
+
+                Notification::make()
+                    ->title('شرکت تأیید و منتشر شد')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Rejecting only flags the draft; an already published snapshot keeps
+     * serving publicly. Guarded by the Reject:Company Shield permission via
+     * CompanyPolicy::reject().
+     */
+    public static function rejectAction(): Action
+    {
+        return Action::make('reject')
+            ->label('رد')
+            ->icon(Heroicon::XCircle)
+            ->color('danger')
+            ->visible(fn (Company $record): bool => $record->review_status === CompanyReviewStatus::PendingReview)
+            ->authorize('reject')
+            ->schema([
+                Textarea::make('rejection_reason')
+                    ->label('دلیل رد')
+                    ->required()
+                    ->rows(3),
+            ])
+            ->action(function (array $data, Company $record) {
+                $record->update([
+                    'review_status' => CompanyReviewStatus::Rejected,
+                    'reviewed_at' => now(),
+                    'rejection_reason' => $data['rejection_reason'],
+                ]);
+
+                Notification::make()
+                    ->title('شرکت رد شد')
+                    ->success()
+                    ->send();
+            });
     }
 }

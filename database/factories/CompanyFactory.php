@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\CompanyStatus;
+use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -30,17 +30,24 @@ class CompanyFactory extends Factory
             'established_at' => null,
             'description' => ['en' => fake()->paragraphs(3, true), 'fa' => fake()->paragraphs(3, true)],
             'summary' => null,
-            'main_products' => null,
             'website' => null,
             'email' => fake()->companyEmail(),
             'phones' => null,
             'social_links' => null,
-            'status' => CompanyStatus::Draft,
+            'review_status' => CompanyReviewStatus::PendingReview,
+            'reviewed_at' => null,
             'rejection_reason' => null,
             'is_verified' => false,
             'is_featured' => false,
             'employee_range' => null,
-            'published_at' => null,
         ];
+    }
+
+    public function approved(): static
+    {
+        return $this->state(fn (): array => [
+            'review_status' => CompanyReviewStatus::Approved,
+            'reviewed_at' => now(),
+        ]);
     }
 }

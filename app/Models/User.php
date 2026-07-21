@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Musonza\Chat\Traits\Messageable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -30,6 +31,7 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
 {
     use HasFactory, Notifiable;
     use HasRoles, HasTranslations, InteractsWithMedia;
+    use Messageable;
 
     public function canAccessPanel(Panel $panel): bool
     {
@@ -56,6 +58,7 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'deactivated_at' => 'datetime',
+            'trial_used_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -95,9 +98,25 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
         return $this->hasMany(Company::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);
+    }
+
+    /**
+     * Each user may assign the 14-day Pro Plus trial to exactly one of
+     * their companies, once ever. Tracked here (not derived from active
+     * subscriptions) so it survives deletion of the company it was granted
+     * to, or the trial's automatic revert to Free after it expires.
+     */
+    public function hasUsedTrial(): bool
+    {
+        return $this->trial_used_at !== null;
     }
 
     /**
@@ -150,5 +169,13 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
         ));
 
         return (int) round($earned);
+    }
+
+    public function getParticipantDetailsAttribute(): array
+    {
+        return [
+            'name' => trim($this->name.' '.$this->family),
+            'type' => 'user',
+        ];
     }
 }

@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Models;
 
-use App\Enums\CompanyStatus;
+use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Models\CompanyAddress;
 use App\Models\CompanyBrand;
 use App\Models\CompanyCategory;
+use App\Models\CompanyPublication;
 use App\Models\Country;
+use App\Models\Plan;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -41,11 +44,11 @@ class CompanyTest extends TestCase
         $this->assertSame('<p>About us</p>', $company->getTranslation('description', 'en'));
     }
 
-    public function test_status_is_cast_to_enum(): void
+    public function test_review_status_is_cast_to_enum(): void
     {
-        $company = Company::factory()->create(['status' => CompanyStatus::Pending]);
+        $company = Company::factory()->create(['review_status' => CompanyReviewStatus::PendingReview]);
 
-        $this->assertSame(CompanyStatus::Pending, $company->status);
+        $this->assertSame(CompanyReviewStatus::PendingReview, $company->review_status);
     }
 
     public function test_belongs_to_user(): void
@@ -112,32 +115,34 @@ class CompanyTest extends TestCase
         $this->assertCount(2, $company->brands);
     }
 
-    public function test_scope_approved_requires_status_and_published_at(): void
+    public function test_publication_relationship(): void
     {
-        Company::factory()->create(['status' => CompanyStatus::Draft, 'published_at' => now()]);
-        Company::factory()->create(['status' => CompanyStatus::Approved, 'published_at' => null]);
-        $approved = Company::factory()->create(['status' => CompanyStatus::Approved, 'published_at' => now()]);
+        $company = Company::factory()->create();
+        $publication = CompanyPublication::factory()->create(['company_id' => $company->id]);
 
-        $result = Company::approved()->get();
-
-        $this->assertCount(1, $result);
-        $this->assertTrue($result->first()->is($approved));
+        $this->assertTrue($company->publication->is($publication));
     }
 
-    public function test_scope_active_excludes_companies_scheduled_in_the_future(): void
+    public function test_the_free_plan_is_assigned_automatically_when_a_plan_is_seeded(): void
     {
-        Company::factory()->create([
-            'status' => CompanyStatus::Approved,
-            'published_at' => now()->addDay(),
-        ]);
-        $live = Company::factory()->create([
-            'status' => CompanyStatus::Approved,
-            'published_at' => now()->subDay(),
-        ]);
+        $this->seed(PlanSeeder::class);
 
-        $result = Company::active()->get();
+        $company = Company::factory()->create();
 
-        $this->assertCount(1, $result);
-        $this->assertTrue($result->first()->is($live));
+        $freePlan = Plan::where('slug', 'free')->firstOrFail();
+        $this->assertTrue($company->subscribedTo($freePlan->id));
+    }
+
+    public function test_publication_survives_force_deleting_the_company(): void
+    {
+        $company = Company::factory()->create();
+        $publication = CompanyPublication::factory()->create(['company_id' => $company->id]);
+
+        $company->forceDelete();
+
+        $publication->refresh();
+
+        $this->assertNull($publication->company_id);
+        $this->assertDatabaseHas('company_publications', ['id' => $publication->id]);
     }
 }

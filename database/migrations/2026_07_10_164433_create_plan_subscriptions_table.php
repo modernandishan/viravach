@@ -16,17 +16,23 @@ return new class extends Migration
             $table->morphs('subscriber');
             $table->foreignIdFor(config('laravel-subscriptions.models.plan'));
             $table->json('name');
-            $table->string('slug')->unique();
+            // Slugs are only unique per-subscriber (see HasSlug's
+            // extraScope()), not globally, so no unique index here.
+            $table->string('slug');
             $table->json('description')->nullable();
             $table->string('timezone')->nullable();
 
             $table->dateTime('trial_ends_at')->nullable();
             $table->dateTime('starts_at')->nullable();
             $table->dateTime('ends_at')->nullable();
-            $table->dateTime('cancels_at')->nullable();
             $table->dateTime('canceled_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            // Marks subscriptions created via the one-time 14-day Pro Plus
+            // trial grant — see
+            // App\Services\CompanySubscriptionService::revertExpiredTrials().
+            $table->boolean('is_trial')->default(false);
         });
     }
 

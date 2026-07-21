@@ -24,4 +24,5 @@ return [
     'complete_profile' => 'Complete profile',
     'edit_profile' => 'Edit profile',
     'create_new_company' => 'Create new company',
+    'admin_dashboard' => 'Admin Dashboard',
 ];

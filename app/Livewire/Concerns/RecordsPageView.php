@@ -2,20 +2,26 @@
 
 namespace App\Livewire\Concerns;
 
-use App\Models\Page;
+use CyrildeWit\EloquentViewable\Contracts\Viewable;
 use Illuminate\Support\Facades\Cache;
 
 trait RecordsPageView
 {
-    protected function recordPageView(Page $page): void
+    protected function recordPageView(Viewable $viewable): void
     {
-        $cooldownKey = "page-view-cooldown:{$page->getKey()}:".request()->session()->getId();
+        // Livewire::test() mounts components directly, without the
+        // StartSession middleware that a real HTTP request goes through, so
+        // request()->session() isn't always available. Fall back to the IP
+        // for the cooldown discriminator in that case.
+        $visitor = request()->hasSession() ? request()->session()->getId() : request()->ip();
+
+        $cooldownKey = 'page-view-cooldown:'.get_class($viewable).":{$viewable->getKey()}:{$visitor}";
 
         if (Cache::has($cooldownKey)) {
             return;
         }
 
-        views($page)->record();
+        views($viewable)->record();
 
         Cache::put($cooldownKey, true, now()->addMinutes(60));
     }

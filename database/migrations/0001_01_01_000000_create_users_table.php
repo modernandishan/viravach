@@ -19,6 +19,12 @@ return new class extends Migration
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+            $table->timestamp('deactivated_at')->nullable();
+
+            // Each user may assign the one-time 14-day Pro Plus trial to
+            // exactly one of their companies, ever — see
+            // App\Services\CompanySubscriptionService::startProPlusTrial().
+            $table->timestamp('trial_used_at')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

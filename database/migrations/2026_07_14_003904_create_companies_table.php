@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CompanyReviewStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -28,24 +29,24 @@ return new class extends Migration
 
             $table->json('description');
             $table->json('summary')->nullable();
-            $table->json('main_products')->nullable();
 
             $table->string('website')->nullable();
             $table->string('email')->nullable();
             $table->json('phones')->nullable();
             $table->json('social_links')->nullable();
 
-            $table->string('status')->default('draft')->index();
+            $table->string('review_status')->default(CompanyReviewStatus::PendingReview->value)->index();
             $table->text('rejection_reason')->nullable();
 
             $table->boolean('is_verified')->default(false);
             $table->boolean('is_featured')->default(false)->index();
 
             $table->string('employee_range')->nullable();
-            $table->timestamp('published_at')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
+
+            $table->timestamp('reviewed_at')->nullable();
         });
     }
 

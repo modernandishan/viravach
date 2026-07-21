@@ -18,8 +18,12 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->json('description')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->decimal('price')->default('0.00');
-            $table->decimal('signup_fee')->default('0.00');
+
+            // Toman prices run into the tens/hundreds of millions; the
+            // vendor package's default decimal(8,2) only holds up to
+            // 999999.99.
+            $table->decimal('price', 14, 2)->default('0.00');
+            $table->decimal('signup_fee', 14, 2)->default('0.00');
             $table->string('currency', 3);
             $table->unsignedSmallInteger('trial_period')->default(0);
             $table->string('trial_interval')->default(Interval::DAY->value);

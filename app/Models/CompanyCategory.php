@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSeo;
+use CyrildeWit\EloquentViewable\Contracts\Viewable;
+use CyrildeWit\EloquentViewable\InteractsWithViews;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -24,18 +28,20 @@ use Staudenmeir\LaravelAdjacencyList\Eloquent\HasRecursiveRelationships;
 ])]
 #[Translatable([
     'title',
-    'description'
+    'description',
 ])]
-class CompanyCategory extends Model implements HasMedia
+class CompanyCategory extends Model implements HasMedia, Viewable
 {
-    use InteractsWithRichContent;
     use HasFactory,
         HasRecursiveRelationships,
+        HasSeo,
         HasTranslations,
         InteractsWithMedia,
+        InteractsWithViews,
         SoftDeletes;
+    use InteractsWithRichContent;
 
-    //public array $translatable = ['title', 'description'];
+    // public array $translatable = ['title', 'description'];
 
     protected function casts(): array
     {
@@ -56,5 +62,17 @@ class CompanyCategory extends Model implements HasMedia
         $this->addMediaConversion('webp')
             ->format('webp')
             ->queued();
+    }
+
+    protected function getSeoFallbackTitle(string $locale): ?string
+    {
+        return $this->getTranslation('title', $locale, false);
+    }
+
+    protected function getSeoFallbackDescription(string $locale): ?string
+    {
+        $description = $this->getTranslation('description', $locale, false);
+
+        return $description ? Str::limit(strip_tags($description), 160) : null;
     }
 }

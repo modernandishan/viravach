@@ -26,5 +26,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CompanyCategorySeeder::class);
         $this->call(HomePageSeeder::class);
         $this->call(PlanSeeder::class);
+        $this->call(AiAssistantSeeder::class);
     }
 }

@@ -39,7 +39,7 @@ return new class extends Migration
             $table->unsignedBigInteger('population')->nullable();
 
             $table->string('flag_emoji', 10)->nullable();
-            $table->string('flag_svg_path')->nullable();
+            // $table->string('flag_svg_path')->nullable();
 
             $table->boolean('is_active')->default(true)->index();
 
