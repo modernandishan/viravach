@@ -24,7 +24,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class CompanyForm
@@ -178,7 +177,6 @@ class CompanyForm
                             ->label('وضعیت بررسی')
                             ->options(CompanyReviewStatus::class)
                             ->default(CompanyReviewStatus::PendingReview)
-                            ->live()
                             ->native(false)
                             ->required(),
                         DateTimePicker::make('reviewed_at')
@@ -190,11 +188,6 @@ class CompanyForm
                             ->label('تأیید شده'),
                         Toggle::make('is_featured')
                             ->label('ویژه'),
-                        Textarea::make('rejection_reason')
-                            ->label('دلیل رد')
-                            ->rows(3)
-                            ->columnSpanFull()
-                            ->visible(fn (Get $get): bool => $get('review_status') === CompanyReviewStatus::Rejected->value),
                     ])
                     ->columns(2),
 
@@ -214,15 +207,6 @@ class CompanyForm
                             ->visibility('public')
                             ->image()
                             ->imageEditor(),
-                        SpatieMediaLibraryFileUpload::make('gallery')
-                            ->label('گالری تصاویر')
-                            ->collection('gallery')
-                            ->disk('s3')
-                            ->visibility('public')
-                            ->image()
-                            ->multiple()
-                            ->reorderable()
-                            ->columnSpanFull(),
                         SpatieMediaLibraryFileUpload::make('certificates')
                             ->label('گواهی‌نامه‌ها')
                             ->collection('certificates')

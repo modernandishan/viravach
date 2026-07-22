@@ -41,7 +41,6 @@ use Spatie\Translatable\HasTranslations;
     'social_links',
     'review_status',
     'reviewed_at',
-    'rejection_reason',
     'is_verified',
     'is_featured',
     'employee_range',
@@ -102,7 +101,6 @@ class Company extends Model implements HasMedia
     {
         $this->addMediaCollection('logo')->singleFile();
         $this->addMediaCollection('featured_image')->singleFile();
-        $this->addMediaCollection('gallery');
         $this->addMediaCollection('certificates');
     }
 

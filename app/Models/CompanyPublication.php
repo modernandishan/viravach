@@ -76,7 +76,6 @@ class CompanyPublication extends Model implements HasMedia, Viewable
     {
         $this->addMediaCollection('logo')->singleFile();
         $this->addMediaCollection('featured_image')->singleFile();
-        $this->addMediaCollection('gallery');
         $this->addMediaCollection('certificates');
     }
 

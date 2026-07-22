@@ -30,6 +30,7 @@ use Spatie\Translatable\HasTranslations;
     'sitemap_include',
     'sitemap_priority',
     'sitemap_change_freq',
+    'is_cornerstone',
 ])]
 #[Translatable([
     'meta_title',
@@ -48,11 +49,12 @@ class SeoMeta extends Model implements HasMedia
     protected function casts(): array
     {
         return [
-            'schema_extra'      => 'array',
-            'robots_index'      => 'boolean',
-            'robots_follow'     => 'boolean',
-            'sitemap_include'   => 'boolean',
-            'sitemap_priority'  => 'decimal:1',
+            'schema_extra' => 'array',
+            'robots_index' => 'boolean',
+            'robots_follow' => 'boolean',
+            'sitemap_include' => 'boolean',
+            'sitemap_priority' => 'decimal:1',
+            'is_cornerstone' => 'boolean',
         ];
     }
 

@@ -1,6 +1,6 @@
-@props(['logo' => null, 'gallery' => [], 'existingLogoUrl' => null, 'existingGalleryUrls' => []])
+@props(['logo' => null, 'existingLogoUrl' => null])
 
-<div class="fv-row mb-10">
+<div class="fv-row mb-0">
     <label class="form-label">{{ __('companies.field_logo') }}</label>
     <div class="d-flex align-items-center gap-5">
         <div class="symbol symbol-75px bg-light">
@@ -18,28 +18,5 @@
                 <div class="invalid-feedback d-block">{{ $message }}</div>
             @enderror
         </div>
-    </div>
-</div>
-
-<div class="fv-row mb-0">
-    <label class="form-label">{{ __('companies.field_gallery') }}</label>
-    <input type="file" wire:model="gallery" multiple accept="image/png,image/jpeg,image/webp"
-           class="form-control form-control-solid @error('gallery.*') is-invalid @enderror" />
-    <div class="form-text">{{ __('companies.field_gallery_hint') }}</div>
-    @error('gallery.*')
-        <div class="invalid-feedback d-block">{{ $message }}</div>
-    @enderror
-
-    <div class="d-flex flex-wrap gap-3 mt-3">
-        @foreach ($gallery as $image)
-            <div class="symbol symbol-75px bg-light">
-                <img src="{{ $image->temporaryUrl() }}" alt="" class="p-2">
-            </div>
-        @endforeach
-        @foreach ($existingGalleryUrls as $url)
-            <div class="symbol symbol-75px bg-light">
-                <img src="{{ $url }}" alt="" class="p-2">
-            </div>
-        @endforeach
     </div>
 </div>

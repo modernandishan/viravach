@@ -22,6 +22,11 @@
     @endunless
     {!! \Artesaos\SEOTools\Facades\SEOTools::generate() !!}
 
+    @foreach (config('laravellocalization.supportedLocales') as $hreflangCode => $hreflangLocale)
+        <link rel="alternate" hreflang="{{ $hreflangCode }}" href="{{ LaravelLocalization::getLocalizedURL($hreflangCode, null, [], true) }}">
+    @endforeach
+    <link rel="alternate" hreflang="x-default" href="{{ LaravelLocalization::getLocalizedURL(LaravelLocalization::getDefaultLocale(), null, [], true) }}">
+
     <!--begin::Fonts(mandatory for all pages)-->
     {{--<link rel="stylesheet" href="https://fonts.googleapis.com/cssfamily=Inter:300,400,500,600,700" />--}}
     <!--end::Fonts-->

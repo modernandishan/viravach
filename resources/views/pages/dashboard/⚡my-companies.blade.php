@@ -178,13 +178,24 @@ class extends Component
                                                 {{ __('companies.action_assign_subscription') }}
                                             </a>
                                             <a href="{{ route('edit.company', $company) }}"
-                                               class="btn btn-sm btn-light btn-active-light-primary me-2">
-                                                {{ __('companies.action_edit') }}
+                                               class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-2"
+                                               data-bs-toggle="tooltip" title="{{ __('companies.action_edit') }}">
+                                                <i class="ki-duotone ki-pencil fs-2">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
                                             </a>
-                                            <button type="button" class="btn btn-sm btn-light btn-active-light-danger"
+                                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm"
                                                     data-bs-toggle="modal" data-bs-target="#kt_modal_delete_company"
-                                                    wire:click="confirmDelete({{ $company->id }})">
-                                                {{ __('companies.action_delete') }}
+                                                    wire:click="confirmDelete({{ $company->id }})"
+                                                    title="{{ __('companies.action_delete') }}">
+                                                <i class="ki-duotone ki-trash fs-2">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                    <span class="path4"></span>
+                                                    <span class="path5"></span>
+                                                </i>
                                             </button>
                                         </td>
                                     </tr>

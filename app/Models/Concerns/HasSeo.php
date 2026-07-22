@@ -3,6 +3,7 @@
 namespace App\Models\Concerns;
 
 use App\Models\SeoMeta;
+use Artesaos\SEOTools\Facades\SEOTools;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 trait HasSeo
@@ -10,6 +11,116 @@ trait HasSeo
     public function seo(): MorphOne
     {
         return $this->morphOne(SeoMeta::class, 'seoable');
+    }
+
+    /**
+     * Push this model's full SEO output (title/description/canonical,
+     * keywords, robots, Open Graph, Twitter Card, JSON-LD) into SEOTools,
+     * to be rendered by the layout's SEOTools::generate() call. Meant to be
+     * called once from a public page's mount(). Everything beyond
+     * title/description/canonical only renders when a SeoMeta row exists.
+     */
+    public function applySeoTags(): void
+    {
+        // Deliberately scoped to metatags(): the SEOTools::setTitle()/
+        // setDescription() facade shortcuts would also push the values into
+        // OpenGraph/Twitter/JSON-LD, making those blocks render even
+        // without a SeoMeta row. OG/Twitter/JSON-LD are fed explicitly
+        // below, only when SeoMeta exists.
+        SEOTools::metatags()->setTitle($this->seoTitle());
+
+        if ($description = $this->seoDescription()) {
+            SEOTools::metatags()->setDescription($description);
+        }
+
+        $canonical = $this->seo?->canonical_url ?: url()->current();
+
+        SEOTools::setCanonical($canonical);
+
+        if (! $seo = $this->seo) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+
+        $keywords = collect(explode(',', (string) $seo->getTranslation('meta_keywords', $locale, false)))
+            ->map(fn (string $keyword) => trim($keyword))
+            ->filter()
+            ->values();
+
+        if ($keywords->isNotEmpty()) {
+            SEOTools::metatags()->setKeywords($keywords->all());
+        }
+
+        // Cornerstone (pillar) content must never end up accidentally
+        // noindexed, so it overrides the manual robots toggles.
+        $robots = $seo->is_cornerstone
+            ? 'index, follow'
+            : ($seo->robots_index ? 'index' : 'noindex').', '.($seo->robots_follow ? 'follow' : 'nofollow');
+
+        SEOTools::metatags()->setRobots($robots);
+
+        $ogImageUrl = $seo->getFirstMediaUrl('og_image', 'webp') ?: null;
+
+        $opengraph = SEOTools::opengraph();
+        $opengraph->setType($seo->og_type ?: 'website');
+
+        if ($ogTitle = $seo->getTranslation('og_title', $locale, false) ?: $this->seoTitle()) {
+            $opengraph->setTitle($ogTitle);
+        }
+
+        if ($ogDescription = $seo->getTranslation('og_description', $locale, false) ?: $this->seoDescription()) {
+            $opengraph->setDescription($ogDescription);
+        }
+
+        if ($ogImageUrl) {
+            $opengraph->addImage($ogImageUrl);
+        }
+
+        $twitter = SEOTools::twitter();
+        $twitter->setType($seo->twitter_card_type ?: 'summary_large_image');
+
+        if ($twitterTitle = $seo->getTranslation('twitter_title', $locale, false) ?: $this->seoTitle()) {
+            $twitter->setTitle($twitterTitle);
+        }
+
+        if ($twitterDescription = $seo->getTranslation('twitter_description', $locale, false) ?: $this->seoDescription()) {
+            $twitter->setDescription($twitterDescription);
+        }
+
+        if ($twitterImageUrl = $seo->getFirstMediaUrl('twitter_image', 'webp') ?: null) {
+            $twitter->addImage($twitterImageUrl);
+        }
+
+        // schema.org output requires an @type, so schema_type doubles as
+        // the on/off switch for the whole JSON-LD block. The layout's
+        // SEOTools::generate() renders jsonLdMulti(), not jsonLd(), so the
+        // values go there.
+        if ($seo->schema_type) {
+            $jsonLd = SEOTools::jsonLdMulti();
+            $jsonLd->setType($seo->schema_type);
+            $jsonLd->setUrl($canonical);
+
+            if ($title = $this->seoTitle()) {
+                $jsonLd->setTitle($title);
+            }
+
+            if ($description = $this->seoDescription()) {
+                $jsonLd->setDescription($description);
+            }
+
+            if ($ogImageUrl) {
+                $jsonLd->addImage($ogImageUrl);
+            }
+
+            foreach ($seo->schema_extra ?? [] as $key => $value) {
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                $jsonLd->addValue($key, $value);
+            }
+        }
     }
 
     public function seoTitle(?string $locale = null): ?string

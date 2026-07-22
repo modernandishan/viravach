@@ -11,7 +11,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -105,7 +104,6 @@ class CompaniesTable
                 $record->update([
                     'review_status' => CompanyReviewStatus::Approved,
                     'reviewed_at' => now(),
-                    'rejection_reason' => null,
                 ]);
 
                 app(CompanyPublicationService::class)->publish($record);
@@ -130,17 +128,13 @@ class CompaniesTable
             ->color('danger')
             ->visible(fn (Company $record): bool => $record->review_status === CompanyReviewStatus::PendingReview)
             ->authorize('reject')
-            ->schema([
-                Textarea::make('rejection_reason')
-                    ->label('دلیل رد')
-                    ->required()
-                    ->rows(3),
-            ])
-            ->action(function (array $data, Company $record) {
+            ->requiresConfirmation()
+            ->modalHeading('رد شرکت')
+            ->modalDescription('با رد، پیش‌نویس فعلی به وضعیت «رد شده» می‌رود؛ نسخه منتشرشده قبلی (در صورت وجود) همچنان نمایش داده می‌شود.')
+            ->action(function (Company $record) {
                 $record->update([
                     'review_status' => CompanyReviewStatus::Rejected,
                     'reviewed_at' => now(),
-                    'rejection_reason' => $data['rejection_reason'],
                 ]);
 
                 Notification::make()

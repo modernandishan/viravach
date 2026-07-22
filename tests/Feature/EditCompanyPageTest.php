@@ -69,7 +69,7 @@ class EditCompanyPageTest extends TestCase
             'country_id' => $originalState->country_id,
             'state_id' => $originalState->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 
@@ -79,7 +79,7 @@ class EditCompanyPageTest extends TestCase
             ->assertSet('email', 'old@example.com')
             ->set('name.en', 'New Name')
             ->set('categoryIds', [$newCategory->id])
-            ->set('stateId', $newState->id)
+            ->set('addresses.0.state_id', $newState->id)
             ->set('email', 'new@example.com')
             ->call('updateCompany')
             ->assertRedirect(route('my-companies'));
@@ -105,7 +105,7 @@ class EditCompanyPageTest extends TestCase
             'country_id' => $state->country_id,
             'state_id' => $state->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 
@@ -129,14 +129,13 @@ class EditCompanyPageTest extends TestCase
 
         $company = Company::factory()->for($user)->approved()->create([
             'name' => ['en' => 'Approved Name', 'fa' => 'نام تأییدشده'],
-            'rejection_reason' => null,
         ]);
         $company->categories()->attach($category);
         $company->addresses()->create([
             'country_id' => $state->country_id,
             'state_id' => $state->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 
@@ -169,7 +168,7 @@ class EditCompanyPageTest extends TestCase
             'country_id' => $state->country_id,
             'state_id' => $state->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 
@@ -193,7 +192,7 @@ class EditCompanyPageTest extends TestCase
             'country_id' => $state->country_id,
             'state_id' => $state->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 
@@ -222,7 +221,7 @@ class EditCompanyPageTest extends TestCase
             'country_id' => $state->country_id,
             'state_id' => $state->id,
             'type' => 'office',
-            'address_line' => ['en' => ''],
+            'address_line' => ['en' => 'Original street 1'],
             'is_primary' => true,
         ]);
 

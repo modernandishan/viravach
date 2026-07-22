@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\CompanyReviewStatus;
+use App\Models\City;
 use App\Models\Company;
 use App\Models\CompanyCategory;
 use App\Models\State;
 use App\Services\CompanySubscriptionService;
+use App\Support\CompanySocialPlatforms;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -26,26 +28,26 @@ class extends Component
     /** @var array<int, int> */
     public array $categoryIds = [];
 
-    public ?int $stateId = null;
+    /** @var array<int, array<string, mixed>> */
+    public array $addresses = [];
 
     public $logo = null;
-
-    /** @var array<int, mixed> */
-    public array $gallery = [];
 
     public ?string $website = null;
 
     public ?string $email = null;
 
-    public ?string $phones = null;
+    /** @var array<int, string> */
+    public array $phones = [];
 
-    public ?string $socialInstagram = null;
+    /** @var array<string, string> */
+    public array $socialLinks = [];
 
-    public ?string $socialTelegram = null;
-
-    public ?string $socialLinkedin = null;
-
-    public ?string $socialWebsite = null;
+    public function mount(): void
+    {
+        $this->addresses = [$this->emptyAddressRow(isPrimary: true)];
+        $this->socialLinks = CompanySocialPlatforms::emptyState();
+    }
 
     public function categoryTree(): Collection
     {
@@ -86,6 +88,79 @@ class extends Component
     }
 
     /**
+     * Cities of the states currently picked across address rows, keyed by
+     * state_id, for the per-row city selects.
+     */
+    public function citiesByState(): Collection
+    {
+        $stateIds = collect($this->addresses)->pluck('state_id')->filter()->unique();
+
+        if ($stateIds->isEmpty()) {
+            return collect();
+        }
+
+        return City::query()
+            ->active()
+            ->whereIn('state_id', $stateIds)
+            ->orderBy('id')
+            ->get()
+            ->groupBy('state_id');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function emptyAddressRow(bool $isPrimary = false): array
+    {
+        return [
+            'state_id' => null,
+            'city_id' => null,
+            'type' => 'office',
+            'address_line' => '',
+            'postal_code' => null,
+            'is_primary' => $isPrimary,
+        ];
+    }
+
+    public function addAddressRow(): void
+    {
+        $this->addresses[] = $this->emptyAddressRow();
+    }
+
+    public function removeAddressRow(int $index): void
+    {
+        if (count($this->addresses) <= 1 || ! array_key_exists($index, $this->addresses)) {
+            return;
+        }
+
+        $wasPrimary = (bool) ($this->addresses[$index]['is_primary'] ?? false);
+
+        unset($this->addresses[$index]);
+        $this->addresses = array_values($this->addresses);
+
+        if ($wasPrimary) {
+            $this->addresses[0]['is_primary'] = true;
+        }
+    }
+
+    public function setPrimaryAddress(int $index): void
+    {
+        foreach ($this->addresses as $i => $row) {
+            $this->addresses[$i]['is_primary'] = $i === $index;
+        }
+    }
+
+    public function updatedAddresses(mixed $value, ?string $key = null): void
+    {
+        // Changing a row's state invalidates its city selection.
+        if ($key !== null && str_ends_with($key, '.state_id')) {
+            $index = (int) explode('.', $key)[0];
+            $this->addresses[$index]['state_id'] = ($value !== '' && $value !== null) ? (int) $value : null;
+            $this->addresses[$index]['city_id'] = null;
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function rulesForStep(int $step): array
@@ -100,21 +175,29 @@ class extends Component
                 'categoryIds.*' => ['integer', 'exists:company_categories,id'],
             ],
             3 => [
-                'stateId' => ['required', 'exists:states,id'],
+                'addresses' => ['required', 'array', 'min:1'],
+                'addresses.*.state_id' => ['required', 'exists:states,id'],
+                'addresses.*.city_id' => ['nullable', 'exists:cities,id'],
+                'addresses.*.type' => ['required', 'in:office,warehouse,factory,showroom'],
+                'addresses.*.address_line' => ['required', 'string', 'max:500'],
+                'addresses.*.postal_code' => ['nullable', 'string', 'max:10'],
             ],
             4 => [
                 'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-                'gallery' => ['nullable', 'array'],
-                'gallery.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             ],
             5 => [
                 'website' => ['nullable', 'url', 'max:255'],
                 'email' => ['nullable', 'email', 'max:255'],
-                'phones' => ['nullable', 'string', 'max:255'],
-                'socialInstagram' => ['nullable', 'url', 'max:255'],
-                'socialTelegram' => ['nullable', 'url', 'max:255'],
-                'socialLinkedin' => ['nullable', 'url', 'max:255'],
-                'socialWebsite' => ['nullable', 'url', 'max:255'],
+                'phones' => ['nullable', 'array'],
+                'phones.*' => ['string', 'max:32'],
+                'socialLinks.telegram' => ['nullable', 'string', 'max:255'],
+                'socialLinks.whatsapp' => ['nullable', 'string', 'max:255'],
+                'socialLinks.instagram' => ['nullable', 'string', 'max:255'],
+                'socialLinks.youtube' => ['nullable', 'string', 'max:255'],
+                'socialLinks.x' => ['nullable', 'string', 'max:255'],
+                'socialLinks.website1' => ['nullable', 'url', 'max:255'],
+                'socialLinks.website2' => ['nullable', 'url', 'max:255'],
+                'socialLinks.website3' => ['nullable', 'url', 'max:255'],
             ],
             default => [],
         };
@@ -143,31 +226,31 @@ class extends Component
             'description' => $this->description !== '' ? ['fa' => Str::sanitizeHtml($this->description)] : [],
             'website' => $this->website ?: null,
             'email' => $this->email ?: null,
-            'phones' => $this->phones ? array_values(array_filter(array_map('trim', explode(',', $this->phones)))) : null,
-            'social_links' => array_filter([
-                'instagram' => $this->socialInstagram ?: null,
-                'telegram' => $this->socialTelegram ?: null,
-                'linkedin' => $this->socialLinkedin ?: null,
-                'website' => $this->socialWebsite ?: null,
-            ]) ?: null,
+            'phones' => $this->phones !== [] ? array_values($this->phones) : null,
+            'social_links' => CompanySocialPlatforms::toStoredLinks($this->socialLinks),
             'review_status' => CompanyReviewStatus::PendingReview,
         ]);
 
         $company->categories()->sync($this->categoryIds);
 
-        $state = State::findOrFail($this->stateId);
+        // Country is never picked directly; each row derives it from the
+        // chosen state.
+        $rows = $this->addressesWithSinglePrimary();
+        $states = State::query()->findMany(collect($rows)->pluck('state_id'))->keyBy('id');
 
-        // The wizard's "state" step only collects a state (country is
-        // derived from it); a full postal address is out of scope here and
-        // can be filled in later from the edit page, but address_line is a
-        // required json column so it needs a value for the current locale.
-        $company->addresses()->create([
-            'country_id' => $state->country_id,
-            'state_id' => $state->id,
-            'type' => 'office',
-            'address_line' => [app()->getLocale() => ''],
-            'is_primary' => true,
-        ]);
+        foreach ($rows as $row) {
+            $state = $states[(int) $row['state_id']];
+
+            $company->addresses()->create([
+                'country_id' => $state->country_id,
+                'state_id' => $state->id,
+                'city_id' => ($row['city_id'] ?? null) ? (int) $row['city_id'] : null,
+                'type' => $row['type'],
+                'address_line' => [app()->getLocale() => $row['address_line']],
+                'postal_code' => ($row['postal_code'] ?? '') !== '' && $row['postal_code'] !== null ? $row['postal_code'] : null,
+                'is_primary' => $row['is_primary'],
+            ]);
+        }
 
         if ($this->logo) {
             $company->addMedia($this->logo->getRealPath())
@@ -175,17 +258,40 @@ class extends Component
                 ->toMediaCollection('logo', 's3');
         }
 
-        foreach ($this->gallery as $image) {
-            $company->addMedia($image->getRealPath())
-                ->usingFileName($image->getClientOriginalName())
-                ->toMediaCollection('gallery', 's3');
-        }
-
         app(CompanySubscriptionService::class)->assignFreePlanIfMissing($company);
 
         session()->flash('company-status', __('companies.created_successfully'));
 
         $this->redirect(route('my-companies'), navigate: false);
+    }
+
+    /**
+     * The submitted rows with the is_primary flags normalized so exactly
+     * one row is primary (the first flagged one, or the first row when
+     * none is flagged).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function addressesWithSinglePrimary(): array
+    {
+        $rows = array_values($this->addresses);
+
+        $primaryIndex = null;
+
+        foreach ($rows as $index => $row) {
+            if (! empty($row['is_primary'])) {
+                $primaryIndex = $index;
+                break;
+            }
+        }
+
+        $primaryIndex ??= 0;
+
+        foreach ($rows as $index => $row) {
+            $rows[$index]['is_primary'] = $index === $primaryIndex;
+        }
+
+        return $rows;
     }
 
     public function render()
@@ -206,7 +312,7 @@ class extends Component
                 <div class="card d-flex justify-content-center justify-content-xl-start flex-row-auto w-100 w-xl-300px w-xxl-400px">
                     <div class="card-body px-6 px-lg-10 px-xxl-15 py-20">
                         <div class="stepper-nav">
-                            @foreach ([1 => 'wizard_step_basic_info', 2 => 'wizard_step_category', 3 => 'wizard_step_state', 4 => 'wizard_step_media', 5 => 'wizard_step_contact'] as $number => $labelKey)
+                            @foreach ([1 => 'wizard_step_basic_info', 2 => 'wizard_step_category', 3 => 'wizard_step_addresses', 4 => 'wizard_step_media', 5 => 'wizard_step_contact'] as $number => $labelKey)
                                 <div class="stepper-item {{ $step === $number ? 'current' : ($step > $number ? 'completed' : '') }}">
                                     <div class="stepper-wrapper">
                                         <div class="stepper-icon w-40px h-40px">
@@ -252,16 +358,16 @@ class extends Component
                         @elseif ($step === 3)
                             <div class="w-100">
                                 <div class="pb-10 pb-lg-15">
-                                    <h2 class="fw-bold text-gray-900">{{ __('companies.wizard_step_state') }}</h2>
+                                    <h2 class="fw-bold text-gray-900">{{ __('companies.wizard_step_addresses') }}</h2>
                                 </div>
-                                <x-company-elements.state-select :states="$this->states()" />
+                                <x-company-elements.address-fields :addresses="$addresses" :states="$this->states()" :cities-by-state="$this->citiesByState()" />
                             </div>
                         @elseif ($step === 4)
                             <div class="w-100">
                                 <div class="pb-10 pb-lg-15">
                                     <h2 class="fw-bold text-gray-900">{{ __('companies.wizard_step_media') }}</h2>
                                 </div>
-                                <x-company-elements.media-fields :logo="$logo" :gallery="$gallery" />
+                                <x-company-elements.media-fields :logo="$logo" />
                             </div>
                         @elseif ($step === 5)
                             <div class="w-100">

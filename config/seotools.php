@@ -63,7 +63,10 @@ return [
             'title' => false, // set false to total remove
             'description' => false, // set false to total remove
             'url' => false, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
-            'type' => 'WebPage',
+            // false (not 'WebPage') so pages without an explicit schema_type
+            // emit no JSON-LD block at all — HasSeo::applySeoTags() opts in
+            // per page when SeoMeta.schema_type is set.
+            'type' => false,
             'images' => [],
         ],
     ],

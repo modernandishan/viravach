@@ -71,4 +71,14 @@ class CompanyPolicy
     {
         return $authUser->can('Reorder:Company');
     }
+
+    public function approve(AuthUser $authUser, Company $company): bool
+    {
+        return $authUser->can('Approve:Company');
+    }
+
+    public function reject(AuthUser $authUser, Company $company): bool
+    {
+        return $authUser->can('Reject:Company');
+    }
 }

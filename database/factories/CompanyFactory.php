@@ -36,7 +36,6 @@ class CompanyFactory extends Factory
             'social_links' => null,
             'review_status' => CompanyReviewStatus::PendingReview,
             'reviewed_at' => null,
-            'rejection_reason' => null,
             'is_verified' => false,
             'is_featured' => false,
             'employee_range' => null,

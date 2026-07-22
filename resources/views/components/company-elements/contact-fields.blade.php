@@ -18,40 +18,51 @@
 
 <div class="fv-row mb-7">
     <label class="form-label">{{ __('companies.field_phones') }}</label>
-    <input type="text" wire:model="phones" class="form-control form-control-lg form-control-solid @error('phones') is-invalid @enderror" />
+    {{-- Tagify rewrites the input's DOM, so keep it inside wire:ignore and
+         sync tag values back to the Livewire `phones` array ourselves. The
+         Alpine init() re-runs whenever the wrapper (re)enters the DOM (e.g.
+         wizard step navigation), re-seeding from the current state. --}}
+    <div wire:ignore
+         x-data="{
+             init() {
+                 const tagify = new Tagify(this.$refs.phonesInput);
+                 tagify.addTags(this.$wire.phones ?? []);
+                 tagify.on('change', () => {
+                     this.$wire.set('phones', tagify.value.map(tag => tag.value), false);
+                 });
+             }
+         }">
+        <input type="text" x-ref="phonesInput" dir="ltr"
+               class="form-control form-control-lg form-control-solid @error('phones') is-invalid @enderror @error('phones.*') is-invalid @enderror" />
+    </div>
     <div class="form-text">{{ __('companies.field_phones_hint') }}</div>
     @error('phones')
+        <div class="invalid-feedback d-block">{{ $message }}</div>
+    @enderror
+    @error('phones.*')
         <div class="invalid-feedback d-block">{{ $message }}</div>
     @enderror
 </div>
 
 <div class="row mb-0">
-    <div class="col-md-6 fv-row mb-7">
-        <label class="form-label">{{ __('companies.field_social_instagram') }}</label>
-        <input type="text" wire:model="socialInstagram" class="form-control form-control-lg form-control-solid @error('socialInstagram') is-invalid @enderror" />
-        @error('socialInstagram')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-    <div class="col-md-6 fv-row mb-7">
-        <label class="form-label">{{ __('companies.field_social_telegram') }}</label>
-        <input type="text" wire:model="socialTelegram" class="form-control form-control-lg form-control-solid @error('socialTelegram') is-invalid @enderror" />
-        @error('socialTelegram')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-    <div class="col-md-6 fv-row">
-        <label class="form-label">{{ __('companies.field_social_linkedin') }}</label>
-        <input type="text" wire:model="socialLinkedin" class="form-control form-control-lg form-control-solid @error('socialLinkedin') is-invalid @enderror" />
-        @error('socialLinkedin')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-    <div class="col-md-6 fv-row">
-        <label class="form-label">{{ __('companies.field_social_website') }}</label>
-        <input type="text" wire:model="socialWebsite" class="form-control form-control-lg form-control-solid @error('socialWebsite') is-invalid @enderror" />
-        @error('socialWebsite')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
+    @foreach (\App\Support\CompanySocialPlatforms::PLATFORMS as $platform => $prefix)
+        <div class="col-md-6 fv-row mb-7">
+            <label class="form-label">{{ __('companies.'.\App\Support\CompanySocialPlatforms::labelKey($platform)) }}</label>
+            @if ($prefix !== null)
+                <div class="input-group input-group-lg input-group-solid" dir="ltr">
+                    <span class="input-group-text" dir="ltr">{{ $prefix }}</span>
+                    <input type="text" dir="ltr" wire:model="socialLinks.{{ $platform }}"
+                           placeholder="{{ __('companies.field_social_'.$platform.'_placeholder') }}"
+                           class="form-control form-control-solid @error('socialLinks.'.$platform) is-invalid @enderror" />
+                </div>
+            @else
+                <input type="url" dir="ltr" wire:model="socialLinks.{{ $platform }}"
+                       placeholder="https://example.com"
+                       class="form-control form-control-lg form-control-solid @error('socialLinks.'.$platform) is-invalid @enderror" />
+            @endif
+            @error('socialLinks.'.$platform)
+                <div class="invalid-feedback d-block">{{ $message }}</div>
+            @enderror
+        </div>
+    @endforeach
 </div>

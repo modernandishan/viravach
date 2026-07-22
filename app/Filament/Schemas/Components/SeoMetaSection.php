@@ -10,6 +10,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Contracts\Support\Htmlable;
 
 /**
  * سکشن سئوی قابل‌استفاده‌ی مجدد، برای اتصال به هر مدلی که از تریت
@@ -19,7 +20,7 @@ use Filament\Schemas\Components\Tabs\Tab;
  */
 class SeoMetaSection extends Section
 {
-    public static function make(string|\Illuminate\Contracts\Support\Htmlable|\Closure|array|null $heading = 'سئو (SEO)'): static
+    public static function make(string|Htmlable|\Closure|array|null $heading = 'سئو (SEO)'): static
     {
         $locales = config('laravellocalization.supportedLocales');
 
@@ -138,6 +139,10 @@ class SeoMetaSection extends Section
                             ->maxValue(1)
                             ->step(0.1)
                             ->default(0.5),
+                        Toggle::make('is_cornerstone')
+                            ->label('محتوای پایه (Cornerstone)')
+                            ->helperText('این صفحه به‌عنوان محتوای ستونی با بالاترین اولویت علامت‌گذاری می‌شود و خروجی robots همیشه index, follow خواهد بود.')
+                            ->default(false),
                         Select::make('sitemap_change_freq')
                             ->label('بازه تغییر Sitemap')
                             ->options([

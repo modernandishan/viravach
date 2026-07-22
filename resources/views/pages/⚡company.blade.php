@@ -2,7 +2,6 @@
 
 use App\Livewire\Concerns\RecordsPageView;
 use App\Models\CompanyPublication;
-use Artesaos\SEOTools\Facades\SEOTools;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -20,18 +19,12 @@ class extends Component {
         $this->publication = CompanyPublication::query()
             ->active()
             ->where('slug', $slug)
-            ->with(['media', 'categories', 'state'])
+            ->with(['media', 'categories', 'state', 'company.brands', 'company.exportCountries', 'seo', 'seo.media'])
             ->firstOrFail();
 
         $this->recordPageView($this->publication);
 
-        SEOTools::setTitle($this->publication->seoTitle());
-
-        if ($description = $this->publication->seoDescription()) {
-            SEOTools::setDescription($description);
-        }
-
-        SEOTools::setCanonical(url()->current());
+        $this->publication->applySeoTags();
     }
 
     public function render()
@@ -79,6 +72,23 @@ class extends Component {
                                             {{ $publication->state->name }}
                                         </span>
                                     @endif
+                                    @if ($publication->established_at)
+                                        <span class="d-flex align-items-center text-gray-500">
+                                            <i class="ki-duotone ki-calendar fs-4 me-1">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            {{ \App\Support\LocalizedDate::format($publication->established_at, \App\Support\LocalizedDate::FORMAT_YEAR) }}
+                                        </span>
+                                    @endif
+                                    <span class="d-flex align-items-center text-gray-500">
+                                        <i class="ki-duotone ki-eye fs-3 me-1">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        {{ number_format(views($publication)->count()) }}
+                                    </span>
                                     @foreach ($publication->categories as $category)
                                         <a href="{{ route('companies.category', ['slug' => $category->slug]) }}" class="badge badge-light-primary fw-bold">
                                             {{ $category->title }}
@@ -115,21 +125,47 @@ class extends Component {
                     </div>
                 @endif
 
-                @if ($publication->getMedia('gallery')->isNotEmpty())
+                @if ($publication->company?->brands->isNotEmpty())
                     <div class="card mb-6 mb-xl-9">
                         <div class="card-header border-0 pt-6">
                             <div class="card-title">
-                                <h2>{{ __('companies.profile_gallery') }}</h2>
+                                <h2>{{ __('companies.profile_brands') }}</h2>
                             </div>
                         </div>
                         <div class="card-body pt-0">
                             <div class="row g-4">
-                                @foreach ($publication->getMedia('gallery') as $media)
-                                    <div class="col-6 col-md-4">
-                                        <img src="{{ $media->getUrl('webp') }}" alt="{{ $publication->name }}" class="w-100 rounded object-fit-cover" style="aspect-ratio: 4 / 3;">
+                                @foreach ($publication->company->brands as $brand)
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <div class="d-flex flex-column align-items-center text-center bg-light rounded p-4 h-100">
+                                            <div class="symbol symbol-60px bg-white mb-3">
+                                                @if ($brand->hasMedia('logo'))
+                                                    <img src="{{ $brand->getFirstMediaUrl('logo', 'webp') }}" alt="{{ $brand->name }}" class="p-2">
+                                                @else
+                                                    <span class="symbol-label bg-light-primary text-primary fw-bold fs-3">
+                                                        {{ \Illuminate\Support\Str::substr($brand->name, 0, 1) }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="fw-bold text-gray-800">{{ $brand->name }}</div>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($publication->company?->exportCountries->isNotEmpty())
+                    <div class="card mb-6 mb-xl-9">
+                        <div class="card-header border-0 pt-6">
+                            <div class="card-title">
+                                <h2>{{ __('companies.profile_export_countries') }}</h2>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0 d-flex flex-wrap gap-2">
+                            @foreach ($publication->company->exportCountries as $country)
+                                <span class="badge badge-light-primary fw-bold">{{ $country->name }}</span>
+                            @endforeach
                         </div>
                     </div>
                 @endif

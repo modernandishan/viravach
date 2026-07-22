@@ -18,6 +18,8 @@ class LocalizedDate
 
     public const FORMAT_DATETIME = 'datetime';
 
+    public const FORMAT_YEAR = 'year';
+
     public static function format(?CarbonInterface $date, string $format = self::FORMAT_DATE): ?string
     {
         if ($date === null) {
@@ -25,12 +27,20 @@ class LocalizedDate
         }
 
         if (app()->getLocale() === 'fa') {
-            $pattern = $format === self::FORMAT_DATETIME ? 'Y/m/d H:i' : 'Y/m/d';
+            $pattern = match ($format) {
+                self::FORMAT_DATETIME => 'Y/m/d H:i',
+                self::FORMAT_YEAR => 'Y',
+                default => 'Y/m/d',
+            };
 
             return Jalali::fromCarbon($date)->format($pattern);
         }
 
-        $pattern = $format === self::FORMAT_DATETIME ? 'j F Y, H:i' : 'j F Y';
+        $pattern = match ($format) {
+            self::FORMAT_DATETIME => 'j F Y, H:i',
+            self::FORMAT_YEAR => 'Y',
+            default => 'j F Y',
+        };
 
         return $date->copy()->locale(app()->getLocale())->translatedFormat($pattern);
     }

@@ -94,15 +94,15 @@ class CompanyPublicationServiceTest extends TestCase
     {
         $company = Company::factory()->create(['name' => ['fa' => 'قدیمی']]);
         $company->addMedia(UploadedFile::fake()->image('one.png', 10, 10))
-            ->toMediaCollection('gallery', 's3');
+            ->toMediaCollection('certificates', 's3');
 
         $service = app(CompanyPublicationService::class);
 
         $first = $service->publish($company);
-        $this->assertCount(1, $first->getMedia('gallery'));
+        $this->assertCount(1, $first->getMedia('certificates'));
 
-        // Owner removes the gallery image and renames the company.
-        $company->clearMediaCollection('gallery');
+        // Owner removes the certificate image and renames the company.
+        $company->clearMediaCollection('certificates');
         $company->update(['name' => ['fa' => 'جدید']]);
 
         $second = $service->publish($company->fresh());
@@ -110,7 +110,7 @@ class CompanyPublicationServiceTest extends TestCase
         $this->assertTrue($first->is($second));
         $this->assertSame(1, CompanyPublication::count());
         $this->assertSame('جدید', $second->getTranslation('name', 'fa'));
-        $this->assertCount(0, $second->fresh()->getMedia('gallery'));
+        $this->assertCount(0, $second->fresh()->getMedia('certificates'));
     }
 
     public function test_publish_copies_the_seo_meta_snapshot(): void

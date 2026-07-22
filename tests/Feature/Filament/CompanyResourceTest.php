@@ -233,19 +233,16 @@ class CompanyResourceTest extends TestCase
             ->assertActionHidden(TestAction::make('approve')->table($company));
     }
 
-    public function test_reject_action_requires_reason_and_sets_status(): void
+    public function test_reject_action_sets_status(): void
     {
         $company = Company::factory()->create(['review_status' => CompanyReviewStatus::PendingReview]);
 
         Livewire::test(ListCompanies::class)
-            ->callAction(TestAction::make('reject')->table($company), [
-                'rejection_reason' => 'مدارک ناقص است',
-            ]);
+            ->callAction(TestAction::make('reject')->table($company));
 
         $company->refresh();
 
         $this->assertSame(CompanyReviewStatus::Rejected, $company->review_status);
-        $this->assertSame('مدارک ناقص است', $company->rejection_reason);
         $this->assertNotNull($company->reviewed_at);
         $this->assertDatabaseMissing('company_publications', ['company_id' => $company->id]);
     }

@@ -105,13 +105,6 @@ class CompanyPublicationInfolist
                             ->conversion('webp')
                             ->visibility('public')
                             ->placeholder('—'),
-                        SpatieMediaLibraryImageEntry::make('gallery')
-                            ->label('گالری تصاویر')
-                            ->collection('gallery')
-                            ->conversion('webp')
-                            ->visibility('public')
-                            ->placeholder('—')
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
