@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'virabot_name' => 'ویرابات',
     'ai_error' => 'متأسفانه در حال حاضر امکان پاسخگویی نیست. لطفاً دقایقی دیگر تلاش کنید.',
     'header_title' => 'ویرابات',
     'header_status' => 'دستیار هوشمند ویراواچ',
@@ -26,6 +27,18 @@ return [
     'inbox_empty' => 'هیچ گفتگوی پشتیبانی وجود ندارد.',
     'select_conversation' => 'یک گفتگو را برای مشاهده انتخاب کنید.',
     'no_message_preview' => 'بدون پیام',
+
+    'company_chat_trigger' => 'چت با ویرابات',
+    'connect_to_company' => 'ارتباط مستقیم با شرکت',
+    'tab_company' => 'شرکت',
+    'connected_to_company' => 'شما به :company متصل شدید.',
+    'company_transfer_not_eligible' => 'ابتدا درباره این شرکت با ویرابات گفتگو کنید.',
+    'company_no_owner' => 'در حال حاضر امکان ارتباط مستقیم با این شرکت وجود ندارد.',
+    'company_empty_state' => 'سلام! من ویرابات هستم. هر سوالی درباره :company دارید بپرسید.',
+    'company_header_status' => 'گفتگوی مستقیم با شرکت',
+    'company_drawer_hint' => 'پس از گفتگو با ویرابات می‌توانید مستقیم با این شرکت هم در ارتباط باشید.',
+    'company_inbox_title' => 'چت‌های شرکت :name',
+    'company_inbox_empty' => 'هنوز کسی با این شرکت گفتگو نکرده است.',
 
     'page_title' => 'گفتگوها',
     'contacts_title' => 'مخاطبین',

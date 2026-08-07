@@ -175,6 +175,16 @@ class extends Component {
 
             <!--begin::Sidebar-->
             <div class="flex-column flex-lg-row-auto w-lg-300px w-xl-350px mb-10">
+                {{-- Chattable only while the source company still exists: the
+                     publication snapshot survives deletion of its draft. --}}
+                @if ($publication->company)
+                    <div class="mb-6">
+                        <livewire:company-elements.company-chat
+                            :company-id="$publication->company->id"
+                            :company-name="(string) $publication->name"
+                        />
+                    </div>
+                @endif
                 <div class="card">
                     <div class="card-header border-0 pt-6">
                         <div class="card-title">

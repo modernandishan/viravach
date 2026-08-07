@@ -36,6 +36,8 @@ Route::get('/haha', function () {
     dd($response->text);
 });
 
+// Route::get('/76012842.txt', function (){return null;});
+
 Route::post('/editor/upload', [EditorUploadController::class, 'store'])
     ->name('editor.upload')
     ->middleware('auth');

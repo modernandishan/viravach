@@ -1,8 +1,10 @@
 <?php
 
+use App\Events\ChatConversationStarted;
 use App\Models\User;
 use App\Services\Chat\Exceptions\TranslationException;
 use App\Services\Chat\TranslationService;
+use App\Settings\ChatSettings;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -43,6 +45,76 @@ class extends Component
         $this->loadConversations();
     }
 
+    /**
+     * Echo listeners — the PRIMARY real-time mechanism on this page.
+     * Registered here instead of #[On] attributes because the channel names
+     * embed ids only known at runtime. Livewire sends this set to the
+     * browser once, at mount, so it covers the agent's own participant
+     * channel (App\Events\ChatConversationStarted announces newly assigned
+     * support conversations there) plus the musonza channel of every
+     * conversation already in the inbox at mount. Conversations assigned
+     * AFTER mount get their row via ChatConversationStarted, and their
+     * channel is subscribed by the template's per-selection subscription
+     * once opened; until then their messages only update the list via the
+     * 60s fallback poll.
+     */
+    public function getListeners(): array
+    {
+        $agent = auth()->user();
+
+        $listeners = [
+            'echo-private:'.ChatConversationStarted::channelNameFor($agent).',ChatConversationStarted' => 'refreshConversations',
+        ];
+
+        foreach (collect($this->conversations)->pluck('id') as $conversationId) {
+            $listeners["echo-private:mc-chat-conversation.{$conversationId},.Musonza\\Chat\\Eventing\\MessageWasSent"] = 'onConversationMessage';
+        }
+
+        return $listeners;
+    }
+
+    /**
+     * Public wrapper so Echo listeners (and only they) can trigger the
+     * protected list rebuild.
+     */
+    public function refreshConversations(): void
+    {
+        $this->loadConversations();
+    }
+
+    /**
+     * Echo handler for musonza's MessageWasSent: reuses the exact refresh
+     * paths the old poll called — pollForReply() when the push is for the
+     * open conversation, refreshConversations() (unread badges / last
+     * message) when it is for any other one in the inbox.
+     *
+     * @param  array{message?: array{conversation_id?: int}}  $event
+     */
+    public function onConversationMessage(array $event = []): void
+    {
+        $conversationId = (int) data_get($event, 'message.conversation_id', 0);
+
+        if ($conversationId !== 0 && $conversationId === $this->selectedConversationId) {
+            $this->pollForReply();
+
+            return;
+        }
+
+        $this->refreshConversations();
+    }
+
+    /**
+     * FALLBACK ONLY, not the primary mechanism (that's the Echo listeners
+     * above): runs on a slow 60s wire:poll to recover anything a missed or
+     * dropped WebSocket event left behind — both the open conversation and
+     * the inbox list.
+     */
+    public function fallbackSync(): void
+    {
+        $this->pollForReply();
+        $this->loadConversations();
+    }
+
     public function selectConversation(int $conversationId): void
     {
         $agent = auth()->user();
@@ -78,7 +150,7 @@ class extends Component
             return;
         }
 
-        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($agent), 10)) {
+        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($agent), $this->sendRateLimitMax())) {
             $this->sendError = __('chat.rate_limited_send');
 
             return;
@@ -101,9 +173,10 @@ class extends Component
     }
 
     /**
-     * Polled every 5s while a conversation is open, since agent replies (and
-     * new customer messages) can arrive anytime — no push channel until
-     * Reverb lands.
+     * Fetches messages newer than the last one shown in the open
+     * conversation. Triggered primarily by Echo MessageWasSent pushes (via
+     * onConversationMessage()); the 60s fallbackSync() poll is the only
+     * remaining timer that reaches it.
      */
     public function pollForReply(): void
     {
@@ -156,7 +229,7 @@ class extends Component
 
         $agent = auth()->user();
 
-        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($agent), 20)) {
+        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($agent), $this->translateRateLimitMax())) {
             $this->translations[$messageId] = [
                 'visible' => true,
                 'text' => null,
@@ -294,6 +367,24 @@ class extends Component
         return 'chat-translate:'.$agent->getMorphClass().':'.$agent->getKey();
     }
 
+    /**
+     * Falls back to the historical hardcoded limit (10/min) when the admin
+     * hasn't set an override in ChatSettings.
+     */
+    protected function sendRateLimitMax(): int
+    {
+        return app(ChatSettings::class)->rate_limit_messages_per_minute ?? 10;
+    }
+
+    /**
+     * Falls back to the historical hardcoded limit (20/min) when the admin
+     * hasn't set an override in ChatSettings.
+     */
+    protected function translateRateLimitMax(): int
+    {
+        return app(ChatSettings::class)->rate_limit_translations_per_minute ?? 20;
+    }
+
     public function render()
     {
         return $this->view()->title(__('chat.inbox_title').' | '.__('globals.viravach'));
@@ -355,7 +446,23 @@ class extends Component
                                 {{ __('chat.select_conversation') }}
                             </div>
                         @else
-                            <div class="scroll-y mh-400px flex-grow-1 mb-3" wire:poll.5s="pollForReply">
+                            {{--
+                                FALLBACK ONLY, not the primary mechanism: Echo listeners
+                                (getListeners()) drive updates; this slow poll recovers
+                                missed/dropped WebSocket events. The x-init subscription is
+                                keyed per selection so conversations assigned after mount
+                                are covered too (dedup lives in listenToChatConversation —
+                                resources/js/echo.js).
+                            --}}
+                            <div
+                                class="scroll-y mh-400px flex-grow-1 mb-3"
+                                wire:poll.60s="fallbackSync"
+                                wire:key="support-chat-messages-{{ $selectedConversationId }}"
+                                x-data
+                                {{-- typeof guard: if the bundle failed to load, degrade to the fallback poll instead of throwing mid-update. --}}
+                                x-init="typeof window.listenToChatConversation === 'function'
+                                    && window.listenToChatConversation({{ (int) $selectedConversationId }}, (e) => $wire.onConversationMessage(e))"
+                            >
                                 @foreach($messages as $msg)
                                     @include('components.chat-elements.message-item', ['msg' => $msg, 'translations' => $translations])
                                 @endforeach

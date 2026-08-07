@@ -12,8 +12,11 @@ use Laravel\Ai\Promptable;
 /**
  * ViraBot, the Viravach AI chat assistant. Pinned to the zai/GLM-4.7-Flash
  * model with thinking disabled (see providerOptions()); the system prompt
- * comes from config('viravach_chat.system_prompt') with its {context}
- * placeholder substituted by the page-specific context passed in.
+ * defaults to config('viravach_chat.system_prompts') keyed by the locale that
+ * was active when the user sent their message, unless the caller passes an
+ * admin-edited override (see App\Settings\ChatSettings via
+ * GenerateAiChatReply). Either way, the {context} placeholder is substituted
+ * by the page-specific context passed in.
  */
 class ViraBotAgent implements Agent, Conversational, HasProviderOptions
 {
@@ -22,15 +25,30 @@ class ViraBotAgent implements Agent, Conversational, HasProviderOptions
     /**
      * @param  iterable<int, Message>  $history  prior conversation messages
      * @param  string|null  $context  substituted into the {context} placeholder
+     * @param  string|null  $locale  site locale at send time, selects the system prompt
+     * @param  string|null  $systemPrompt  admin-edited override (ChatSettings) for this
+     *                                     locale's prompt template; null falls back to config
      */
     public function __construct(
         protected iterable $history = [],
         protected ?string $context = null,
+        protected ?string $locale = null,
+        protected ?string $systemPrompt = null,
     ) {}
 
     public function instructions(): string
     {
-        return str_replace('{context}', $this->context ?? '', (string) config('viravach_chat.system_prompt'));
+        return str_replace('{context}', $this->context ?? '', $this->systemPrompt ?? $this->configPrompt());
+    }
+
+    protected function configPrompt(): string
+    {
+        /** @var array<string, string> $prompts */
+        $prompts = config('viravach_chat.system_prompts');
+
+        return $prompts[$this->locale]
+            ?? $prompts[config('app.fallback_locale')]
+            ?? $prompts['en'];
     }
 
     public function messages(): iterable

@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravelcm\Subscriptions\Models\Subscription;
 use Laravelcm\Subscriptions\Traits\HasPlanSubscriptions;
+use Musonza\Chat\Traits\Messageable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -61,6 +62,7 @@ class Company extends Model implements HasMedia
         InteractsWithRichContent,
         SoftDeletes;
     use HasSeo;
+    use Messageable;
 
     /**
      * Owner-editable attributes that are subject to admin review; changing
@@ -114,6 +116,25 @@ class Company extends Model implements HasMedia
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Chat participant identity. The display name comes from the PUBLISHED
+     * snapshot (in the current request locale) because only published
+     * companies have public pages and are therefore chattable; the draft name
+     * is only a defensive fallback.
+     *
+     * @return array{name: string, type: string, avatar_url: ?string}
+     */
+    public function getParticipantDetailsAttribute(): array
+    {
+        $publication = $this->publication;
+
+        return [
+            'name' => (string) ($publication?->name ?? $this->name),
+            'type' => 'company',
+            'avatar_url' => $publication?->getFirstMediaUrl('logo', 'webp') ?: null,
+        ];
     }
 
     public function addresses(): HasMany

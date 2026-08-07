@@ -5,6 +5,8 @@ namespace App\Livewire\Concerns;
 use App\Services\Chat\ChatParticipantResolver;
 use App\Services\Chat\Exceptions\TranslationException;
 use App\Services\Chat\TranslationService;
+use App\Settings\ChatSettings;
+use App\Support\LocalizedDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
 use Musonza\Chat\Facades\ChatFacade as Chat;
@@ -63,7 +65,7 @@ trait InteractsWithChatMessages
 
         $participant = $this->participant();
 
-        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($participant), 20)) {
+        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($participant), $this->translateRateLimitMax())) {
             $this->translations[$messageId] = [
                 'visible' => true,
                 'text' => null,
@@ -96,7 +98,7 @@ trait InteractsWithChatMessages
     }
 
     /**
-     * @return array<int, array{id: int, body: string, senderName: string, senderType: ?string, isOwn: bool, time: ?string, type: string}>
+     * @return array<int, array{id: int, body: string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}>
      */
     protected function fetchMessages(Conversation $conversation, Model $participant): array
     {
@@ -114,7 +116,7 @@ trait InteractsWithChatMessages
     }
 
     /**
-     * @return array{id: int, body: string, senderName: string, senderType: ?string, isOwn: bool, time: ?string, type: string}
+     * @return array{id: int, body: string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}
      */
     protected function presentMessage(ChatMessage $message, Model $participant): array
     {
@@ -126,8 +128,9 @@ trait InteractsWithChatMessages
             'body' => $message->body,
             'senderName' => (string) ($message->sender['name'] ?? ''),
             'senderType' => $message->sender['type'] ?? null,
+            'senderAvatar' => $message->sender['avatar_url'] ?? null,
             'isOwn' => $isOwn,
-            'time' => $message->created_at?->format('H:i'),
+            'time' => LocalizedDate::format($message->created_at, LocalizedDate::FORMAT_DATETIME),
             'type' => $message->type,
         ];
     }
@@ -140,5 +143,23 @@ trait InteractsWithChatMessages
     protected function translateRateLimitKey(Model $participant): string
     {
         return 'chat-translate:'.$participant->getMorphClass().':'.$participant->getKey();
+    }
+
+    /**
+     * Falls back to the historical hardcoded limit (10/min) when the admin
+     * hasn't set an override in ChatSettings.
+     */
+    protected function sendRateLimitMax(): int
+    {
+        return app(ChatSettings::class)->rate_limit_messages_per_minute ?? 10;
+    }
+
+    /**
+     * Falls back to the historical hardcoded limit (20/min) when the admin
+     * hasn't set an override in ChatSettings.
+     */
+    protected function translateRateLimitMax(): int
+    {
+        return app(ChatSettings::class)->rate_limit_translations_per_minute ?? 20;
     }
 }

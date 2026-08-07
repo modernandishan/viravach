@@ -1,3 +1,75 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Environment: everything runs in Docker
+
+There is **no `php` binary on the host**. All PHP/artisan/composer commands must run inside the `viravach_app` container:
+
+```bash
+docker exec viravach_app php artisan test --compact
+docker exec viravach_app vendor/bin/pint --dirty --format agent
+docker exec viravach_app composer install
+```
+
+- App code lives on the host at `/var/www/viravach`, bind-mounted into containers at `/var/www/html`.
+- Compose file: `/HHD/docker/viravach/docker-compose.yml` (outside this repo). Containers: `viravach_app` (php-fpm), `viravach_queue` (`queue:work`), `viravach_nginx` — all on the external `webproxy` network.
+- Postgres, Redis, and MinIO (S3 file storage) are **shared standalone containers** (`postgres`, `redis`, `minio`) on the same network — there are no viravach-specific DB/cache containers. Production DB: `viravach_laravel`, user `viravach_user`.
+- Logs: `docker logs viravach_app --tail 50`, `docker logs viravach_nginx --tail 50`.
+
+## Commands
+
+```bash
+# Run all tests / one file / one test
+docker exec viravach_app php artisan test --compact
+docker exec viravach_app php artisan test --compact tests/Feature/CompanyPageTest.php
+docker exec viravach_app php artisan test --compact --filter=testName
+
+# Format (required after modifying any PHP file)
+docker exec viravach_app vendor/bin/pint --dirty --format agent
+
+# Frontend assets (Tailwind v4 via Vite)
+npm run build
+```
+
+## Testing gotchas
+
+- **PHPUnit only — Pest is not installed.** Even though some guidelines below show Pest syntax, all tests are PHPUnit classes extending `Tests\TestCase`. If asked for "Pest tests", write PHPUnit.
+- Tests run on **in-memory sqlite** (`phpunit.xml`), while production is **Postgres**. Postgres-specific failures (e.g. `DISTINCT` over translatable `json` columns in Filament `->relationship()` multi-selects) will not be caught by the suite — verify such queries against Postgres manually.
+- `phpunit.xml` raises `memory_limit` to 512M because Filament resources with 5-locale translatable forms exceed the default when several schemas are built in one process.
+
+## Architecture
+
+### Two frontends
+
+1. **Public site** — Livewire 4 full-page single-file components in `resources/views/pages/` (filenames prefixed with `⚡`, namespace `pages::`), registered via `Route::livewire('/uri', 'pages::name')` in `routes/web.php`. UI is based on the Metronic theme assets in `public/theme/1`.
+2. **Filament v5 admin** — mounted at `/admin` via `app/Providers/Filament/AdminPanelProvider.php`, **not** locale-prefixed, Persian-only UI, roles/permissions via `bezhansalleh/filament-shield`.
+
+### Localization (mcamara/laravel-localization)
+
+- Locales: `en` (default, **no URL prefix** — `hideDefaultLocaleInURL = true`), `fa`, `ar`, `ru`, `tr`. Public routes sit in a `LaravelLocalization::setLocale()` prefixed group with `localeSessionRedirect`, `localizationRedirect`, `localeViewPath` middleware.
+- `GET /lang/{locale}` (route `lang.switch`) lives **outside** the localized group: it writes `session(['locale' => ...])` before redirecting so `LocaleSessionRedirect` doesn't bounce the user back to the previous locale. It also excludes the `DetectLocaleFromIp` middleware (see comments in `routes/web.php`).
+- Inside the localized group, `config('app.locale')` reflects the *current request's* locale, not the site default — use `LaravelLocalization::getDefaultLocale()` for the true default.
+- Model content is translated with `spatie/laravel-translatable` (JSON columns); site-wide settings use `spatie/laravel-settings` with per-locale JSON payloads (`app/Settings/GeneralSettings.php`, managed via a Filament SettingsPage).
+- Translation strings live in `lang/{en,fa,ar,ru,tr}/` — keep all five in sync when adding keys.
+
+### Company draft/snapshot publication model
+
+The public site never renders `Company` records directly. Users create/edit a `Company` (the **draft**) via the dashboard; admins review it in Filament (`CompanyReviewStatus`: pending_review / approved / rejected). Approving calls `CompanyPublicationService::publish()`, which upserts a `CompanyPublication` **snapshot** (copying translatable fields, addresses, SEO, and fresh media copies in a transaction). Public pages (`pages::company`, category/state listings) query `CompanyPublication` only, so draft edits stay invisible until re-approved. Rejection only flags the draft — an existing published snapshot stays live.
+
+### Subscriptions
+
+`CompanySubscriptionService` is the **only** place allowed to create/modify plan subscriptions (`laravelcm/laravel-subscriptions`): `switchToPlan()`, `assignFreePlanIfMissing()`, `startProPlusTrial()` (14-day Pro Plus trial), `revertExpiredTrials()`. Payments go through `shetabit/payment` with the callback at `dashboard/payment/callback`.
+
+### Other cross-cutting pieces
+
+- **SEO**: `artesaos/seotools` + a per-model `SeoMeta` record via the `App\Models\Concerns\HasSeo` trait; Filament forms share `app/Filament/Schemas/Components/SeoMetaSection.php`.
+- **Dates**: `App\Support\LocalizedDate` is the single source of truth for user-facing dates (Jalali for `fa`, Gregorian otherwise). Storage is always Gregorian/UTC; the admin panel uses `ariaieboy/filament-jalali` modifiers directly.
+- **Media**: `spatie/laravel-medialibrary` stores on MinIO (S3 driver); conversions run on the Redis queue in the `viravach_queue` container. See `docs/viravach-media-queue-setup.md` (Persian).
+- **Homepage content is DB-driven**: `pages::home` does `Page::where('slug', '/')->firstOrFail()` — with an empty `pages` table the homepage 404s (there is no `Page` seeder).
+
+Additional project knowledge (infra topology, localization gotchas) lives in the `.claude/skills/viravach-project` skill and the "About This Project" section of `README.md`.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

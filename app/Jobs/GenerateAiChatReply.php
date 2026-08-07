@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Ai\Agents\ViraBotAgent;
 use App\Models\AiAssistant;
+use App\Services\Chat\CompanyContextBuilder;
+use App\Settings\ChatSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,11 +27,18 @@ class GenerateAiChatReply implements ShouldQueue
 
     /**
      * Create a new job instance.
+     *
+     * @param  string|null  $locale  site locale at the time the user sent
+     *                               their message — selects the system prompt
+     *                               and the fallback error string, since
+     *                               app()->getLocale() inside the queue worker
+     *                               does not reflect the request's locale
      */
     public function __construct(
         public int $conversationId,
         public Model $participant,
         public ?string $context = null,
+        public ?string $locale = null,
     ) {}
 
     /**
@@ -43,7 +52,7 @@ class GenerateAiChatReply implements ShouldQueue
         $recentMessages = $conversation->messages()
             ->with('participation')
             ->latest('id')
-            ->limit((int) config('viravach_chat.ai_history_limit'))
+            ->limit($this->historyLimit())
             ->get()
             ->reverse()
             ->values();
@@ -56,11 +65,11 @@ class GenerateAiChatReply implements ShouldQueue
                 : new UserMessage($message->body))
             ->all();
 
-        $agent = new ViraBotAgent($history, $this->context);
+        $agent = new ViraBotAgent($history, $this->resolveContext($conversation), $this->locale, $this->systemPromptOverride());
 
         $response = $agent->prompt($latestMessage?->body ?? '');
 
-        Chat::message($response->text)->from($assistant)->to($conversation)->send();
+        Chat::message(trim($response->text))->from($assistant)->to($conversation)->send();
     }
 
     /**
@@ -80,7 +89,63 @@ class GenerateAiChatReply implements ShouldQueue
             return;
         }
 
-        Chat::message(__('chat.ai_error'))->from($assistant)->to($conversation)->send();
+        Chat::message(__('chat.ai_error', [], $this->locale))->from($assistant)->to($conversation)->type('ai_error')->send();
+    }
+
+    /**
+     * Falls back to config('viravach_chat.ai_history_limit') when the admin
+     * hasn't set an override in ChatSettings.
+     */
+    protected function historyLimit(): int
+    {
+        return app(ChatSettings::class)->ai_history_limit ?? (int) config('viravach_chat.ai_history_limit');
+    }
+
+    /**
+     * The admin-editable system prompt for this locale, or null (meaning
+     * ViraBotAgent falls back to config('viravach_chat.system_prompts')
+     * itself) when ChatSettings has no non-blank override for it.
+     */
+    protected function systemPromptOverride(): ?string
+    {
+        if ($this->locale === null) {
+            return null;
+        }
+
+        $prompt = app(ChatSettings::class)->system_prompts[$this->locale] ?? null;
+
+        return blank($prompt) ? null : $prompt;
+    }
+
+    /**
+     * For company-scoped AI conversations (data.company_id set), the context
+     * is rebuilt from the company's published snapshot at reply time — never
+     * cached at conversation creation — so edits that go through a new
+     * approval/publication are reflected immediately. The builder reads
+     * app()->getLocale(), which is switched to the sender's locale for the
+     * duration of the build because the queue worker runs on the app default.
+     */
+    protected function resolveContext(Conversation $conversation): ?string
+    {
+        $companyId = $conversation->data['company_id'] ?? null;
+
+        if ($companyId === null || ($conversation->data['type'] ?? null) !== 'ai') {
+            return $this->context;
+        }
+
+        $originalLocale = app()->getLocale();
+
+        if ($this->locale !== null) {
+            app()->setLocale($this->locale);
+        }
+
+        try {
+            $context = app(CompanyContextBuilder::class)->build((int) $companyId);
+        } finally {
+            app()->setLocale($originalLocale);
+        }
+
+        return $context !== '' ? $context : $this->context;
     }
 
     /**

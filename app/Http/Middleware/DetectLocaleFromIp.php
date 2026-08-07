@@ -28,6 +28,17 @@ class DetectLocaleFromIp
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Only top-level GET navigations can be locale-redirected. This
+        // middleware sits in the global "web" group, so without this guard it
+        // also 302s framework POST endpoints that live OUTSIDE the localized
+        // URL group ("/broadcasting/auth", "/livewire/update") for any
+        // GeoIP-matched visitor who never picked a locale manually — Echo's
+        // channel-auth POST then gets a redirect instead of a signature and
+        // every private-channel subscription silently fails.
+        if (! $request->isMethod('GET')) {
+            return $next($request);
+        }
+
         if ($request->cookie('locale_selected_manually')) {
             return $next($request);
         }

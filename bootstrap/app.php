@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\DetectLocaleFromIp;
+use App\Http\Middleware\DiscardInvalidBroadcastSocketId;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -26,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // in routes/web.php), which are applied on top of this implicit group.
         $middleware->web(append: [
             DetectLocaleFromIp::class,
+            // Strips the "X-Socket-ID: undefined" header a not-yet-connected
+            // Echo client sends, which would otherwise make pusher-php throw
+            // inside every queued MessageWasSent broadcast (see the class).
+            DiscardInvalidBroadcastSocketId::class,
         ]);
 
         $middleware->alias([

@@ -1,11 +1,17 @@
 {{--
     Shared message bubble, reused by the header chat drawer, the full-page
     chat client, and the support agent inbox. Expects $msg (see
-    presentMessage() shape: id, body, senderName, senderType, isOwn, time,
-    type) and $translations (keyed by message id). The enclosing Livewire
-    component must define toggleTranslation($id). senderType is optional —
-    components that don't set it (e.g. the support inbox) simply never
-    suppress the translate link based on it.
+    presentMessage() shape: id, body, senderName, senderType, senderAvatar,
+    isOwn, time, type) and $translations (keyed by message id). The enclosing
+    Livewire component must define toggleTranslation($id). senderType and
+    senderAvatar are optional — components that don't set them (e.g. the
+    support inbox) simply never suppress the translate link / show an avatar.
+
+    Bubble side follows the current page direction (the layouts set dir + the
+    matching LTR/RTL bundle from LaravelLocalization::getCurrentLocaleDirection()):
+    own messages hug the inline-start edge (left in LTR, right in RTL) and
+    everyone else's the inline-end edge, so flex start/end — not hardcoded
+    left/right — is what keeps both directions correct.
 --}}
 @if($msg['type'] === 'system')
     <!--begin::System notice-->
@@ -15,20 +21,18 @@
     <!--end::System notice-->
 @else
     <!--begin::پیام-->
-    <div class="d-flex {{ $msg['isOwn'] ? 'justify-content-end' : 'justify-content-start' }} mb-10" wire:key="chat-message-{{ $msg['id'] }}">
+    <div class="d-flex {{ $msg['isOwn'] ? 'justify-content-start' : 'justify-content-end' }} mb-5" wire:key="chat-message-{{ $msg['id'] }}">
         <!--begin::Wrapper-->
-        <div class="d-flex flex-column {{ $msg['isOwn'] ? 'align-items-end' : 'align-items-start' }}">
+        {{-- mw-75 caps the bubble at ~75% of the row so the alignment side stays obvious even for short messages. --}}
+        <div class="d-flex flex-column mw-75 {{ $msg['isOwn'] ? 'align-items-start' : 'align-items-end' }}">
             <!--begin::user-->
-            <div class="d-flex align-items-center mb-2">
-                <span class="fs-7 fw-bold text-gray-900 {{ $msg['isOwn'] ? 'ms-1' : 'me-1' }}">{{ $msg['senderName'] }}</span>
-                @if($msg['time'])
-                    <span class="text-muted fs-8">{{ $msg['time'] }}</span>
-                @endif
+            <div class="d-flex align-items-center mb-1">
+                <span class="fs-7 fw-bold text-gray-900">{{ $msg['senderName'] }}</span>
             </div>
             <!--end::user-->
             <!--begin::Text-->
-            <div class="p-5 rounded {{ $msg['isOwn'] ? 'bg-light-primary text-end' : 'bg-light-info text-start' }} text-gray-900 fw-semibold mw-lg-400px" style="white-space: pre-wrap;">
-                {{ $msg['body'] }}
+            <div class="px-4 py-2 rounded {{ $msg['isOwn'] ? 'bg-primary text-white' : 'bg-gray-200 text-gray-900' }} fw-semibold">
+                <div style="white-space: pre-wrap;" dir="auto">{{ trim($msg['body']) }}</div>
 
                 @if($translations[$msg['id']]['visible'] ?? false)
                     <!--begin::Translation-->
@@ -40,6 +44,10 @@
                         @endif
                     </div>
                     <!--end::Translation-->
+                @endif
+
+                @if($msg['time'])
+                    <div class="{{ $msg['isOwn'] ? 'text-white opacity-75' : 'text-muted' }} fs-9 fw-normal mt-1 text-end">{{ $msg['time'] }}</div>
                 @endif
             </div>
             <!--end::Text-->
@@ -57,6 +65,12 @@
             @endunless
         </div>
         <!--end::Wrapper-->
+        @if(! $msg['isOwn'] && ($msg['senderAvatar'] ?? null))
+            {{-- Non-own messages sit at the inline-end edge, so their avatar goes on the outer (end) side. --}}
+            <div class="symbol symbol-35px symbol-circle ms-3 mt-6">
+                <img src="{{ $msg['senderAvatar'] }}" alt="{{ $msg['senderName'] }}"/>
+            </div>
+        @endif
     </div>
     <!--end::پیام-->
 @endif

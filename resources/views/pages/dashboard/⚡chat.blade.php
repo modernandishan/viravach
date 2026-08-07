@@ -1,6 +1,9 @@
 <?php
 
+use App\Events\ChatConversationStarted;
 use App\Livewire\Concerns\InteractsWithChatMessages;
+use App\Models\Company;
+use App\Models\User;
 use App\Services\Chat\AiChatService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
@@ -30,9 +33,24 @@ class extends Component
      */
     public array $contacts = [];
 
+    /**
+     * One section per Company the participant owns, listing conversations
+     * where the COMPANY is the participant (visitors who contacted it from
+     * its public page) — kept apart from the personal contact list above.
+     *
+     * @var array<int, array{companyId: int, name: string, contacts: array<int, array{conversationId: int, name: string, type: ?string, lastMessage: ?string, relativeTime: ?string, sortTime: int, unreadCount: int}>}>
+     */
+    public array $companySections = [];
+
     public ?int $aiConversationId = null;
 
     public ?int $selectedConversationId = null;
+
+    /**
+     * When the open thread comes from a company section, the id of the owned
+     * Company it is viewed — and sent — as; null for personal threads.
+     */
+    public ?int $activeCompanyId = null;
 
     public bool $isAiSelected = false;
 
@@ -60,6 +78,7 @@ class extends Component
 
         $this->loadAiConversation($participant);
         $this->loadContacts($participant);
+        $this->loadCompanySections($participant);
         $this->selectConversation((int) $this->aiConversationId);
     }
 
@@ -68,22 +87,31 @@ class extends Component
         $this->loadContacts($this->participant());
     }
 
-    public function selectConversation(int $conversationId): void
+    /**
+     * @param  int|null  $companyId  present when the thread was picked from a
+     *                               company section: the conversation is then
+     *                               viewed as that owned Company, not as the
+     *                               personal participant
+     */
+    public function selectConversation(int $conversationId, ?int $companyId = null): void
     {
         $participant = $this->participant();
+        $viewer = $companyId !== null ? $this->ownedCompany($companyId) : $participant;
         $conversation = Conversation::findOrFail($conversationId);
 
-        abort_unless($this->participantBelongsTo($conversation, $participant), 403);
+        abort_unless($this->participantBelongsTo($conversation, $viewer), 403);
 
         $this->selectedConversationId = $conversationId;
-        $this->isAiSelected = $conversationId === $this->aiConversationId;
-        $this->messages = $this->fetchMessages($conversation, $participant);
+        $this->activeCompanyId = $companyId;
+        $this->isAiSelected = $companyId === null && $conversationId === $this->aiConversationId;
+        $this->messages = $this->fetchMessages($conversation, $viewer);
         $this->sendError = null;
         $this->awaitingReply = false;
 
-        Chat::conversation($conversation)->setParticipant($participant)->readAll();
+        Chat::conversation($conversation)->setParticipant($viewer)->readAll();
 
         $this->loadContacts($participant);
+        $this->loadCompanySections($participant);
     }
 
     public function sendMessage(): void
@@ -104,7 +132,7 @@ class extends Component
 
         $participant = $this->participant();
 
-        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($participant), 10)) {
+        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($participant), $this->sendRateLimitMax())) {
             $this->sendError = __('chat.rate_limited_send');
 
             return;
@@ -118,6 +146,8 @@ class extends Component
             return;
         }
 
+        $sender = $this->activeParticipant();
+
         if ($this->isAiSelected) {
             $message = app(AiChatService::class)->sendUserMessage($participant, $body);
 
@@ -125,20 +155,122 @@ class extends Component
             $this->pollDeadline = now()->addSeconds(self::POLL_TIMEOUT_SECONDS)->timestamp;
         } else {
             $conversation = Conversation::findOrFail($this->selectedConversationId);
-            $message = Chat::message($body)->from($participant)->to($conversation)->send();
+            $message = Chat::message($body)->from($sender)->to($conversation)->send();
         }
 
-        $this->messages[] = $this->presentMessage($message->load('participation.messageable'), $participant);
+        $this->messages[] = $this->presentMessage($message->load('participation.messageable'), $sender);
         $this->body = '';
 
         $this->loadContacts($participant);
+        $this->loadCompanySections($participant);
     }
 
     /**
-     * Polled while awaiting an AI reply (3s, stops itself once it lands or
-     * times out — see the template), and every 5s while any conversation is
-     * open, since replies from a human counterpart can arrive anytime with
-     * no push channel until Reverb lands.
+     * Echo listeners — the PRIMARY real-time mechanism on this page.
+     * Registered here instead of #[On] attributes because the channel names
+     * embed ids only known at runtime. Livewire sends this set to the
+     * browser once, at mount, so it covers:
+     *  - the per-participant channels (this user + each owned company) that
+     *    App\Events\ChatConversationStarted announces new conversations on;
+     *  - the per-conversation musonza channels of every conversation already
+     *    in the lists at mount.
+     * Conversations that appear AFTER mount get their row via
+     * ChatConversationStarted, and their channel is subscribed by the
+     * template's selectedConversationId watcher once opened; until then
+     * their messages only update the list via the 60s fallback poll.
+     */
+    public function getListeners(): array
+    {
+        $user = auth()->user();
+
+        $listeners = [
+            'echo-private:'.ChatConversationStarted::channelNameFor($user).',ChatConversationStarted' => 'refreshContactLists',
+        ];
+
+        foreach ($user->companies as $company) {
+            $listeners['echo-private:'.ChatConversationStarted::channelNameFor($company).',ChatConversationStarted'] = 'refreshContactLists';
+        }
+
+        foreach ($this->listedConversationIds() as $conversationId) {
+            $listeners["echo-private:mc-chat-conversation.{$conversationId},.Musonza\\Chat\\Eventing\\MessageWasSent"] = 'onConversationMessage';
+        }
+
+        return $listeners;
+    }
+
+    /**
+     * Echo handler for musonza's MessageWasSent: reuses the exact refresh
+     * paths the old polls called — pollForReply() when the push is for the
+     * open thread, refreshContactLists() (unread badges / last message /
+     * ordering) when it is for any other listed conversation.
+     *
+     * @param  array{message?: array{conversation_id?: int}}  $event
+     */
+    public function onConversationMessage(array $event = []): void
+    {
+        $conversationId = (int) data_get($event, 'message.conversation_id', 0);
+
+        if ($conversationId !== 0 && $conversationId === $this->selectedConversationId) {
+            $this->pollForReply();
+
+            return;
+        }
+
+        $this->refreshContactLists();
+    }
+
+    /**
+     * FALLBACK ONLY, not the primary mechanism (that's the Echo listeners
+     * above): runs on a slow 60s wire:poll to recover anything a missed or
+     * dropped WebSocket event left behind — both the open thread and the
+     * contact lists.
+     */
+    public function fallbackSync(): void
+    {
+        $this->pollForReply();
+        $this->refreshContactLists();
+    }
+
+    /**
+     * Rebuilds both sidebar lists. Triggered by Echo pushes (new
+     * conversations and messages in non-open threads) and the 60s fallback
+     * poll.
+     */
+    public function refreshContactLists(): void
+    {
+        $participant = $this->participant();
+
+        $this->loadContacts($participant);
+        $this->loadCompanySections($participant);
+    }
+
+    /**
+     * Conversation ids currently present in the personal list and the
+     * company sections (plus the open thread), i.e. the channels worth
+     * listening on.
+     *
+     * @return array<int, int>
+     */
+    protected function listedConversationIds(): array
+    {
+        $ids = collect($this->contacts)->pluck('conversationId');
+
+        foreach ($this->companySections as $section) {
+            $ids = $ids->merge(collect($section['contacts'])->pluck('conversationId'));
+        }
+
+        if ($this->selectedConversationId !== null) {
+            $ids->push($this->selectedConversationId);
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /**
+     * Fetches messages newer than the last one shown in the open thread.
+     * Triggered primarily by Echo MessageWasSent pushes (via
+     * onConversationMessage()); the 60s fallbackSync() poll is the only
+     * remaining timer that reaches it.
      */
     public function pollForReply(): void
     {
@@ -153,6 +285,7 @@ class extends Component
         }
 
         $participant = $this->participant();
+        $viewer = $this->activeParticipant();
         $conversation = Conversation::findOrFail($this->selectedConversationId);
 
         $lastKnownId = (int) (collect($this->messages)->max('id') ?? 0);
@@ -168,15 +301,16 @@ class extends Component
         }
 
         foreach ($newMessages as $newMessage) {
-            $this->messages[] = $this->presentMessage($newMessage, $participant);
+            $this->messages[] = $this->presentMessage($newMessage, $viewer);
         }
 
         if ($this->isAiSelected) {
             $this->awaitingReply = false;
         }
 
-        Chat::conversation($conversation)->setParticipant($participant)->readAll();
+        Chat::conversation($conversation)->setParticipant($viewer)->readAll();
         $this->loadContacts($participant);
+        $this->loadCompanySections($participant);
     }
 
     /**
@@ -208,6 +342,11 @@ class extends Component
         $paginator = Chat::conversations()->setParticipant($participant)->isDirect()->perPage(100)->get();
 
         $all = collect($paginator->items())
+            // Company-scoped ViraBot conversations (data.company_id set) live
+            // on the public company pages only; listing them here would show
+            // several indistinguishable "ViraBot" contacts.
+            ->reject(fn (Participation $participation) => ($participation->conversation->data['type'] ?? null) === 'ai'
+                && ($participation->conversation->data['company_id'] ?? null) !== null)
             ->map(fn (Participation $participation) => $this->presentContact($participation, $participant))
             ->filter()
             ->values();
@@ -256,6 +395,59 @@ class extends Component
         ];
     }
 
+    /**
+     * One section per owned Company with that company's direct conversations
+     * (data.type=company), viewed from the COMPANY's perspective so unread
+     * counts and message ownership are the company's, not the owner's.
+     */
+    protected function loadCompanySections(Model $participant): void
+    {
+        $this->companySections = [];
+
+        if (! $participant instanceof User) {
+            return;
+        }
+
+        foreach ($participant->companies as $company) {
+            $paginator = Chat::conversations()->setParticipant($company)->isDirect()->perPage(100)->get();
+
+            $contacts = collect($paginator->items())
+                ->filter(fn (Participation $participation) => ($participation->conversation->data['type'] ?? null) === 'company')
+                ->map(fn (Participation $participation) => $this->presentContact($participation, $company))
+                ->filter()
+                ->sortByDesc('sortTime')
+                ->values()
+                ->all();
+
+            $this->companySections[] = [
+                'companyId' => $company->id,
+                'name' => (string) ($company->publication?->name ?? $company->name),
+                'contacts' => $contacts,
+            ];
+        }
+    }
+
+    /**
+     * The identity the open thread is viewed and sent as: an owned Company
+     * for threads picked from a company section — so visitors see the
+     * company itself replying — or the resolved personal participant.
+     */
+    protected function activeParticipant(): Model
+    {
+        return $this->activeCompanyId !== null
+            ? $this->ownedCompany($this->activeCompanyId)
+            : $this->participant();
+    }
+
+    protected function ownedCompany(int $companyId): Company
+    {
+        $participant = $this->participant();
+
+        abort_unless($participant instanceof User, 403);
+
+        return $participant->companies()->findOrFail($companyId);
+    }
+
     protected function participantBelongsTo(Conversation $conversation, Model $participant): bool
     {
         return $conversation->participants()
@@ -277,7 +469,8 @@ class extends Component
             <!--begin::Sidebar-->
             <div class="flex-column flex-lg-row-auto w-100 w-lg-300px w-xl-400px mb-10 mb-lg-0">
                 <!--begin::مخاطبین-->
-                <div class="card card-flush">
+                {{-- FALLBACK ONLY, not the primary mechanism: Echo listeners (getListeners() + the thread subscription below) drive updates; this slow poll recovers missed/dropped WebSocket events. --}}
+                <div class="card card-flush" wire:poll.60s="fallbackSync">
                     <!--begin::کارت header-->
                     <div class="card-header pt-7">
                         <div class="card-title">
@@ -345,6 +538,51 @@ class extends Component
                                 </div>
                                 <!--end::contact-->
                             @endforeach
+
+                            @foreach($companySections as $section)
+                                <!--begin::Company section-->
+                                <div wire:key="company-section-{{ $section['companyId'] }}">
+                                    <div class="separator my-4"></div>
+                                    <div class="fs-6 fw-bold text-gray-800 px-3 mb-2">
+                                        {{ __('chat.company_inbox_title', ['name' => $section['name']]) }}
+                                    </div>
+
+                                    @if(empty($section['contacts']))
+                                        <div class="text-muted fs-7 px-3 pb-2">{{ __('chat.company_inbox_empty') }}</div>
+                                    @endif
+
+                                    @foreach($section['contacts'] as $contact)
+                                        <!--begin::Company contact-->
+                                        <div
+                                            class="d-flex flex-stack py-4 px-3 rounded cursor-pointer {{ $selectedConversationId === $contact['conversationId'] && $activeCompanyId === $section['companyId'] ? 'bg-light-primary' : '' }}"
+                                            wire:click="selectConversation({{ $contact['conversationId'] }}, {{ $section['companyId'] }})"
+                                            wire:key="company-{{ $section['companyId'] }}-contact-{{ $contact['conversationId'] }}"
+                                        >
+                                            <div class="d-flex align-items-center overflow-hidden">
+                                                <div class="symbol symbol-45px symbol-circle">
+                                                    <span class="symbol-label bg-light-info text-info fs-6 fw-bolder">
+                                                        {{ \Illuminate\Support\Str::substr($contact['name'], 0, 1) }}
+                                                    </span>
+                                                </div>
+                                                <div class="ms-5 overflow-hidden">
+                                                    <span class="fs-5 fw-bold text-gray-900 text-truncate d-block">{{ $contact['name'] }}</span>
+                                                    <div class="fw-semibold text-muted text-truncate">
+                                                        {{ $contact['lastMessage'] ?? __('chat.no_message_preview') }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column align-items-end ms-2 flex-shrink-0">
+                                                <span class="text-muted fs-7 mb-1">{{ $contact['relativeTime'] }}</span>
+                                                @if($contact['unreadCount'] > 0)
+                                                    <span class="badge badge-sm badge-circle badge-light-warning">{{ $contact['unreadCount'] }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <!--end::Company contact-->
+                                    @endforeach
+                                </div>
+                                <!--end::Company section-->
+                            @endforeach
                         </div>
                     </div>
                     <!--end::کارت body-->
@@ -360,12 +598,18 @@ class extends Component
                             {{ __('chat.select_contact_prompt') }}
                         </div>
                     @else
-                        @php($currentContact = collect($contacts)->firstWhere('conversationId', $selectedConversationId))
+                        @php($currentContact = collect($contacts)->firstWhere('conversationId', $selectedConversationId)
+                            ?? collect($companySections)->flatMap(fn ($section) => $section['contacts'])->firstWhere('conversationId', $selectedConversationId))
+                        @php($activeSection = $activeCompanyId !== null ? collect($companySections)->firstWhere('companyId', $activeCompanyId) : null)
                         <!--begin::کارت header-->
                         <div class="card-header" id="kt_chat_messenger_header">
                             <div class="card-title">
                                 <div class="d-flex justify-content-center flex-column me-3">
                                     <span class="fs-4 fw-bold text-gray-900 me-1 mb-2 lh-1">{{ $currentContact['name'] ?? '' }}</span>
+                                    @if($activeSection)
+                                        {{-- Replies in this thread are sent AS the company, not as the personal account. --}}
+                                        <span class="fs-7 fw-semibold text-muted lh-1">{{ $activeSection['name'] }}</span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -376,13 +620,23 @@ class extends Component
                                 class="scroll-y me-n5 pe-5 h-400px h-lg-auto"
                                 style="max-height: 480px;"
                                 id="dashboard-chat-messages"
+                                data-chat-scroll
                                 wire:key="dashboard-chat-messages-{{ $selectedConversationId }}"
-                                wire:poll.5s="pollForReply"
                                 x-data
                                 x-init="
-                                    const scrollToBottom = () => { $el.scrollTop = $el.scrollHeight; };
-                                    scrollToBottom();
-                                    new MutationObserver(scrollToBottom).observe($el, { childList: true, subtree: true });
+                                    $el.scrollTop = $el.scrollHeight;
+                                    {{--
+                                        Primary real-time mechanism for the open thread. The wire:key
+                                        above recreates this element on every thread switch, so this
+                                        runs once per selection and covers conversations created after
+                                        mount that getListeners() could not know about (dedup lives in
+                                        listenToChatConversation — resources/js/echo.js). Scroll-to-bottom
+                                        on every subsequent update is handled by the global 'morphed' hook
+                                        in resources/js/echo.js via the data-chat-scroll marker above.
+                                    --}}
+                                    {{-- typeof guard: if the bundle failed to load, degrade to the fallback poll instead of throwing mid-update. --}}
+                                    typeof window.listenToChatConversation === 'function'
+                                        && window.listenToChatConversation({{ (int) $selectedConversationId }}, (e) => $wire.onConversationMessage(e));
                                 "
                             >
                                 @if($isAiSelected && empty($messages) && ! $awaitingReply)
@@ -395,8 +649,9 @@ class extends Component
                                     @include('components.chat-elements.message-item', ['msg' => $msg, 'translations' => $translations])
                                 @endforeach
 
+                                {{-- No wire:poll here anymore: the AI reply is pushed over Echo; the 60s fallbackSync clears a stuck indicator if the socket drops. --}}
                                 @if($isAiSelected && $awaitingReply)
-                                    <div class="d-flex justify-content-start mb-10" wire:poll.3s="pollForReply">
+                                    <div class="d-flex justify-content-start mb-10">
                                         <div class="p-3 rounded bg-light-info text-muted fs-7 fst-italic">
                                             {{ __('chat.typing') }}
                                         </div>

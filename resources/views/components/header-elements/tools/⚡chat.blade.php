@@ -134,7 +134,7 @@ new class extends Component
 
         $participant = $this->participant();
 
-        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($participant), 10)) {
+        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($participant), $this->sendRateLimitMax())) {
             $this->sendError = __('chat.rate_limited_send');
 
             return;
@@ -191,10 +191,12 @@ new class extends Component
     }
 
     /**
-     * Polled while awaiting an AI reply (3s, stops itself once it lands or
-     * times out — see the template), and every 5s while the support tab is
-     * open, since agent replies can arrive anytime with no push channel
-     * until Reverb lands.
+     * Fetches messages newer than the last one shown. Triggered primarily by
+     * Echo MessageWasSent pushes for authenticated users (see the template's
+     * subscription block); guests — who can't authorize private channels —
+     * still poll it (3s while awaiting an AI reply, 5s on the support tab).
+     * A slow 60s wire:poll remains for authenticated users purely as a
+     * fallback for dropped WebSocket events.
      */
     public function pollForReply(): void
     {
@@ -329,7 +331,42 @@ new class extends Component
             KTEventHandler.on($el, 'kt.drawer.shown', () => $wire.openDrawer());
             KTEventHandler.on($el, 'kt.drawer.hide', () => $wire.closeDrawer());
         })()"
-        data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'300px', 'md': '500px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close">
+        {{--
+            drawer-direction is logical, not physical: the RTLCSS-flipped
+            bundle maps "start" to the right edge on RTL locales and the LTR
+            bundle maps it to the left edge, so the drawer docks on the
+            correct side for every locale without hardcoding one.
+        --}}
+        data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'300px', 'md': '500px'}" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close">
+        @auth
+            {{--
+                Primary real-time mechanism (authenticated users only):
+                subscribe to the AI/support conversation channels as soon as
+                their ids are known — they load lazily on first open, after
+                Livewire has already registered mount-time listeners, so the
+                subscription goes through window.listenToChatConversation
+                (resources/js/echo.js) instead of getListeners(). Each
+                MessageWasSent push triggers the same pollForReply() the old
+                polls used. Guests cannot pass /broadcasting/auth (see
+                routes/channels.php) and keep the poll fallbacks below.
+            --}}
+            {{--
+                The typeof guard is load-bearing: these $watch callbacks run
+                inside Livewire's response processing, so if the Vite bundle
+                failed to load (e.g. stale cache after a deploy) an unguarded
+                call would throw and abort the rest of the UI update.
+                Guarded, a missing helper just degrades to the fallback poll.
+            --}}
+            <div class="d-none" x-data x-init="(() => {
+                const subscribe = (id) => id
+                    && typeof window.listenToChatConversation === 'function'
+                    && window.listenToChatConversation(id, () => $wire.pollForReply());
+                subscribe($wire.aiConversationId);
+                subscribe($wire.supportConversationId);
+                $wire.$watch('aiConversationId', subscribe);
+                $wire.$watch('supportConversationId', subscribe);
+            })()"></div>
+        @endauth
         <!--begin::Messenger-->
         <div class="card w-100 border-0 rounded-0" id="kt_drawer_chat_messenger">
             <!--begin::کارت header-->
@@ -393,7 +430,27 @@ new class extends Component
             <!--begin::کارت body-->
             <div class="card-body" id="kt_drawer_chat_messenger_body">
                 <!--begin::پیام ها-->
-                <div class="scroll-y me-n5 pe-5" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px">
+                <div
+                    class="scroll-y me-n5 pe-5"
+                    data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px"
+                    data-chat-scroll
+                    {{--
+                        wire:ignore.self: KTScroll sets an inline height style
+                        on this element (via data-kt-scroll) that never
+                        appears in the server-rendered HTML. Without ignoring
+                        this element's own attributes, every morph (send,
+                        poll, Echo-triggered reply) strips that inline style,
+                        the container stops overflowing, and the drawer's own
+                        wrapper starts scrolling instead — so the global
+                        'morphed' hook's scrollTop write in resources/js/echo.js
+                        lands on an element that no longer has anything to
+                        scroll. Children (messages) still morph normally.
+                    --}}
+                    wire:ignore.self
+                    x-data
+                    x-init="$el.scrollTop = $el.scrollHeight"
+                >
+                    {{-- Scroll-to-bottom on send/receive/open is handled by the global 'morphed' Livewire hook in resources/js/echo.js via the data-chat-scroll marker above. --}}
                     @php $activeMessages = $activeConversation === 'support' ? $supportMessages : $aiMessages; @endphp
 
                     @if($activeConversation === 'ai' && $aiLoaded && empty($activeMessages) && ! $awaitingReply)
@@ -409,8 +466,9 @@ new class extends Component
                     @endforeach
 
                     @if($activeConversation === 'ai' && $awaitingReply)
+                        {{-- Guests still poll for the AI reply (no broadcasting auth); authenticated users get it pushed over Echo. --}}
                         <!--begin::Typing indicator-->
-                        <div class="d-flex justify-content-start mb-10" wire:poll.3s="pollForReply">
+                        <div class="d-flex justify-content-start mb-10" @guest wire:poll.3s="pollForReply" @endguest>
                             <div class="p-3 rounded bg-light-info text-muted fs-7 fst-italic">
                                 {{ __('chat.typing') }}
                             </div>
@@ -418,9 +476,17 @@ new class extends Component
                         <!--end::Typing indicator-->
                     @endif
 
-                    @if($open && $activeConversation === 'support' && $supportConversationId !== null)
-                        <div wire:poll.5s="pollForReply" class="d-none"></div>
-                    @endif
+                    @guest
+                        {{-- Guests keep the pre-Reverb poll as their primary mechanism — they cannot subscribe to private channels. --}}
+                        @if($open && $activeConversation === 'support' && $supportConversationId !== null)
+                            <div wire:poll.5s="pollForReply" class="d-none"></div>
+                        @endif
+                    @else
+                        {{-- FALLBACK ONLY, not the primary mechanism: Echo pushes above drive updates; this slow poll recovers missed/dropped WebSocket events. --}}
+                        @if($open)
+                            <div wire:poll.60s="pollForReply" class="d-none"></div>
+                        @endif
+                    @endguest
                 </div>
                 <!--end::پیام ها-->
             </div>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Chat;
 
+use App\Events\ChatConversationStarted;
 use App\Models\User;
 use App\Services\Chat\Exceptions\SupportTransferException;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +43,10 @@ class SupportTransferService
 
         $conversation = Chat::makeDirect()->createConversation([$participant, $agent]);
         $conversation->update(['data' => ['type' => 'support']]);
+
+        // Only on creation (reused conversations are already in the agent's
+        // inbox): push the new row to the assigned agent's inbox list.
+        ChatConversationStarted::dispatch($conversation, $agent, $participant);
 
         Chat::message(__('chat.transferred'))->from($agent)->to($conversation)->type('system')->send();
 

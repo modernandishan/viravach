@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AiAssistant;
+use App\Models\Company;
 use App\Models\Guest;
 use App\Models\User;
 
@@ -17,7 +18,7 @@ return [
      * Channel: mc-chat-conversation.2,
      * Event: Musonza\Chat\Eventing\MessageWasSent
      */
-    'broadcasts' => false,
+    'broadcasts' => true,
 
     /*
      * Customize the broadcast connection and queue for MessageWasSent event.
@@ -64,6 +65,7 @@ return [
         User::class,
         Guest::class,
         AiAssistant::class,
+        Company::class,
     ],
 
     /*
