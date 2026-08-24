@@ -908,6 +908,8 @@
 <!--end::custom Javascript-->
 <!--end::Javascript-->
 
+@stack('scripts')
+
 @livewireScripts
 </body>
 </html>
