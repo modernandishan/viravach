@@ -72,6 +72,19 @@ class ManageChatSettings extends SettingsPage
                             ->required(),
                     ]),
 
+                Section::make('سرویس‌دهنده و مدل هوش مصنوعی')
+                    ->schema([
+                        TextInput::make('ai_provider')
+                            ->label('سرویس‌دهنده هوش مصنوعی')
+                            ->required()
+                            ->helperText('باید دقیقاً برابر یکی از کلیدهای آرایه providers در config/ai.php باشد.'),
+                        TextInput::make('ai_model')
+                            ->label('مدل هوش مصنوعی')
+                            ->required()
+                            ->helperText('باید دقیقاً برابر شناسه مدل تعریف‌شده برای همان سرویس‌دهنده باشد.'),
+                    ])
+                    ->columns(2),
+
                 Section::make('محدودیت‌های عددی')
                     ->description('هر فیلد را خالی بگذارید تا مقدار پیش‌فرض اعمال شود.')
                     ->schema([

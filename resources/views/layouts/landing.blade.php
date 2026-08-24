@@ -22,10 +22,28 @@
     @endunless
     {!! \Artesaos\SEOTools\Facades\SEOTools::generate() !!}
 
-    @foreach (config('laravellocalization.supportedLocales') as $hreflangCode => $hreflangLocale)
+    {{--@foreach (config('laravellocalization.supportedLocales') as $hreflangCode => $hreflangLocale)
         <link rel="alternate" hreflang="{{ $hreflangCode }}" href="{{ LaravelLocalization::getLocalizedURL($hreflangCode, null, [], true) }}">
     @endforeach
-    <link rel="alternate" hreflang="x-default" href="{{ LaravelLocalization::getLocalizedURL(LaravelLocalization::getDefaultLocale(), null, [], true) }}">
+    <link rel="alternate" hreflang="x-default" href="{{ LaravelLocalization::getLocalizedURL(LaravelLocalization::getDefaultLocale(), null, [], true) }}">--}}
+    {{-- Alternate-language links. Emitted only on the public host: the
+             dashboard shares this layout but has no locale-prefixed URLs, and
+             pointing search engines at noindex pages would be noise.
+
+             The x-default entry tells Google which version to show when it
+             cannot infer the user's language — the English one, since this
+             directory exists to reach international buyers. --}}
+    @if (request()->getHost() === config('domains.public'))
+        @foreach (LaravelLocalization::getSupportedLocales() as $code => $properties)
+            <link rel="alternate"
+                  hreflang="{{ $properties['regional'] ?? $code }}"
+                  href="{{ LaravelLocalization::getLocalizedURL($code, null, [], true) }}"/>
+        @endforeach
+        <link rel="alternate"
+              hreflang="x-default"
+              href="{{ LaravelLocalization::getLocalizedURL('en', null, [], true) }}"/>
+    @endif
+
 
     <!--begin::Fonts(mandatory for all pages)-->
     {{--<link rel="stylesheet" href="https://fonts.googleapis.com/cssfamily=Inter:300,400,500,600,700" />--}}

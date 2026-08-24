@@ -13,11 +13,6 @@ class SupportTransferException extends RuntimeException
         parent::__construct($message);
     }
 
-    public static function notEligible(): self
-    {
-        return new self(SupportTransferFailureReason::NotEligible, 'The participant has not chatted with the AI assistant yet.');
-    }
-
     public static function noAgentAvailable(): self
     {
         return new self(SupportTransferFailureReason::NoAgentAvailable, 'No support agent is currently available.');

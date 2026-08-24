@@ -46,8 +46,8 @@ new class extends Component
                         <span class="d-flex flex-column">
                             <span
                                 class="fs-6 fw-bold text-gray-800">{{ $category->title }}</span>
-                            <span
-                                class="fs-7 fw-semibold text-muted">{{ $category->description }}</span>
+                            {{--<span
+                                class="fs-7 fw-semibold text-muted">{!! $category->description !!}</span>--}}
                         </span>
                     </a>
                     <!--end:Menu link-->
@@ -63,10 +63,12 @@ new class extends Component
     <!--begin:صفحه فرود-->
     <div class="d-flex flex-stack flex-wrap flex-lg-nowrap gap-2 mx-5">
         <div class="d-flex flex-column me-5">
-            <div class="fs-6 fw-bold text-gray-800">اشتراک ها</div>
-            {{--<div class="fs-7 fw-semibold text-muted">تک صفحه فرود نمونه با قیمت</div>--}}
+            <div class="fs-6 fw-bold text-gray-800">برترین های صادرات</div>
+            <div class="fs-7 fw-semibold text-muted">
+                کسب و کار ها و شرکت ها با بیشترین امتیاز صادرات
+            </div>
         </div>
-        <a href="{{route('pricing')}}" class="btn btn-sm btn-primary fw-bold">پلن ها</a>
+        <a href="{{route('pricing')}}" class="btn btn-sm btn-primary fw-bold">مشاهده</a>
     </div>
     <!--end:صفحه فرود-->
 </div>

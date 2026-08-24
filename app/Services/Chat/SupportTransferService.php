@@ -15,22 +15,17 @@ class SupportTransferService
      * Find (or start) the participant's direct conversation with a human
      * support agent, tagging it so it's distinguishable from AI conversations.
      *
-     * @throws SupportTransferException when the participant hasn't chatted
-     *                                  with the AI assistant yet, or no support agent is available
+     * @throws SupportTransferException when no support agent is available
      */
     public function transfer(Model $participant): Conversation
     {
-        if (! $this->isEligible($participant)) {
-            throw SupportTransferException::notEligible();
-        }
-
         $existing = $this->existingConversation($participant);
 
         if ($existing) {
             return $existing;
         }
 
-        $agent = User::role('support')->inRandomOrder()->first();
+        $agent = $this->pickAgent($participant);
 
         if (! $agent) {
             throw SupportTransferException::noAgentAvailable();
@@ -41,11 +36,24 @@ class SupportTransferService
         $participant->unsetRelation('participation');
         $agent->unsetRelation('participation');
 
-        $conversation = Chat::makeDirect()->createConversation([$participant, $agent]);
-        $conversation->update(['data' => ['type' => 'support']]);
+        // musonza enforces pair-level uniqueness for direct conversations
+        // (Conversation::makeDirect() throws DirectMessagingExistsException
+        // if this exact pair already has ANY direct conversation, regardless
+        // of its data.type tag), so the type-scoped lookup above isn't
+        // enough on its own — adopt whatever direct conversation the pair
+        // already has instead of blindly trying to create a second one.
+        $conversation = Chat::conversations()->between($participant, $agent);
 
-        // Only on creation (reused conversations are already in the agent's
-        // inbox): push the new row to the assigned agent's inbox list.
+        if ($conversation) {
+            $conversation->update(['data' => ['type' => 'support']]);
+        } else {
+            $conversation = Chat::makeDirect()->createConversation([$participant, $agent]);
+            $conversation->update(['data' => ['type' => 'support']]);
+        }
+
+        // Only on first becoming a support conversation for this pair: push
+        // the row to the assigned agent's inbox list and announce the
+        // hand-off in the thread itself.
         ChatConversationStarted::dispatch($conversation, $agent, $participant);
 
         Chat::message(__('chat.transferred'))->from($agent)->to($conversation)->type('system')->send();
@@ -54,14 +62,35 @@ class SupportTransferService
     }
 
     /**
-     * A participant becomes eligible for a human transfer only after they've
-     * sent at least one message to the AI assistant.
+     * Picks a random agent from the first of these roles that has any
+     * candidate OTHER than the requesting participant: support, then admin,
+     * then super_admin. Excluding the participant matters because musonza
+     * allows only one direct conversation per participant pair — pairing the
+     * requester with themselves would degenerately "match" any of their own
+     * existing direct conversations in the between() lookup above and trip
+     * DirectMessagingExistsException instead of a clean noAgentAvailable().
+     * A crafted installation could theoretically exhaust all three roles
+     * this way, but super_admin always exists in practice, so
+     * SupportTransferException::noAgentAvailable() is kept as a safety net
+     * rather than an expected outcome.
      */
-    public function isEligible(Model $participant): bool
+    protected function pickAgent(Model $participant): ?User
     {
-        $aiConversation = $this->findConversationByType($participant, 'ai');
+        foreach (['support', 'admin', 'super_admin'] as $role) {
+            $query = User::role($role);
 
-        return $aiConversation !== null && $aiConversation->messages()->exists();
+            if ($participant instanceof User) {
+                $query->whereKeyNot($participant->getKey());
+            }
+
+            $agent = $query->inRandomOrder()->first();
+
+            if ($agent) {
+                return $agent;
+            }
+        }
+
+        return null;
     }
 
     /**

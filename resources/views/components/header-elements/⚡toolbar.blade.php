@@ -17,7 +17,7 @@ new class extends Component {
     {{--<livewire:header-elements.tools.notifications />--}}
     <!--end::notifications-->
     <!--begin::chat-->
-    <livewire:header-elements.tools.chat />
+    <livewire:chat-elements.chat-modal />
     <!--end::chat-->
     <!--begin::Quick links-->
     {{--<livewire:header-elements.tools.quick-links />--}}

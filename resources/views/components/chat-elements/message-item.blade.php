@@ -1,8 +1,12 @@
 {{--
     Shared message bubble, reused by the header chat drawer, the full-page
     chat client, and the support agent inbox. Expects $msg (see
-    presentMessage() shape: id, body, senderName, senderType, senderAvatar,
-    isOwn, time, type) and $translations (keyed by message id). The enclosing
+    presentMessage() shape: id, body, bodyHtml, senderName, senderType,
+    senderAvatar, isOwn, time, type) and $translations (keyed by message id).
+    bodyHtml is only non-null for AiAssistant messages (rendered as sanitized
+    Markdown); every other sender keeps the escaped plain-text $body. The
+    support inbox's own presentMessage() never sets bodyHtml, so it always
+    falls back to the escaped $body here. The enclosing
     Livewire component must define toggleTranslation($id). senderType and
     senderAvatar are optional — components that don't set them (e.g. the
     support inbox) simply never suppress the translate link / show an avatar.
@@ -13,26 +17,34 @@
     everyone else's the inline-end edge, so flex start/end — not hardcoded
     left/right — is what keeps both directions correct.
 --}}
+@once
+    {{--
+        Neutralizes the rendered Markdown's <p> margins (bodyHtml is
+        League/CommonMark output, which always wraps a single-paragraph
+        reply in <p>...</p>) so it takes up exactly the same height as a
+        plain-text bubble. Scoped to .chat-bubble-text so it never touches
+        Bootstrap's own paragraph spacing elsewhere on the page.
+    --}}
+    <style>
+        .chat-bubble-text > :first-child { margin-top: 0; }
+        .chat-bubble-text > :last-child { margin-bottom: 0; }
+    </style>
+@endonce
 @if($msg['type'] === 'system')
     <!--begin::System notice-->
-    <div class="text-center text-muted fs-8 my-4" wire:key="chat-message-{{ $msg['id'] }}">
+    <div class="text-center text-muted fs-8 my-2" wire:key="chat-message-{{ $msg['id'] }}">
         {{ $msg['body'] }}
     </div>
     <!--end::System notice-->
 @else
     <!--begin::پیام-->
-    <div class="d-flex {{ $msg['isOwn'] ? 'justify-content-start' : 'justify-content-end' }} mb-5" wire:key="chat-message-{{ $msg['id'] }}">
-        <!--begin::Wrapper-->
+    <div class="d-flex {{ $msg['isOwn'] ? 'justify-content-start' : 'justify-content-end' }} mb-2" wire:key="chat-message-{{ $msg['id'] }}">
         {{-- mw-75 caps the bubble at ~75% of the row so the alignment side stays obvious even for short messages. --}}
         <div class="d-flex flex-column mw-75 {{ $msg['isOwn'] ? 'align-items-start' : 'align-items-end' }}">
-            <!--begin::user-->
-            <div class="d-flex align-items-center mb-1">
-                <span class="fs-7 fw-bold text-gray-900">{{ $msg['senderName'] }}</span>
-            </div>
-            <!--end::user-->
+            <span class="d-block fs-7 fw-bold text-gray-900 mb-1">{{ $msg['senderName'] }}</span>
             <!--begin::Text-->
-            <div class="px-4 py-2 rounded {{ $msg['isOwn'] ? 'bg-primary text-white' : 'bg-gray-200 text-gray-900' }} fw-semibold">
-                <div style="white-space: pre-wrap;" dir="auto">{{ trim($msg['body']) }}</div>
+            <div class="px-3 py-1 rounded {{ $msg['isOwn'] ? 'bg-primary text-white' : 'bg-gray-200 text-gray-900' }} fw-semibold">
+                <div class="chat-bubble-text" style="white-space: pre-wrap;" dir="auto">{!! ($msg['bodyHtml'] ?? null) !== null ? $msg['bodyHtml'] : e(trim($msg['body'])) !!}</div>
 
                 @if($translations[$msg['id']]['visible'] ?? false)
                     <!--begin::Translation-->
@@ -64,7 +76,6 @@
                 <!--end::Translate-->
             @endunless
         </div>
-        <!--end::Wrapper-->
         @if(! $msg['isOwn'] && ($msg['senderAvatar'] ?? null))
             {{-- Non-own messages sit at the inline-end edge, so their avatar goes on the outer (end) side. --}}
             <div class="symbol symbol-35px symbol-circle ms-3 mt-6">

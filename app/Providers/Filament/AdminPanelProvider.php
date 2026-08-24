@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Http\Middleware\FilamentAuthenticate;
+use App\Http\Middleware\ConfigureSessionForHost;
 use App\Http\Middleware\SetFilamentLocale;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -28,9 +28,11 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->default()
-            // ->domain('viravach.com')
             ->id('admin')
-            ->path('admin')
+            // A dedicated host makes an "/admin" path prefix redundant, and
+            // lets the proxy apply IP allow-listing to the panel alone.
+            ->domain(config('domains.admin'))
+            ->path('')
             ->login()
             ->unsavedChangesAlerts()
             ->colors([
@@ -47,7 +49,9 @@ class AdminPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
-                FilamentAuthenticate::class,
+                // Panel routes bypass the `web` group, so the session cookie
+                // must be scoped here as well. Must precede StartSession.
+                ConfigureSessionForHost::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

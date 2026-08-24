@@ -65,7 +65,16 @@ class GenerateAiChatReply implements ShouldQueue
                 : new UserMessage($message->body))
             ->all();
 
-        $agent = new ViraBotAgent($history, $this->resolveContext($conversation), $this->locale, $this->systemPromptOverride());
+        $chatSettings = app(ChatSettings::class);
+
+        $agent = new ViraBotAgent(
+            $history,
+            $this->resolveContext($conversation),
+            $this->locale,
+            $this->systemPromptOverride(),
+            $chatSettings->ai_provider,
+            $chatSettings->ai_model,
+        );
 
         $response = $agent->prompt($latestMessage?->body ?? '');
 

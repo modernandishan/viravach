@@ -13,13 +13,13 @@ class CompanyChatException extends RuntimeException
         parent::__construct($message);
     }
 
-    public static function notEligible(): self
-    {
-        return new self(CompanyChatFailureReason::NotEligible, 'The participant has not chatted with the AI assistant about this company yet.');
-    }
-
     public static function noOwner(): self
     {
         return new self(CompanyChatFailureReason::NoOwner, 'The company has no owner to receive direct messages.');
+    }
+
+    public static function isOwner(): self
+    {
+        return new self(CompanyChatFailureReason::IsOwner, 'The participant is the company\'s own owner and cannot message it.');
     }
 }

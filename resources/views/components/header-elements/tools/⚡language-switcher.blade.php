@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\LocaleSwitchUrl;
 use Livewire\Component;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 
@@ -47,7 +48,7 @@ new class extends Component {
                     "code" => $localeCode,
                     "native" => $supportedLocales[$localeCode]["native"],
                     "flag" => $this->flags[$localeCode] ?? "flag",
-                    "url" => route("lang.switch", $localeCode),
+                    "url" => LocaleSwitchUrl::for($localeCode),
                     "active" => $localeCode === $currentLocale,
                 ],
             )

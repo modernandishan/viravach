@@ -179,7 +179,7 @@ class extends Component {
                      publication snapshot survives deletion of its draft. --}}
                 @if ($publication->company)
                     <div class="mb-6">
-                        <livewire:company-elements.company-chat
+                        <livewire:chat-elements.chat-modal
                             :company-id="$publication->company->id"
                             :company-name="(string) $publication->name"
                         />

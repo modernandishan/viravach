@@ -152,6 +152,12 @@ return [
             'key' => env('ZAI_API_KEY'),
             'url' => env('ZAI_URL', 'https://api.z.ai/api/paas/v4'),
         ],
+
+        'openwebui' => [
+            'driver' => 'openai-compatible',
+            'key' => env('OPENWEBUI_API_KEY'),
+            'url' => env('OPENWEBUI_URL', 'http://open-webui:8080/api'),
+        ],
     ],
 
 ];

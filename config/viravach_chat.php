@@ -7,7 +7,8 @@ return [
      * the reply) sent to the AI provider as conversation context.
      */
     'ai_history_limit' => 20,
-
+    'ai_provider' => 'openwebui',
+    'ai_model' => 'virabot',
     /*
      * System prompts for ViraBot, the Viravach AI assistant, keyed by site
      * locale. The prompt is selected from the locale that was active when the

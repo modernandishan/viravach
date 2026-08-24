@@ -16,6 +16,10 @@ class ChatSettings extends Settings
 {
     public bool $ai_enabled;
 
+    public string $ai_provider;
+
+    public string $ai_model;
+
     public ?int $ai_history_limit;
 
     public ?int $rate_limit_messages_per_minute;

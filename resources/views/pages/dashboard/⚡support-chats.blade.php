@@ -1,10 +1,12 @@
 <?php
 
 use App\Events\ChatConversationStarted;
+use App\Models\Company;
 use App\Models\User;
 use App\Services\Chat\Exceptions\TranslationException;
 use App\Services\Chat\TranslationService;
 use App\Settings\ChatSettings;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -13,6 +15,17 @@ use Musonza\Chat\Models\Conversation;
 use Musonza\Chat\Models\Message as ChatMessage;
 use Musonza\Chat\Models\Participation;
 
+/**
+ * Shared inbox for two audiences, filtered by conversation type:
+ * - Support agents (role support/admin/super_admin — anyone SupportTransferService
+ *   could have assigned) see their 'support' conversations, exactly as before.
+ * - Company owners see 'company' conversations for every company they own —
+ *   they reply AS the Company model (see CompanyChatService), not as
+ *   themselves, since that's the actual musonza participant on those threads.
+ *
+ * A user who is both sees both lists merged. Access is authorized in mount()
+ * rather than route middleware, since it now depends on owning a company too.
+ */
 new
 #[Layout('layouts::landing')]
 class extends Component
@@ -20,11 +33,20 @@ class extends Component
     protected const HISTORY_PAGE_SIZE = 30;
 
     /**
-     * @var array<int, array{id: int, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string}>
+     * @var array<int, array{id: int, type: string, companyId: ?int, companyName: ?string, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string}>
      */
     public array $conversations = [];
 
     public ?int $selectedConversationId = null;
+
+    /**
+     * Which kind of conversation is selected: 'support' or 'company'. Needed
+     * because replying to a 'company' conversation must act AS that Company,
+     * not as the authenticated user themselves.
+     */
+    public ?string $selectedType = null;
+
+    public ?int $selectedCompanyId = null;
 
     /**
      * @var array<int, array{id: int, body: string, senderName: string, isOwn: bool, time: ?string, type: string}>
@@ -42,29 +64,37 @@ class extends Component
 
     public function mount(): void
     {
+        $user = auth()->user();
+
+        abort_unless($user->hasRole('support') || $user->companies()->exists(), 403);
+
         $this->loadConversations();
     }
 
     /**
      * Echo listeners — the PRIMARY real-time mechanism on this page.
      * Registered here instead of #[On] attributes because the channel names
-     * embed ids only known at runtime. Livewire sends this set to the
-     * browser once, at mount, so it covers the agent's own participant
-     * channel (App\Events\ChatConversationStarted announces newly assigned
-     * support conversations there) plus the musonza channel of every
-     * conversation already in the inbox at mount. Conversations assigned
-     * AFTER mount get their row via ChatConversationStarted, and their
-     * channel is subscribed by the template's per-selection subscription
-     * once opened; until then their messages only update the list via the
-     * 60s fallback poll.
+     * embed ids only known at runtime. Listens on the user's own
+     * ChatConversationStarted channel (new support assignments) AND on every
+     * owned company's channel (new direct conversations from visitors — see
+     * CompanyChatService, which broadcasts to the Company as recipient), plus
+     * the musonza channel of every conversation already in the inbox at
+     * mount. Conversations assigned/started AFTER mount get their row via
+     * ChatConversationStarted, and their channel is subscribed by the
+     * template's per-selection subscription once opened; until then their
+     * messages only update the list via the 60s fallback poll.
      */
     public function getListeners(): array
     {
-        $agent = auth()->user();
+        $user = auth()->user();
 
         $listeners = [
-            'echo-private:'.ChatConversationStarted::channelNameFor($agent).',ChatConversationStarted' => 'refreshConversations',
+            'echo-private:'.ChatConversationStarted::channelNameFor($user).',ChatConversationStarted' => 'refreshConversations',
         ];
+
+        foreach ($user->companies as $company) {
+            $listeners['echo-private:'.ChatConversationStarted::channelNameFor($company).',ChatConversationStarted'] = 'refreshConversations';
+        }
 
         foreach (collect($this->conversations)->pluck('id') as $conversationId) {
             $listeners["echo-private:mc-chat-conversation.{$conversationId},.Musonza\\Chat\\Eventing\\MessageWasSent"] = 'onConversationMessage';
@@ -115,18 +145,31 @@ class extends Component
         $this->loadConversations();
     }
 
-    public function selectConversation(int $conversationId): void
+    public function selectConversation(int $conversationId, string $type, ?int $companyId = null): void
     {
-        $agent = auth()->user();
         $conversation = Conversation::findOrFail($conversationId);
 
-        abort_unless($this->belongsToAgent($conversation, $agent), 403);
+        if ($type === 'company') {
+            abort_unless(
+                $companyId !== null
+                    && auth()->user()->companies()->whereKey($companyId)->exists()
+                    && $this->belongsToCompany($conversation, $companyId),
+                403,
+            );
+        } else {
+            abort_unless($this->belongsToAgent($conversation, auth()->user()), 403);
+        }
 
         $this->selectedConversationId = $conversationId;
-        $this->messages = $this->fetchMessages($conversation, $agent);
+        $this->selectedType = $type;
+        $this->selectedCompanyId = $companyId;
+
+        $actingAs = $this->actingAs();
+
+        $this->messages = $this->fetchMessages($conversation, $actingAs);
         $this->sendError = null;
 
-        Chat::conversation($conversation)->setParticipant($agent)->readAll();
+        Chat::conversation($conversation)->setParticipant($actingAs)->readAll();
 
         $this->loadConversations();
     }
@@ -143,20 +186,21 @@ class extends Component
             ],
         );
 
-        $agent = auth()->user();
-        $conversation = $this->resolveSelectedConversation($agent);
+        $conversation = $this->resolveSelectedConversation();
 
         if (! $conversation) {
             return;
         }
 
-        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($agent), $this->sendRateLimitMax())) {
+        $user = auth()->user();
+
+        if (RateLimiter::tooManyAttempts($this->sendRateLimitKey($user), $this->sendRateLimitMax())) {
             $this->sendError = __('chat.rate_limited_send');
 
             return;
         }
 
-        RateLimiter::hit($this->sendRateLimitKey($agent), 60);
+        RateLimiter::hit($this->sendRateLimitKey($user), 60);
 
         $body = strip_tags(trim($this->body));
 
@@ -164,9 +208,11 @@ class extends Component
             return;
         }
 
-        $message = Chat::message($body)->from($agent)->to($conversation)->send();
+        $actingAs = $this->actingAs();
 
-        $this->messages[] = $this->presentMessage($message->load('participation.messageable'), $agent);
+        $message = Chat::message($body)->from($actingAs)->to($conversation)->send();
+
+        $this->messages[] = $this->presentMessage($message->load('participation.messageable'), $actingAs);
         $this->body = '';
 
         $this->loadConversations();
@@ -180,12 +226,13 @@ class extends Component
      */
     public function pollForReply(): void
     {
-        $agent = auth()->user();
-        $conversation = $this->resolveSelectedConversation($agent);
+        $conversation = $this->resolveSelectedConversation();
 
         if (! $conversation) {
             return;
         }
+
+        $actingAs = $this->actingAs();
 
         $lastKnownId = (int) (collect($this->messages)->max('id') ?? 0);
 
@@ -200,10 +247,10 @@ class extends Component
         }
 
         foreach ($newMessages as $newMessage) {
-            $this->messages[] = $this->presentMessage($newMessage, $agent);
+            $this->messages[] = $this->presentMessage($newMessage, $actingAs);
         }
 
-        Chat::conversation($conversation)->setParticipant($agent)->readAll();
+        Chat::conversation($conversation)->setParticipant($actingAs)->readAll();
         $this->loadConversations();
     }
 
@@ -227,9 +274,9 @@ class extends Component
             return;
         }
 
-        $agent = auth()->user();
+        $user = auth()->user();
 
-        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($agent), $this->translateRateLimitMax())) {
+        if (RateLimiter::tooManyAttempts($this->translateRateLimitKey($user), $this->translateRateLimitMax())) {
             $this->translations[$messageId] = [
                 'visible' => true,
                 'text' => null,
@@ -239,7 +286,7 @@ class extends Component
             return;
         }
 
-        RateLimiter::hit($this->translateRateLimitKey($agent), 60);
+        RateLimiter::hit($this->translateRateLimitKey($user), 60);
 
         $message = collect($this->messages)->firstWhere('id', $messageId);
 
@@ -258,21 +305,47 @@ class extends Component
 
     protected function loadConversations(): void
     {
-        $agent = auth()->user();
+        $user = auth()->user();
 
-        $paginator = Chat::conversations()->setParticipant($agent)->isDirect()->perPage(100)->get();
+        $rows = collect();
 
-        $this->conversations = collect($paginator->items())
-            ->filter(fn (Participation $participation) => ($participation->conversation->data['type'] ?? null) === 'support')
-            ->map(fn (Participation $participation) => $this->presentConversation($participation, $agent))
-            ->values()
+        if ($user->hasRole('support')) {
+            $paginator = Chat::conversations()->setParticipant($user)->isDirect()->perPage(100)->get();
+
+            $rows = $rows->merge(
+                collect($paginator->items())
+                    ->filter(fn (Participation $participation) => ($participation->conversation->data['type'] ?? null) === 'support')
+                    ->map(fn (Participation $participation) => $this->presentSupportConversation($participation, $user))
+            );
+        }
+
+        $companyIds = $user->companies()->pluck('id');
+
+        if ($companyIds->isNotEmpty()) {
+            $companyMorphClass = (new Company)->getMorphClass();
+
+            $companyConversations = Conversation::query()
+                ->whereHas('participants', function ($query) use ($companyMorphClass, $companyIds) {
+                    $query->where('messageable_type', $companyMorphClass)
+                        ->whereIn('messageable_id', $companyIds);
+                })
+                ->get()
+                ->filter(fn (Conversation $conversation) => ($conversation->data['type'] ?? null) === 'company');
+
+            $rows = $rows->merge(
+                $companyConversations->map(fn (Conversation $conversation) => $this->presentCompanyConversation($conversation))
+            );
+        }
+
+        $this->conversations = $rows->sortByDesc('updatedAtSort')->values()
+            ->map(fn (array $row) => collect($row)->except('updatedAtSort')->all())
             ->all();
     }
 
     /**
-     * @return array{id: int, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string}
+     * @return array{id: int, type: string, companyId: ?int, companyName: ?string, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string, updatedAtSort: ?string}
      */
-    protected function presentConversation(Participation $participation, User $agent): array
+    protected function presentSupportConversation(Participation $participation, User $agent): array
     {
         $conversation = $participation->conversation;
 
@@ -282,19 +355,67 @@ class extends Component
 
         return [
             'id' => $conversation->id,
+            'type' => 'support',
+            'companyId' => null,
+            'companyName' => null,
             'participantName' => (string) ($otherParticipant?->messageable?->getParticipantDetails()['name'] ?? ''),
             'lastMessage' => $conversation->last_message?->body,
             'unreadCount' => Chat::conversation($conversation)->setParticipant($agent)->unreadCount(),
             'updatedAt' => $conversation->updated_at?->format('Y/m/d H:i'),
+            'updatedAtSort' => $conversation->updated_at?->toIso8601String(),
         ];
     }
 
     /**
-     * Only returns the selected conversation if it's actually a support
-     * conversation this agent participates in — guards against a tampered
-     * selectedConversationId bypassing selectConversation()'s own check.
+     * @return array{id: int, type: string, companyId: ?int, companyName: ?string, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string, updatedAtSort: ?string}
      */
-    protected function resolveSelectedConversation(User $agent): ?Conversation
+    protected function presentCompanyConversation(Conversation $conversation): array
+    {
+        $companyMorphClass = (new Company)->getMorphClass();
+
+        $companyParticipant = $conversation->participants->first(
+            fn (Participation $p) => $p->messageable_type === $companyMorphClass
+        );
+
+        $company = $companyParticipant?->messageable;
+
+        $otherParticipant = $conversation->participants->first(
+            fn (Participation $p) => $p->messageable_type !== $companyMorphClass
+        );
+
+        return [
+            'id' => $conversation->id,
+            'type' => 'company',
+            'companyId' => $company?->id,
+            'companyName' => (string) ($company?->publication?->name ?? $company?->name ?? ''),
+            'participantName' => (string) ($otherParticipant?->messageable?->getParticipantDetails()['name'] ?? ''),
+            'lastMessage' => $conversation->last_message?->body,
+            'unreadCount' => $company ? Chat::conversation($conversation)->setParticipant($company)->unreadCount() : 0,
+            'updatedAt' => $conversation->updated_at?->format('Y/m/d H:i'),
+            'updatedAtSort' => $conversation->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Resolves who the authenticated user is acting AS for the currently
+     * selected conversation: themselves for a 'support' row, or the specific
+     * owned Company for a 'company' row (owners reply AS the company).
+     */
+    protected function actingAs(): Model
+    {
+        if ($this->selectedType === 'company' && $this->selectedCompanyId !== null) {
+            return Company::findOrFail($this->selectedCompanyId);
+        }
+
+        return auth()->user();
+    }
+
+    /**
+     * Only returns the selected conversation if it still actually matches
+     * the selected type/company — guards against a tampered selection
+     * bypassing selectConversation()'s own authorization.
+     */
+    protected function resolveSelectedConversation(): ?Conversation
     {
         if ($this->selectedConversationId === null) {
             return null;
@@ -302,11 +423,17 @@ class extends Component
 
         $conversation = Conversation::find($this->selectedConversationId);
 
-        if (! $conversation || ! $this->belongsToAgent($conversation, $agent)) {
+        if (! $conversation) {
             return null;
         }
 
-        return $conversation;
+        if ($this->selectedType === 'company') {
+            return $this->selectedCompanyId !== null && $this->belongsToCompany($conversation, $this->selectedCompanyId)
+                ? $conversation
+                : null;
+        }
+
+        return $this->belongsToAgent($conversation, auth()->user()) ? $conversation : null;
     }
 
     protected function belongsToAgent(Conversation $conversation, User $agent): bool
@@ -321,13 +448,25 @@ class extends Component
             ->exists();
     }
 
+    protected function belongsToCompany(Conversation $conversation, int $companyId): bool
+    {
+        if (($conversation->data['type'] ?? null) !== 'company' || ($conversation->data['company_id'] ?? null) !== $companyId) {
+            return false;
+        }
+
+        return $conversation->participants()
+            ->where('messageable_type', (new Company)->getMorphClass())
+            ->where('messageable_id', $companyId)
+            ->exists();
+    }
+
     /**
      * @return array<int, array{id: int, body: string, senderName: string, isOwn: bool, time: ?string, type: string}>
      */
-    protected function fetchMessages(Conversation $conversation, User $agent): array
+    protected function fetchMessages(Conversation $conversation, Model $actingAs): array
     {
         $paginator = Chat::conversation($conversation)
-            ->setParticipant($agent)
+            ->setParticipant($actingAs)
             ->setCursorPaginationParams(['sorting' => 'desc'])
             ->perPage(self::HISTORY_PAGE_SIZE)
             ->getMessagesWithCursor();
@@ -335,17 +474,17 @@ class extends Component
         return collect($paginator->items())
             ->reverse()
             ->values()
-            ->map(fn (ChatMessage $message) => $this->presentMessage($message, $agent))
+            ->map(fn (ChatMessage $message) => $this->presentMessage($message, $actingAs))
             ->all();
     }
 
     /**
      * @return array{id: int, body: string, senderName: string, isOwn: bool, time: ?string, type: string}
      */
-    protected function presentMessage(ChatMessage $message, User $agent): array
+    protected function presentMessage(ChatMessage $message, Model $actingAs): array
     {
-        $isOwn = $message->participation->messageable_type === $agent->getMorphClass()
-            && (int) $message->participation->messageable_id === $agent->getKey();
+        $isOwn = $message->participation->messageable_type === $actingAs->getMorphClass()
+            && (int) $message->participation->messageable_id === $actingAs->getKey();
 
         return [
             'id' => $message->id,
@@ -357,14 +496,14 @@ class extends Component
         ];
     }
 
-    protected function sendRateLimitKey(User $agent): string
+    protected function sendRateLimitKey(User $user): string
     {
-        return 'chat-send:'.$agent->getMorphClass().':'.$agent->getKey();
+        return 'chat-send:'.$user->getMorphClass().':'.$user->getKey();
     }
 
-    protected function translateRateLimitKey(User $agent): string
+    protected function translateRateLimitKey(User $user): string
     {
-        return 'chat-translate:'.$agent->getMorphClass().':'.$agent->getKey();
+        return 'chat-translate:'.$user->getMorphClass().':'.$user->getKey();
     }
 
     /**
@@ -409,7 +548,7 @@ class extends Component
                                 <!--begin::Conversation item-->
                                 <div
                                     class="d-flex align-items-center py-3 px-3 border-bottom cursor-pointer {{ $selectedConversationId === $conversation['id'] ? 'bg-light-primary' : '' }}"
-                                    wire:click="selectConversation({{ $conversation['id'] }})"
+                                    wire:click="selectConversation({{ $conversation['id'] }}, '{{ $conversation['type'] }}'{{ $conversation['companyId'] !== null ? ', '.$conversation['companyId'] : '' }})"
                                     wire:key="support-conversation-{{ $conversation['id'] }}"
                                 >
                                     <div class="symbol symbol-40px me-3">
@@ -424,6 +563,9 @@ class extends Component
                                                 <span class="badge badge-circle badge-primary">{{ $conversation['unreadCount'] }}</span>
                                             @endif
                                         </div>
+                                        @if($conversation['companyName'])
+                                            <div class="text-muted fs-9 text-truncate">{{ $conversation['companyName'] }}</div>
+                                        @endif
                                         <div class="text-muted fs-8 text-truncate">
                                             {{ $conversation['lastMessage'] ?? __('chat.no_message_preview') }}
                                         </div>

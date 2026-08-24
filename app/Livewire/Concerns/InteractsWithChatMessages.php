@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Concerns;
 
+use App\Models\AiAssistant;
 use App\Services\Chat\ChatParticipantResolver;
 use App\Services\Chat\Exceptions\TranslationException;
 use App\Services\Chat\TranslationService;
@@ -9,6 +10,7 @@ use App\Settings\ChatSettings;
 use App\Support\LocalizedDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
 use Musonza\Chat\Models\Message as ChatMessage;
@@ -42,6 +44,13 @@ trait InteractsWithChatMessages
      * another request's resolution.
      */
     protected ?Model $resolvedParticipant = null;
+
+    /**
+     * Memoized for the lifetime of this request only, same rationale as
+     * $resolvedParticipant — avoids re-querying the singleton AiAssistant
+     * record once per message when presenting a whole page of history.
+     */
+    protected ?Model $resolvedAiAssistant = null;
 
     /**
      * Toggle the inline translation of a single message, fetching it via
@@ -98,7 +107,7 @@ trait InteractsWithChatMessages
     }
 
     /**
-     * @return array<int, array{id: int, body: string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}>
+     * @return array<int, array{id: int, body: string, bodyHtml: ?string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}>
      */
     protected function fetchMessages(Conversation $conversation, Model $participant): array
     {
@@ -116,7 +125,7 @@ trait InteractsWithChatMessages
     }
 
     /**
-     * @return array{id: int, body: string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}
+     * @return array{id: int, body: string, bodyHtml: ?string, senderName: string, senderType: ?string, senderAvatar: ?string, isOwn: bool, time: ?string, type: string}
      */
     protected function presentMessage(ChatMessage $message, Model $participant): array
     {
@@ -126,6 +135,9 @@ trait InteractsWithChatMessages
         return [
             'id' => $message->id,
             'body' => $message->body,
+            'bodyHtml' => $this->isFromAiAssistant($message)
+                ? Str::markdown($message->body, ['html_input' => 'strip', 'allow_unsafe_links' => false])
+                : null,
             'senderName' => (string) ($message->sender['name'] ?? ''),
             'senderType' => $message->sender['type'] ?? null,
             'senderAvatar' => $message->sender['avatar_url'] ?? null,
@@ -133,6 +145,25 @@ trait InteractsWithChatMessages
             'time' => LocalizedDate::format($message->created_at, LocalizedDate::FORMAT_DATETIME),
             'type' => $message->type,
         ];
+    }
+
+    /**
+     * Mirrors GenerateAiChatReply::isFromAssistant() — the same
+     * messageable_type / messageable_id comparison against the AiAssistant
+     * participant, never the sender's display name.
+     */
+    protected function isFromAiAssistant(ChatMessage $message): bool
+    {
+        $assistant = $this->aiAssistant();
+
+        return $assistant !== null
+            && $message->participation?->messageable_type === $assistant->getMorphClass()
+            && (int) $message->participation?->messageable_id === $assistant->getKey();
+    }
+
+    protected function aiAssistant(): ?Model
+    {
+        return $this->resolvedAiAssistant ??= AiAssistant::query()->first();
     }
 
     protected function sendRateLimitKey(Model $participant): string
