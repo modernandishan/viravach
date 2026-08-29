@@ -11,6 +11,17 @@ return [
     'hero_search_no_results' => 'No company found matching ":term". Browse the categories below instead.',
     'hero_browse_categories_cta' => 'Browse categories',
 
+    // Advanced search filters
+    'filters' => [
+        'toggle' => 'Advanced search',
+        'any' => 'Any',
+        'category' => 'Category',
+        'state' => 'Province / City',
+        'verified' => 'Verified company',
+        'verified_hint' => 'Verified companies only',
+        'reset' => 'Reset filters',
+    ],
+
     // Stats
     'stats_companies' => 'Registered companies',
     'stats_categories' => 'Active categories',

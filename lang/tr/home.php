@@ -11,6 +11,17 @@ return [
     'hero_search_no_results' => '":term" ile eşleşen şirket bulunamadı. Aşağıdaki kategorilere göz atabilirsiniz.',
     'hero_browse_categories_cta' => 'Kategorilere göz at',
 
+    // Gelişmiş arama filtreleri
+    'filters' => [
+        'toggle' => 'Gelişmiş arama',
+        'any' => 'Hepsi',
+        'category' => 'Kategori',
+        'state' => 'Eyalet / Şehir',
+        'verified' => 'Doğrulanmış şirket',
+        'verified_hint' => 'Yalnızca doğrulanmış şirketler',
+        'reset' => 'Filtreleri sıfırla',
+    ],
+
     // İstatistikler
     'stats_companies' => 'Kayıtlı şirket',
     'stats_categories' => 'Aktif kategori',

@@ -1,0 +1,38 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "mcp": {
+        "laravel-boost": {
+            "type": "local",
+            "enabled": true,
+            "command": [
+                "docker",
+                "exec",
+                "-i",
+                "viravach_app",
+                "php",
+                "artisan",
+                "boost:mcp"
+            ]
+        },
+        "phpstorm": {
+            "type": "remote",
+            "enabled": true,
+            "url": "http://127.0.0.1:64442/stream"
+        }
+    },
+    "provider": {
+        "openwebui": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "openwebui",
+            "options": {
+                "baseURL": "https://ai.hktp.ir/api",
+                "apiKey": "sk-9fd21cc7f1b84ffbb1dd6e481e466751"
+            },
+            "models": {
+                "master": {
+                    "name": "master"
+                }
+            }
+        }
+    }
+}

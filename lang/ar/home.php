@@ -11,6 +11,17 @@ return [
     'hero_search_no_results' => 'لم يتم العثور على شركة باسم ":term". يمكنك تصفح الفئات أدناه.',
     'hero_browse_categories_cta' => 'تصفح الفئات',
 
+    // فلاتر البحث المتقدم
+    'filters' => [
+        'toggle' => 'البحث المتقدم',
+        'any' => 'الكل',
+        'category' => 'الفئة',
+        'state' => 'المحافظة / المدينة',
+        'verified' => 'شركة موثقة',
+        'verified_hint' => 'الشركات الموثقة فقط',
+        'reset' => 'إعادة تعيين الفلاتر',
+    ],
+
     // الإحصائيات
     'stats_companies' => 'شركة مسجلة',
     'stats_categories' => 'فئة نشطة',

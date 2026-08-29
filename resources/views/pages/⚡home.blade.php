@@ -42,7 +42,3 @@ class extends Component {
 
 
 </div>
-
-@push('scripts')
-    <script src="{{asset('theme/1/js/custom/utilities/search/horizontal.js')}}"></script>
-@endpush

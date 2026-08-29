@@ -1,5 +1,12 @@
 <?php
 
+
+# Replace YOUR_OPENROUTER_KEY with your actual OpenRouter API key (sk-or-...)
+
+# Run from inside the open-webui container so the request follows the exact same
+# network path (xray tunnel + NO_PROXY rules) that the failing TTS call uses.
+# -i prints response headers, and we drop -s so errors are visible.
+
 return [
 
     /*
