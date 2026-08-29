@@ -49,8 +49,9 @@ return [
 
     'field_name' => 'نام شرکت',
     'field_description' => 'توضیحات',
+    'field_description_hint' => 'هرچه اینجا بنویسید، مبنای تولید خودکار محتوای صفحه‌ی کسب‌وکار شما توسط هوش مصنوعی است. ساده و کامل بنویسید: چه می‌سازید یا می‌فروشید، چه چیزی شما را از دیگران متمایز می‌کند، و مشتریان و بازارهای هدفتان کجا هستند. هرچه دقیق‌تر بنویسید، صفحه‌ی شما بهتر ساخته می‌شود.',
     'field_category' => 'دسته‌بندی‌ها',
-    'field_category_hint' => 'یک یا چند دسته‌بندی که بهترین توصیف شرکت شماست را انتخاب کنید.',
+    'field_category_hint' => 'حداکثر ۵ دسته‌بندی انتخاب کنید.',
     'field_state' => 'استان',
     'field_select_state' => 'یک استان انتخاب کنید',
     'field_city' => 'شهر',
@@ -69,6 +70,7 @@ return [
     'field_logo' => 'لوگو',
     'field_logo_hint' => 'تصویر مربعی توصیه می‌شود. PNG، JPG یا WEBP، حداکثر ۴ مگابایت.',
     'field_website' => 'وب‌سایت',
+    'field_website_hint' => 'بدون https:// وارد کنید. مثال: example.com',
     'field_email' => 'ایمیل',
     'field_phones' => 'شماره‌های تماس',
     'field_phones_hint' => 'برای افزودن هر شماره، آن را تایپ کرده و Enter بزنید.',
@@ -86,6 +88,8 @@ return [
     'field_social_x' => 'ایکس (توییتر)',
     'field_social_x_placeholder' => 'نام کاربری، بدون @',
     'field_social_website' => 'وب‌سایت دیگر',
+    'validation_category_required' => 'انتخاب حداقل یک دسته‌بندی الزامی است.',
+    'validation_category_max' => 'حداکثر ۵ دسته‌بندی می‌توانید انتخاب کنید.',
 
     'button_next' => 'بعدی',
     'button_back' => 'قبلی',

@@ -49,8 +49,9 @@ return [
 
     'field_name' => 'اسم الشركة',
     'field_description' => 'الوصف',
+    'field_description_hint' => 'ما تكتبه هنا هو أساس المحتوى الذي ينشئه الذكاء الاصطناعي لصفحة أعمالك. اكتب بلغة بسيطة وكاملة: ماذا تصنع أو تبيع، وما الذي يميزك عن غيرك، ومن هم عملاؤك وأسواقك المستهدفة. كلما زادت التفاصيل، كانت صفحتك أفضل.',
     'field_category' => 'الفئات',
-    'field_category_hint' => 'اختر فئة واحدة أو أكثر تصف شركتك بشكل أفضل.',
+    'field_category_hint' => 'اختر حتى ٥ فئات.',
     'field_state' => 'الولاية',
     'field_select_state' => 'اختر ولاية',
     'field_city' => 'المدينة',
@@ -69,6 +70,7 @@ return [
     'field_logo' => 'الشعار',
     'field_logo_hint' => 'يُفضّل صورة مربعة. PNG أو JPG أو WEBP، بحد أقصى 4 ميغابايت.',
     'field_website' => 'الموقع الإلكتروني',
+    'field_website_hint' => 'أدخله بدون https://. مثال: example.com',
     'field_email' => 'البريد الإلكتروني',
     'field_phones' => 'أرقام الهاتف',
     'field_phones_hint' => 'اكتب كل رقم ثم اضغط Enter لإضافته.',
@@ -86,6 +88,8 @@ return [
     'field_social_x' => 'إكس (تويتر)',
     'field_social_x_placeholder' => 'اسم المستخدم، بدون @',
     'field_social_website' => 'موقع آخر',
+    'validation_category_required' => 'يرجى اختيار فئة واحدة على الأقل.',
+    'validation_category_max' => 'يمكنك اختيار ٥ فئات كحد أقصى.',
 
     'button_next' => 'التالي',
     'button_back' => 'السابق',

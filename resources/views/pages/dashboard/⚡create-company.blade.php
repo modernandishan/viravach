@@ -171,7 +171,7 @@ class extends Component
                 'description' => ['nullable', 'string'],
             ],
             2 => [
-                'categoryIds' => ['required', 'array', 'min:1'],
+                'categoryIds' => ['required', 'array', 'min:1', 'max:5'],
                 'categoryIds.*' => ['integer', 'exists:company_categories,id'],
             ],
             3 => [
@@ -203,6 +203,18 @@ class extends Component
         };
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'categoryIds.required' => __('companies.validation_category_required'),
+            'categoryIds.min' => __('companies.validation_category_required'),
+            'categoryIds.max' => __('companies.validation_category_max'),
+        ];
+    }
+
     public function nextStep(): void
     {
         $this->validate($this->rulesForStep($this->step));
@@ -215,8 +227,23 @@ class extends Component
         $this->step = max($this->step - 1, 1);
     }
 
+    /**
+     * The website input holds only the domain part: any leading scheme or
+     * protocol-relative slashes the user pasted is stripped before the
+     * https:// prefix is prepended, so the stored value is always a full
+     * URL (null when empty).
+     */
+    protected function normalizeWebsite(): void
+    {
+        $website = preg_replace('#^(https?://|//)#i', '', trim((string) ($this->website ?? ''))) ?? '';
+
+        $this->website = $website !== '' ? 'https://'.$website : null;
+    }
+
     public function createCompany(): void
     {
+        $this->normalizeWebsite();
+
         $this->validate($this->rulesForStep(5));
 
         $company = Company::create([
@@ -349,7 +376,7 @@ class extends Component
                                     <div class="text-muted fw-semibold fs-6">{{ __('companies.field_category_hint') }}</div>
                                 </div>
                                 <div class="fv-row @error('categoryIds') is-invalid @enderror">
-                                    <x-company-elements.category-tree-select :nodes="$this->categoryTree()" :expanded-ids="$this->expandedCategoryIds()" />
+                                    <x-company-elements.category-tree-select :nodes="$this->categoryTree()" :expanded-ids="$this->expandedCategoryIds()" :selected-ids="$categoryIds" />
                                 </div>
                                 @error('categoryIds')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>

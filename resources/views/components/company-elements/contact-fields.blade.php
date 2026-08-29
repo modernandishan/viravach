@@ -2,7 +2,11 @@
 
 <div class="fv-row mb-7">
     <label class="form-label">{{ __('companies.field_website') }}</label>
-    <input type="text" wire:model="website" class="form-control form-control-lg form-control-solid @error('website') is-invalid @enderror" />
+    <div class="input-group input-group-lg input-group-solid">
+        <span class="input-group-text">https://</span>
+        <input type="text" dir="ltr" wire:model="website" class="form-control form-control-solid @error('website') is-invalid @enderror" />
+    </div>
+    <div class="form-text">{{ __('companies.field_website_hint') }}</div>
     @error('website')
         <div class="invalid-feedback d-block">{{ $message }}</div>
     @enderror
@@ -46,7 +50,7 @@
 
 <div class="row mb-0">
     @foreach (\App\Support\CompanySocialPlatforms::PLATFORMS as $platform => $prefix)
-        <div class="col-md-6 fv-row mb-7">
+        <div class="col-12 fv-row mb-7">
             <label class="form-label">{{ __('companies.'.\App\Support\CompanySocialPlatforms::labelKey($platform)) }}</label>
             @if ($prefix !== null)
                 <div class="input-group input-group-lg input-group-solid" dir="ltr">

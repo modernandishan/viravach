@@ -62,7 +62,9 @@ class extends Component
         $this->name = $company->getTranslations('name');
         $this->description = $company->getTranslations('description');
         $this->categoryIds = $company->categories->pluck('id')->all();
-        $this->website = $company->website;
+        // Stored values always carry the https:// scheme; the input shows
+        // only the rest, since the form's input-group re-adds the prefix.
+        $this->website = $company->website !== null ? Str::after($company->website, 'https://') : null;
         $this->email = $company->email;
         $this->phones = $company->phones ?? [];
         $this->socialLinks = CompanySocialPlatforms::toFormState($company->social_links);
@@ -222,12 +224,39 @@ class extends Component
         ], $this->addresses));
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'categoryIds.required' => __('companies.validation_category_required'),
+            'categoryIds.min' => __('companies.validation_category_required'),
+            'categoryIds.max' => __('companies.validation_category_max'),
+        ];
+    }
+
+    /**
+     * The website input holds only the domain part: any leading scheme or
+     * protocol-relative slashes the user pasted is stripped before the
+     * https:// prefix is prepended, so the stored value is always a full
+     * URL (null when empty).
+     */
+    protected function normalizeWebsite(): void
+    {
+        $website = preg_replace('#^(https?://|//)#i', '', trim((string) ($this->website ?? ''))) ?? '';
+
+        $this->website = $website !== '' ? 'https://'.$website : null;
+    }
+
     public function updateCompany(): void
     {
+        $this->normalizeWebsite();
+
         $this->validate([
             'name.'.config('app.fallback_locale') => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'array'],
-            'categoryIds' => ['required', 'array', 'min:1'],
+            'categoryIds' => ['required', 'array', 'min:1', 'max:5'],
             'categoryIds.*' => ['integer', 'exists:company_categories,id'],
             'addresses' => ['required', 'array', 'min:1'],
             'addresses.*.id' => ['nullable', 'integer', Rule::exists('company_addresses', 'id')->where('company_id', $this->record->id)],
@@ -378,8 +407,9 @@ class extends Component
                     </div>
                 </div>
                 <div class="card-body border-top p-9">
+                    <div class="text-muted fw-semibold fs-6 mb-5">{{ __('companies.field_category_hint') }}</div>
                     <div class="fv-row @error('categoryIds') is-invalid @enderror">
-                        <x-company-elements.category-tree-select :nodes="$this->categoryTree()" :expanded-ids="$this->expandedCategoryIds()" />
+                        <x-company-elements.category-tree-select :nodes="$this->categoryTree()" :expanded-ids="$this->expandedCategoryIds()" :selected-ids="$categoryIds" />
                     </div>
                     @error('categoryIds')
                         <div class="invalid-feedback d-block">{{ $message }}</div>

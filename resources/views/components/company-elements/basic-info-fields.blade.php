@@ -12,6 +12,7 @@
     <div class="fv-row mb-0">
         <label class="form-label">{{ __('companies.field_description') }}</label>
         <x-tiptap-editor wire:model="description" :placeholder="__('companies.field_description')" />
+        <div class="form-text">{{ __('companies.field_description_hint') }}</div>
     </div>
 @else
     @php
@@ -46,6 +47,7 @@
                     <label class="form-label">{{ __('companies.field_description') }} ({{ $localeProps['native'] }})</label>
 
                     <x-tiptap-editor class="tiptap" wire:model="description.{{ $code }}" :placeholder="__('companies.field_description')" />
+                    <div class="form-text">{{ __('companies.field_description_hint') }}</div>
                 </div>
             </div>
         @endforeach

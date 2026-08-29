@@ -49,8 +49,9 @@ return [
 
     'field_name' => 'Название компании',
     'field_description' => 'Описание',
+    'field_description_hint' => 'То, что вы напишете здесь, станет основой для контента вашей страницы, создаваемого искусственным интеллектом. Пишите просто и подробно: что вы производите или продаёте, чем отличаетесь от других, на каких клиентов и рынки ориентируетесь. Чем больше деталей, тем лучше будет ваша страница.',
     'field_category' => 'Категории',
-    'field_category_hint' => 'Выберите одну или несколько категорий, которые лучше всего описывают компанию.',
+    'field_category_hint' => 'Выберите не более 5 категорий.',
     'field_state' => 'Регион',
     'field_select_state' => 'Выберите регион',
     'field_city' => 'Город',
@@ -69,6 +70,7 @@ return [
     'field_logo' => 'Логотип',
     'field_logo_hint' => 'Рекомендуется квадратное изображение. PNG, JPG или WEBP, до 4 МБ.',
     'field_website' => 'Веб-сайт',
+    'field_website_hint' => 'Введите без https://. Пример: example.com',
     'field_email' => 'Эл. почта',
     'field_phones' => 'Номера телефонов',
     'field_phones_hint' => 'Введите номер и нажмите Enter, чтобы добавить его.',
@@ -86,6 +88,8 @@ return [
     'field_social_x' => 'X (Twitter)',
     'field_social_x_placeholder' => 'Имя пользователя, без @',
     'field_social_website' => 'Другой сайт',
+    'validation_category_required' => 'Выберите хотя бы одну категорию.',
+    'validation_category_max' => 'Можно выбрать не более 5 категорий.',
 
     'button_next' => 'Далее',
     'button_back' => 'Назад',

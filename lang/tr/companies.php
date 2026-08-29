@@ -49,8 +49,9 @@ return [
 
     'field_name' => 'Şirket adı',
     'field_description' => 'Açıklama',
+    'field_description_hint' => 'Buraya yazdıklarınız, işletme sayfanızın yapay zekâ tarafından oluşturulacak içeriğinin temelini oluşturur. Sade ve eksiksiz yazın: ne ürettiğinizi veya sattığınızı, sizi farklı kılan şeyi, hedef müşteri ve pazarlarınızı anlatın. Ne kadar ayrıntı verirseniz sayfanız o kadar iyi olur.',
     'field_category' => 'Kategoriler',
-    'field_category_hint' => 'Şirketinizi en iyi tanımlayan bir veya daha fazla kategori seçin.',
+    'field_category_hint' => 'En fazla 5 kategori seçin.',
     'field_state' => 'Eyalet',
     'field_select_state' => 'Bir eyalet seçin',
     'field_city' => 'Şehir',
@@ -69,6 +70,7 @@ return [
     'field_logo' => 'Logo',
     'field_logo_hint' => 'Kare görsel önerilir. PNG, JPG veya WEBP, en fazla 4MB.',
     'field_website' => 'Web sitesi',
+    'field_website_hint' => 'https:// olmadan girin. Örnek: example.com',
     'field_email' => 'E-posta',
     'field_phones' => 'Telefon numaraları',
     'field_phones_hint' => 'Her numarayı yazıp eklemek için Enter tuşuna basın.',
@@ -86,6 +88,8 @@ return [
     'field_social_x' => 'X (Twitter)',
     'field_social_x_placeholder' => 'Kullanıcı adı, @ olmadan',
     'field_social_website' => 'Diğer web sitesi',
+    'validation_category_required' => 'Lütfen en az bir kategori seçin.',
+    'validation_category_max' => 'En fazla 5 kategori seçebilirsiniz.',
 
     'button_next' => 'İleri',
     'button_back' => 'Geri',

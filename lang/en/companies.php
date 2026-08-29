@@ -49,8 +49,9 @@ return [
 
     'field_name' => 'Company name',
     'field_description' => 'Description',
+    'field_description_hint' => 'Whatever you write here becomes the basis for the AI-generated content of your business page. Write simply and completely: what you make or sell, what makes you different, and which customers and markets you target. The more detail you give, the better your page will be.',
     'field_category' => 'Categories',
-    'field_category_hint' => 'Select one or more categories that best describe this company.',
+    'field_category_hint' => 'Select up to 5 categories.',
     'field_state' => 'State',
     'field_select_state' => 'Select a state',
     'field_city' => 'City',
@@ -69,6 +70,7 @@ return [
     'field_logo' => 'Logo',
     'field_logo_hint' => 'Square image recommended. PNG, JPG or WEBP, up to 4MB.',
     'field_website' => 'Website',
+    'field_website_hint' => 'Enter it without https://. Example: example.com',
     'field_email' => 'Email',
     'field_phones' => 'Phone numbers',
     'field_phones_hint' => 'Type each number and press Enter to add it.',
@@ -86,6 +88,8 @@ return [
     'field_social_x' => 'X (Twitter)',
     'field_social_x_placeholder' => 'Username, without @',
     'field_social_website' => 'Other website',
+    'validation_category_required' => 'Please select at least one category.',
+    'validation_category_max' => 'You can select up to 5 categories.',
 
     'button_next' => 'Next',
     'button_back' => 'Back',

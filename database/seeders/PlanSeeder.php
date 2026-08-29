@@ -81,11 +81,6 @@ class PlanSeeder extends Seeder
                 'ar' => 'تحليلات الزيارات', 'ru' => 'Аналитика посещений',
                 'tr' => 'Ziyaret analitiği',
             ]],
-            'products-limit' => ['name' => [
-                'en' => 'Products & services', 'fa' => 'تعداد محصولات و خدمات',
-                'ar' => 'عدد المنتجات والخدمات', 'ru' => 'Количество товаров и услуг',
-                'tr' => 'Ürün ve hizmet sayısı',
-            ]],
             /*'gallery-images' => ['name' => [
                 'en' => 'Gallery images', 'fa' => 'تصاویر گالری',
                 'ar' => 'صور المعرض', 'ru' => 'Изображения в галерее',
@@ -135,11 +130,6 @@ class PlanSeeder extends Seeder
                 'en' => 'ViraBot smart assistant', 'fa' => 'دستیار هوشمند ویرابات',
                 'ar' => 'المساعد الذكي فيرابوت', 'ru' => 'Умный ассистент ViraBot',
                 'tr' => 'ViraBot akıllı asistan',
-            ]],
-            'virabot-monthly-messages' => ['resettable' => true, 'name' => [
-                'en' => 'Monthly ViraBot messages', 'fa' => 'پیام ماهانه ویرابات',
-                'ar' => 'رسائل فيرابوت الشهرية', 'ru' => 'Сообщения ViraBot в месяц',
-                'tr' => 'Aylık ViraBot mesajı',
             ]],
             'verified-badge' => ['name' => [
                 'en' => 'Verified business badge', 'fa' => 'تیک تأیید کسب‌وکار',
@@ -207,7 +197,6 @@ class PlanSeeder extends Seeder
             'multilingual-seo' => 'true',
             'contact-display' => 'true',
             'analytics' => 'basic',
-            'products-limit' => '10',
             // 'gallery-images' => '5',
             // 'team-members' => '1',
             'support' => 'true',
@@ -220,7 +209,6 @@ class PlanSeeder extends Seeder
         return [
             ...$this->freeFeatureValues(),
             'analytics' => 'standard',
-            'products-limit' => '50',
             // 'gallery-images' => '20',
             // 'team-members' => '3',
             'intro-video' => 'true',
@@ -229,7 +217,6 @@ class PlanSeeder extends Seeder
             // 'rfq-monthly-limit' => '30',
             'live-chat' => 'true',
             'virabot' => 'true',
-            'virabot-monthly-messages' => '500',
             'verified-badge' => 'true',
             'certifications' => 'true',
             'virawp-monthly-contents' => '10',
@@ -242,11 +229,9 @@ class PlanSeeder extends Seeder
         return [
             ...$this->proFeatureValues(),
             'analytics' => 'advanced',
-            'products-limit' => 'unlimited',
             // 'gallery-images' => '50',
             // 'team-members' => '10',
             // 'rfq-monthly-limit' => 'unlimited',
-            'virabot-monthly-messages' => '2000',
             'virawp-monthly-contents' => '50',
             'premium-placement' => 'true',
             'multilingual-catalog' => 'true',
