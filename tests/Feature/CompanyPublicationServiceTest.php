@@ -55,7 +55,7 @@ class CompanyPublicationServiceTest extends TestCase
 
         $company = Company::factory()->create([
             'name' => ['en' => 'Acme Co', 'fa' => 'شرکت آکمی'],
-            'description' => ['en' => '<p>About us</p>', 'fa' => '<p>درباره ما</p>'],
+            'content' => ['en' => ['v' => 1], 'fa' => ['v' => 1]],
             'website' => 'https://acme.test',
             'phones' => ['02100000000'],
         ]);
@@ -75,7 +75,10 @@ class CompanyPublicationServiceTest extends TestCase
         $this->assertSame($company->slug, $publication->slug);
         $this->assertSame('Acme Co', $publication->getTranslation('name', 'en'));
         $this->assertSame('شرکت آکمی', $publication->getTranslation('name', 'fa'));
-        $this->assertSame('<p>About us</p>', $publication->getTranslation('description', 'en'));
+        $this->assertSame(['en' => ['v' => 1], 'fa' => ['v' => 1]], $publication->content);
+        // The translatable description is gone from the draft; publish()
+        // no longer copies it, so the snapshot's own column stays null.
+        $this->assertNull($publication->description);
         $this->assertSame('https://acme.test', $publication->website);
         $this->assertSame(['02100000000'], $publication->phones);
         $this->assertSame($state->id, $publication->state_id);

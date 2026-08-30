@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSeo;
+use App\Models\Concerns\HasTranslatableSlug;
 use CyrildeWit\EloquentViewable\Contracts\Viewable;
 use CyrildeWit\EloquentViewable\InteractsWithViews;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
@@ -35,11 +36,21 @@ class CompanyCategory extends Model implements HasMedia, Viewable
     use HasFactory,
         HasRecursiveRelationships,
         HasSeo,
+        HasTranslatableSlug,
         HasTranslations,
         InteractsWithMedia,
         InteractsWithViews,
         SoftDeletes;
     use InteractsWithRichContent;
+
+    /**
+     * Categories are labelled by `title`, not `name`
+     * ({@see HasTranslatableSlug}).
+     */
+    protected function slugSourceAttribute(): string
+    {
+        return 'title';
+    }
 
     // public array $translatable = ['title', 'description'];
 

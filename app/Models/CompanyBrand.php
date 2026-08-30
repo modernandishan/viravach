@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasTranslatableSlug;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ use Spatie\Translatable\HasTranslations;
 class CompanyBrand extends Model implements HasMedia
 {
     use HasFactory,
+        HasTranslatableSlug,
         HasTranslations,
         InteractsWithMedia,
         SoftDeletes;

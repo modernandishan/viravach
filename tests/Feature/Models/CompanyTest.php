@@ -32,16 +32,23 @@ class CompanyTest extends TestCase
         ]);
     }
 
-    public function test_name_and_description_are_translatable(): void
+    public function test_name_is_translatable_and_brief_is_a_plain_single_locale_string(): void
     {
         $company = Company::factory()->create([
             'name' => ['en' => 'Acme Co', 'fa' => 'شرکت آکمی'],
-            'description' => ['en' => '<p>About us</p>', 'fa' => '<p>درباره ما</p>'],
+            'brief' => 'We manufacture industrial insulation panels.',
+            'brief_locale' => 'fa',
         ]);
 
         $this->assertSame('Acme Co', $company->getTranslation('name', 'en'));
         $this->assertSame('شرکت آکمی', $company->getTranslation('name', 'fa'));
-        $this->assertSame('<p>About us</p>', $company->getTranslation('description', 'en'));
+
+        // The brief replaced the old translatable HTML description: one
+        // language of raw user text, never rendered publicly.
+        $this->assertSame('We manufacture industrial insulation panels.', $company->brief);
+        $this->assertIsString($company->brief);
+        $this->assertSame('fa', $company->brief_locale);
+        $this->assertFalse($company->isTranslatableAttribute('brief'));
     }
 
     public function test_review_status_is_cast_to_enum(): void

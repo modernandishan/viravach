@@ -23,11 +23,11 @@ class PricingPageTest extends TestCase
         $response->assertSeeText(Plan::where('slug', 'pro-3-months')->first()->name);
     }
 
-    public function test_it_links_ctas_to_sign_up(): void
+    public function test_it_links_plan_ctas_to_the_subscriptions_page(): void
     {
         $this->seed(PlanSeeder::class);
 
         Livewire::test('pages::pricing')
-            ->assertSee(route('auth.sign-up'));
+            ->assertSee(route('subscriptions'));
     }
 }

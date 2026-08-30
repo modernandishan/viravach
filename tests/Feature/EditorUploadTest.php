@@ -27,7 +27,7 @@ class EditorUploadTest extends TestCase
         Storage::fake('s3');
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->postJson('/editor/upload', [
+        $response = $this->actingAs($user)->postJson($this->appUrl('/editor/upload'), [
             'image' => UploadedFile::fake()->image('photo.jpg'),
         ]);
 

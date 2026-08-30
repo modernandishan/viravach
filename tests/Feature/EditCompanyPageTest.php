@@ -93,7 +93,7 @@ class EditCompanyPageTest extends TestCase
         $this->assertSame($newState->id, $company->primaryAddress()->first()->state_id);
     }
 
-    public function test_it_sanitizes_the_description_html_before_saving(): void
+    public function test_it_rejects_a_brief_shorter_than_100_characters(): void
     {
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
@@ -111,14 +111,39 @@ class EditCompanyPageTest extends TestCase
 
         Livewire::actingAs($user)
             ->test('pages::dashboard.edit-company', ['company' => $company->id])
-            ->set('description.fa', '<p>Safe <strong>text</strong></p><script>alert(1)</script>')
+            ->set('brief', str_repeat('a', 99))
+            ->call('updateCompany')
+            ->assertHasErrors(['brief']);
+    }
+
+    public function test_a_successful_update_stores_the_brief_and_its_locale(): void
+    {
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        $company = Company::factory()->for($user)->create();
+        $company->categories()->attach($category);
+        $company->addresses()->create([
+            'country_id' => $state->country_id,
+            'state_id' => $state->id,
+            'type' => 'office',
+            'address_line' => ['en' => 'Original street 1'],
+            'is_primary' => true,
+        ]);
+
+        $brief = str_repeat('Acme designs and exports handwoven carpets. ', 4);
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.edit-company', ['company' => $company->id])
+            ->set('brief', $brief)
             ->call('updateCompany')
             ->assertRedirect(route('my-companies'));
 
-        $description = $company->fresh()->getTranslation('description', 'fa', false);
+        $company = $company->fresh();
 
-        $this->assertStringContainsString('<strong>text</strong>', $description);
-        $this->assertStringNotContainsString('<script>', $description);
+        $this->assertSame($brief, $company->brief);
+        $this->assertSame(app()->getLocale(), $company->brief_locale);
     }
 
     public function test_editing_reviewed_fields_resets_status_to_pending_and_keeps_the_publication(): void

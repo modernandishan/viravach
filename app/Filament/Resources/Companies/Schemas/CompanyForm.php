@@ -14,7 +14,6 @@ use App\Services\CompanySubscriptionService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TagsInput;
@@ -75,6 +74,11 @@ class CompanyForm
                         TextInput::make('employee_range')
                             ->label('بازه تعداد کارکنان')
                             ->maxLength(255),
+                        Textarea::make('brief')
+                            ->label('شرح کوتاه کسب‌وکار')
+                            ->rows(8)
+                            ->helperText('ورودی خام کاربر برای تولید محتوا. در صفحه‌ی عمومی نمایش داده نمی‌شود.')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -233,13 +237,6 @@ class CompanyForm
                                     Textarea::make("summary.{$code}")
                                         ->label('خلاصه')
                                         ->rows(3)
-                                        ->columnSpanFull(),
-                                    RichEditor::make("description.{$code}")
-                                        ->label('توضیحات')
-                                        ->required($code === config('app.fallback_locale'))
-                                        ->fileAttachmentsDisk('s3')
-                                        ->fileAttachmentsDirectory("companies/{$code}")
-                                        ->fileAttachmentsVisibility('public')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)

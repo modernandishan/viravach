@@ -18,21 +18,6 @@ use Tests\TestCase;
  */
 class HostRoutingTest extends TestCase
 {
-    private function publicUrl(string $path = '/'): string
-    {
-        return 'https://'.config('domains.public').$path;
-    }
-
-    private function appUrl(string $path = '/'): string
-    {
-        return 'https://'.config('domains.app').$path;
-    }
-
-    private function adminUrl(string $path = '/'): string
-    {
-        return 'https://'.config('domains.admin').$path;
-    }
-
     public function test_legacy_dashboard_paths_redirect_to_the_app_host(): void
     {
         $this->get($this->publicUrl('/dashboard/profile'))

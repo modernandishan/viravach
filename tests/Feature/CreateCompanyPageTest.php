@@ -42,6 +42,11 @@ class CreateCompanyPageTest extends TestCase
         ]);
     }
 
+    private function validBrief(): string
+    {
+        return str_repeat('Acme designs and exports handwoven carpets. ', 3);
+    }
+
     public function test_it_creates_a_company_and_auto_attaches_the_free_plan(): void
     {
         $this->seed(PlanSeeder::class);
@@ -53,6 +58,7 @@ class CreateCompanyPageTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::dashboard.create-company')
             ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
             ->call('nextStep')
             ->assertSet('step', 2)
             ->set('categoryIds', [$category->id])
@@ -101,6 +107,7 @@ class CreateCompanyPageTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::dashboard.create-company')
             ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
             ->call('nextStep')
             ->assertSet('step', 2)
             ->call('nextStep')
@@ -108,18 +115,34 @@ class CreateCompanyPageTest extends TestCase
             ->assertSet('step', 2);
     }
 
-    public function test_it_sanitizes_the_description_html_before_saving(): void
+    public function test_it_rejects_a_brief_shorter_than_100_characters(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $user = User::factory()->create();
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.create-company')
+            ->set('name', 'Acme Trading Co')
+            ->set('brief', str_repeat('a', 99))
+            ->call('nextStep')
+            ->assertHasErrors(['brief'])
+            ->assertSet('step', 1);
+    }
+
+    public function test_a_successful_create_stores_the_brief_and_its_locale(): void
     {
         $this->seed(PlanSeeder::class);
 
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
         $state = $this->makeState();
+        $brief = str_repeat('Acme designs and exports handwoven carpets. ', 4);
 
         Livewire::actingAs($user)
             ->test('pages::dashboard.create-company')
             ->set('name', 'Acme Trading Co')
-            ->set('description', '<p>Safe <strong>text</strong></p><script>alert(1)</script>')
+            ->set('brief', $brief)
             ->call('nextStep')
             ->assertSet('step', 2)
             ->set('categoryIds', [$category->id])
@@ -131,13 +154,13 @@ class CreateCompanyPageTest extends TestCase
             ->assertSet('step', 4)
             ->call('nextStep')
             ->assertSet('step', 5)
-            ->call('createCompany');
+            ->call('createCompany')
+            ->assertRedirect(route('my-companies'));
 
         $company = Company::where('user_id', $user->id)->firstOrFail();
-        $description = $company->getTranslation('description', 'fa', false);
 
-        $this->assertStringContainsString('<strong>text</strong>', $description);
-        $this->assertStringNotContainsString('<script>', $description);
+        $this->assertSame($brief, $company->brief);
+        $this->assertSame(app()->getLocale(), $company->brief_locale);
     }
 
     public function test_it_renders_categories_nested_three_levels_deep(): void
@@ -152,6 +175,7 @@ class CreateCompanyPageTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::dashboard.create-company')
             ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
             ->call('nextStep')
             ->assertSet('step', 2)
             ->assertSee($child->title);

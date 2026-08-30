@@ -44,6 +44,12 @@ There is **no `routes/web.php`**. Routes are split per hostname in `bootstrap/ap
 
 The public site never renders `Company` records directly. Users edit a `Company` (the **draft**); admins review it in Filament (`CompanyReviewStatus`). Approving calls `CompanyPublicationService::publish()`, which upserts a `CompanyPublication` **snapshot** (translatable fields, addresses, SEO, fresh media copies) in a transaction. Public pages query `CompanyPublication` only, so draft edits stay invisible until re-approved. Rejection only flags the draft — the published snapshot stays live.
 
+## AI content pipeline (in progress, Aug 2026)
+
+`companies.description` (translatable Tiptap HTML) was **repurposed away**: it's replaced by `companies.brief` + `brief_locale` — the user's own single-language plain-text brief. The old HTML is backfilled into `brief` by migration `2026_08_29_000001`, then the `description` column is dropped. `CompanyPublication` keeps its own `description` (now nullable) so public pages are unaffected, and both `companies` and `company_publications` gain a `content` jsonb column for the future AI-rendered payload.
+
+Pipeline state lives in `CompanyContent` (one row per company: `CompanyContentStatus` draft/queued/generating/ready/failed, `ai_payload`, `input_hash`, `step`, `failure_reason`, `locked_at`); the rendered payload itself goes on `companies.content`. Structured-output schemas for the AI calls are in `app/Ai/Schemas/` (`CompanyContentSchema`, `CompanySeoSchema`). `SeoKeywordReservation` enforces that a (locale, keyword) SEO pair is claimed by only one owner via a `seoable` morph. Renderer + AI generation steps are not shipped yet.
+
 ## Subscriptions
 
 `CompanySubscriptionService` is the **only** place allowed to create/modify plan subscriptions (`laravelcm/laravel-subscriptions`): `switchToPlan()`, `assignFreePlanIfMissing()`, `startProPlusTrial()` (14-day), `revertExpiredTrials()`. Payments via `shetabit/payment`, callback at `dashboard/payment/callback`.

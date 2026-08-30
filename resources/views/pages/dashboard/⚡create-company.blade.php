@@ -8,7 +8,6 @@ use App\Models\State;
 use App\Services\CompanySubscriptionService;
 use App\Support\CompanySocialPlatforms;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -23,7 +22,7 @@ class extends Component
 
     public string $name = '';
 
-    public string $description = '';
+    public ?string $brief = null;
 
     /** @var array<int, int> */
     public array $categoryIds = [];
@@ -168,7 +167,7 @@ class extends Component
         return match ($step) {
             1 => [
                 'name' => ['required', 'string', 'max:255'],
-                'description' => ['nullable', 'string'],
+                'brief' => ['required', 'string', 'min:100', 'max:5000'],
             ],
             2 => [
                 'categoryIds' => ['required', 'array', 'min:1', 'max:5'],
@@ -215,6 +214,38 @@ class extends Component
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function validationAttributes(): array
+    {
+        return [
+            'name' => __('companies.field_name'),
+            'brief' => __('companies.field_description'),
+            'categoryIds' => __('companies.field_category'),
+            'categoryIds.*' => __('companies.field_category'),
+            'addresses' => __('companies.wizard_step_addresses'),
+            'addresses.*.state_id' => __('companies.field_state'),
+            'addresses.*.city_id' => __('companies.field_city'),
+            'addresses.*.type' => __('companies.field_address_type'),
+            'addresses.*.address_line' => __('companies.field_address_line'),
+            'addresses.*.postal_code' => __('companies.field_postal_code'),
+            'logo' => __('companies.field_logo'),
+            'website' => __('companies.field_website'),
+            'email' => __('companies.field_email'),
+            'phones' => __('companies.field_phones'),
+            'phones.*' => __('companies.field_phones'),
+            'socialLinks.telegram' => __('companies.field_social_telegram'),
+            'socialLinks.whatsapp' => __('companies.field_social_whatsapp'),
+            'socialLinks.instagram' => __('companies.field_social_instagram'),
+            'socialLinks.youtube' => __('companies.field_social_youtube'),
+            'socialLinks.x' => __('companies.field_social_x'),
+            'socialLinks.website1' => __('companies.field_social_website_1'),
+            'socialLinks.website2' => __('companies.field_social_website_2'),
+            'socialLinks.website3' => __('companies.field_social_website_3'),
+        ];
+    }
+
     public function nextStep(): void
     {
         $this->validate($this->rulesForStep($this->step));
@@ -248,9 +279,11 @@ class extends Component
 
         $company = Company::create([
             'user_id' => auth()->id(),
-            'slug' => Str::slug($this->name).'-'.Str::lower(Str::random(6)),
+            // slug comes from the model's HasTranslatableSlug trait —
+            // Str::slug() here stripped Persian names into empty slugs.
             'name' => ['fa' => $this->name],
-            'description' => $this->description !== '' ? ['fa' => Str::sanitizeHtml($this->description)] : [],
+            'brief' => $this->brief,
+            'brief_locale' => app()->getLocale(),
             'website' => $this->website ?: null,
             'email' => $this->email ?: null,
             'phones' => $this->phones !== [] ? array_values($this->phones) : null,

@@ -81,7 +81,7 @@ class ChatBroadcastingTest extends TestCase
         Event::fake([ChatConversationStarted::class]);
 
         $service = app(CompanyChatService::class);
-        $conversation = $service->transfer($guest, $company);
+        $conversation = $service->startOrGetConversation($guest, $company);
 
         Event::assertDispatched(
             ChatConversationStarted::class,
@@ -91,7 +91,7 @@ class ChatBroadcastingTest extends TestCase
         );
 
         // Reusing the existing conversation must not announce it again.
-        $service->transfer($guest, $company);
+        $service->startOrGetConversation($guest, $company);
 
         Event::assertDispatchedTimes(ChatConversationStarted::class, 1);
     }
@@ -113,7 +113,7 @@ class ChatBroadcastingTest extends TestCase
         $user = User::factory()->create();
         Company::factory()->create(['user_id' => $user->id]);
 
-        $this->actingAs($user)->get('/dashboard/chat')->assertOk();
+        $this->actingAs($user)->get(route('chat'))->assertOk();
     }
 
     public function test_support_chats_page_renders_with_echo_listeners(): void
@@ -122,28 +122,28 @@ class ChatBroadcastingTest extends TestCase
         Role::findOrCreate('support');
         $agent->assignRole('support');
 
-        $this->actingAs($agent)->get('/dashboard/support-chats')->assertOk();
+        $this->actingAs($agent)->get(route('support-chats'))->assertOk();
     }
 
-    public function test_company_chat_drawer_connect_button_transfers_to_the_company_conversation(): void
+    public function test_company_chat_drawer_company_tab_transfers_to_the_company_conversation(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create();
 
         $this->makeEligibleForCompany($user, $company);
 
+        // The shared modal opens with no company conversation started; the
+        // first switch to the company tab starts (or adopts) it.
         Livewire::actingAs($user)
-            ->test('company-elements.company-chat', [
+            ->test('chat-elements.chat-modal', [
                 'companyId' => $company->id,
                 'companyName' => 'Test Co',
             ])
             ->call('openDrawer')
-            ->assertSet('companyEligible', true)
-            ->assertSee(__('chat.company_drawer_hint'))
-            ->call('connectToCompany')
-            ->assertDontSee(__('chat.company_drawer_hint'))
-            ->assertSet('activeConversation', 'company')
-            ->assertSet('transferError', null)
+            ->assertSet('isCompanyOwner', false)
+            ->call('switchTab', 'company')
+            ->assertSet('activeTab', 'company')
+            ->assertSet('companyError', null)
             ->assertNotSet('companyConversationId', null)
             ->set('body', 'direct hello')
             ->call('sendMessage')
@@ -210,7 +210,7 @@ class ChatBroadcastingTest extends TestCase
 
         $component = Livewire::actingAs($agent)
             ->test('pages::dashboard.support-chats')
-            ->call('selectConversation', $conversation->id);
+            ->call('selectConversation', $conversation->id, 'support');
 
         Chat::message('customer follow-up')->from($user->fresh())->to($conversation)->send();
 
@@ -270,7 +270,7 @@ class ChatBroadcastingTest extends TestCase
         $guest = Guest::create(['token' => (string) Str::uuid()]);
 
         $this->makeEligibleForCompany($guest, $company);
-        $conversation = app(CompanyChatService::class)->transfer($guest, $company);
+        $conversation = app(CompanyChatService::class)->startOrGetConversation($guest, $company);
 
         $this->authorizeChannel($company->user, 'private-mc-chat-conversation.'.$conversation->id)->assertOk();
     }

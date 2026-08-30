@@ -29,8 +29,12 @@ class CompanyPublicationService
                     'registration_number' => $company->registration_number,
                     'national_id' => $company->national_id,
                     'established_at' => $company->established_at,
-                    'description' => $company->getTranslations('description'),
+                    // description is deliberately NOT re-copied: the column
+                    // is repurposed into the single-language brief, and the
+                    // snapshot keeps its last published description until the
+                    // AI content renderer ships and writes `content`.
                     'summary' => $company->getTranslations('summary'),
+                    'content' => $company->content,
                     'website' => $company->website,
                     'email' => $company->email,
                     'phones' => $company->phones,

@@ -2,9 +2,9 @@
 
 <div class="fv-row mb-7">
     <label class="form-label">{{ __('companies.field_website') }}</label>
-    <div class="input-group input-group-lg input-group-solid">
+    <div class="input-group input-group-lg input-group-solid" dir="ltr">
         <span class="input-group-text">https://</span>
-        <input type="text" dir="ltr" wire:model="website" class="form-control form-control-solid @error('website') is-invalid @enderror" />
+        <input type="text" wire:model="website" class="form-control form-control-solid @error('website') is-invalid @enderror" />
     </div>
     <div class="form-text">{{ __('companies.field_website_hint') }}</div>
     @error('website')
@@ -14,7 +14,7 @@
 
 <div class="fv-row mb-7">
     <label class="form-label">{{ __('companies.field_email') }}</label>
-    <input type="email" wire:model="email" class="form-control form-control-lg form-control-solid @error('email') is-invalid @enderror" />
+    <input type="email" dir="ltr" wire:model="email" class="form-control form-control-lg form-control-solid @error('email') is-invalid @enderror" />
     @error('email')
         <div class="invalid-feedback d-block">{{ $message }}</div>
     @enderror
@@ -56,7 +56,7 @@
                 <div class="input-group input-group-lg input-group-solid" dir="ltr">
                     <span class="input-group-text" dir="ltr">{{ $prefix }}</span>
                     <input type="text" dir="ltr" wire:model="socialLinks.{{ $platform }}"
-                           placeholder="{{ __('companies.field_social_'.$platform.'_placeholder') }}"
+                           @if (trans()->has('companies.field_social_'.$platform.'_placeholder')) placeholder="{{ __('companies.field_social_'.$platform.'_placeholder') }}" @endif
                            class="form-control form-control-solid @error('socialLinks.'.$platform) is-invalid @enderror" />
                 </div>
             @else

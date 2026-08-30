@@ -1,0 +1,23 @@
+{
+  "mcp": {
+    "servers": {
+      "laravel-boost": {
+        "type": "stdio",
+        "command": "docker",
+        "args": [
+          "exec",
+          "-i",
+          "viravach_app",
+          "php",
+          "artisan",
+          "boost:mcp"
+        ],
+        "timeoutMs": 30000
+      },
+      "phpstorm": {
+        "url": "http://127.0.0.1:64442/stream",
+        "type": "http"
+      }
+    }
+  }
+}

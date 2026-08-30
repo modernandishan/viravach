@@ -25,8 +25,7 @@ class extends Component
     /** @var array<string, string> */
     public array $name = [];
 
-    /** @var array<string, string> */
-    public array $description = [];
+    public ?string $brief = null;
 
     /** @var array<int, int> */
     public array $categoryIds = [];
@@ -60,7 +59,7 @@ class extends Component
 
         $this->record = $company;
         $this->name = $company->getTranslations('name');
-        $this->description = $company->getTranslations('description');
+        $this->brief = $company->brief;
         $this->categoryIds = $company->categories->pluck('id')->all();
         // Stored values always carry the https:// scheme; the input shows
         // only the rest, since the form's input-group re-adds the prefix.
@@ -237,6 +236,38 @@ class extends Component
     }
 
     /**
+     * @return array<string, string>
+     */
+    public function validationAttributes(): array
+    {
+        return [
+            'name.*' => __('companies.field_name'),
+            'brief' => __('companies.field_description'),
+            'categoryIds' => __('companies.field_category'),
+            'categoryIds.*' => __('companies.field_category'),
+            'addresses' => __('companies.wizard_step_addresses'),
+            'addresses.*.state_id' => __('companies.field_state'),
+            'addresses.*.city_id' => __('companies.field_city'),
+            'addresses.*.type' => __('companies.field_address_type'),
+            'addresses.*.address_line' => __('companies.field_address_line'),
+            'addresses.*.postal_code' => __('companies.field_postal_code'),
+            'logo' => __('companies.field_logo'),
+            'website' => __('companies.field_website'),
+            'email' => __('companies.field_email'),
+            'phones' => __('companies.field_phones'),
+            'phones.*' => __('companies.field_phones'),
+            'socialLinks.telegram' => __('companies.field_social_telegram'),
+            'socialLinks.whatsapp' => __('companies.field_social_whatsapp'),
+            'socialLinks.instagram' => __('companies.field_social_instagram'),
+            'socialLinks.youtube' => __('companies.field_social_youtube'),
+            'socialLinks.x' => __('companies.field_social_x'),
+            'socialLinks.website1' => __('companies.field_social_website_1'),
+            'socialLinks.website2' => __('companies.field_social_website_2'),
+            'socialLinks.website3' => __('companies.field_social_website_3'),
+        ];
+    }
+
+    /**
      * The website input holds only the domain part: any leading scheme or
      * protocol-relative slashes the user pasted is stripped before the
      * https:// prefix is prepended, so the stored value is always a full
@@ -255,7 +286,7 @@ class extends Component
 
         $this->validate([
             'name.'.config('app.fallback_locale') => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'array'],
+            'brief' => ['required', 'string', 'min:100', 'max:5000'],
             'categoryIds' => ['required', 'array', 'min:1', 'max:5'],
             'categoryIds.*' => ['integer', 'exists:company_categories,id'],
             'addresses' => ['required', 'array', 'min:1'],
@@ -282,9 +313,8 @@ class extends Component
 
         $this->record->fill([
             'name' => $this->name,
-            'description' => collect($this->description)->filter()->map(
-                fn (string $html) => Str::sanitizeHtml($html)
-            )->all(),
+            'brief' => $this->brief,
+            'brief_locale' => app()->getLocale(),
             'website' => $this->website ?: null,
             'email' => $this->email ?: null,
             'phones' => $this->phones !== [] ? array_values($this->phones) : null,

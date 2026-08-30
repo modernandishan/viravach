@@ -20,9 +20,9 @@ class CompanySocialPlatforms
         'telegram' => 'https://t.me/',
         'whatsapp' => 'https://wa.me/',
         'instagram' => 'https://instagram.com/',
-        'website1' => null,
-        'website2' => null,
-        'website3' => null,
+        'website1' => 'https://',
+        'website2' => 'https://',
+        'website3' => 'https://',
         'youtube' => 'https://youtube.com/@',
         'x' => 'https://x.com/',
     ];

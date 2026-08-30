@@ -45,7 +45,7 @@ class UserTranslatableNameTest extends TestCase
 
         app()->setLocale('en');
 
-        $response = $this->actingAs($user)->get('/admin');
+        $response = $this->actingAs($user)->get($this->adminUrl('/'));
 
         $response->assertStatus(200);
         $response->assertSee('جان دو');

@@ -35,6 +35,7 @@ use Spatie\Translatable\HasTranslations;
     'established_at',
     'description',
     'summary',
+    'content',
     'website',
     'email',
     'phones',
@@ -69,7 +70,26 @@ class CompanyPublication extends Model implements HasMedia, Viewable
             'legal_type' => CompanyType::class,
             'phones' => 'array',
             'social_links' => 'array',
+            'content' => 'array',
         ];
+    }
+
+    /**
+     * The AI-generated content payload for the given locale, falling back
+     * to the site default locale. Stored as a plain locale-keyed map (not
+     * spatie-translatable) because the payload is a nested structure.
+     */
+    public function contentFor(?string $locale = null): ?array
+    {
+        $locale ??= app()->getLocale();
+
+        $content = $this->content;
+
+        if (! is_array($content)) {
+            return null;
+        }
+
+        return $content[$locale] ?? $content[config('app.fallback_locale')] ?? null;
     }
 
     public function registerMediaCollections(): void

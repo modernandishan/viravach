@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CompanyReviewStatus;
 use App\Enums\CompanyType;
 use App\Models\Concerns\HasSeo;
+use App\Models\Concerns\HasTranslatableSlug;
 use App\Observers\CompanyObserver;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -34,8 +35,10 @@ use Spatie\Translatable\HasTranslations;
     'registration_number',
     'national_id',
     'established_at',
-    'description',
+    'brief',
+    'brief_locale',
     'summary',
+    'content',
     'website',
     'email',
     'phones',
@@ -49,7 +52,6 @@ use Spatie\Translatable\HasTranslations;
 #[Translatable([
     'name',
     'legal_name',
-    'description',
     'summary',
 ])]
 #[ObservedBy(CompanyObserver::class)]
@@ -57,6 +59,7 @@ class Company extends Model implements HasMedia
 {
     use HasFactory,
         HasPlanSubscriptions,
+        HasTranslatableSlug,
         HasTranslations,
         InteractsWithMedia,
         InteractsWithRichContent,
@@ -75,7 +78,7 @@ class Company extends Model implements HasMedia
         'name',
         'legal_name',
         'legal_type',
-        'description',
+        'brief',
         'summary',
         'website',
         'email',
@@ -96,7 +99,26 @@ class Company extends Model implements HasMedia
             'legal_type' => CompanyType::class,
             'phones' => 'array',
             'social_links' => 'array',
+            'content' => 'array',
         ];
+    }
+
+    /**
+     * The AI-generated content payload for the given locale, falling back
+     * to the site default locale. Stored as a plain locale-keyed map (not
+     * spatie-translatable) because the payload is a nested structure.
+     */
+    public function contentFor(?string $locale = null): ?array
+    {
+        $locale ??= app()->getLocale();
+
+        $content = $this->content;
+
+        if (! is_array($content)) {
+            return null;
+        }
+
+        return $content[$locale] ?? $content[config('app.fallback_locale')] ?? null;
     }
 
     public function registerMediaCollections(): void
@@ -167,6 +189,11 @@ class Company extends Model implements HasMedia
         return $this->hasOne(CompanyPublication::class);
     }
 
+    public function contentRecord(): HasOne
+    {
+        return $this->hasOne(CompanyContent::class);
+    }
+
     public function activeSubscription(): ?Subscription
     {
         return $this->activePlanSubscriptions()->first();
@@ -175,6 +202,15 @@ class Company extends Model implements HasMedia
     public function primaryAddress(): HasOne
     {
         return $this->hasOne(CompanyAddress::class)->where('is_primary', true);
+    }
+
+    /**
+     * Company slugs are globally unique and company names collide often, so
+     * the random suffix is unconditional ({@see HasTranslatableSlug}).
+     */
+    protected function slugAlwaysSuffix(): bool
+    {
+        return true;
     }
 
     protected function getSeoFallbackTitle(string $locale): ?string

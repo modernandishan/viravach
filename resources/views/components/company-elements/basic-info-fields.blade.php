@@ -10,9 +10,14 @@
         @enderror
     </div>
     <div class="fv-row mb-0">
-        <label class="form-label">{{ __('companies.field_description') }}</label>
-        <x-tiptap-editor wire:model="description" :placeholder="__('companies.field_description')" />
+        <label class="form-label required">{{ __('companies.field_description') }}</label>
+        <textarea wire:model="brief" rows="8"
+                  class="form-control form-control-lg form-control-solid @error('brief') is-invalid @enderror"
+                  placeholder="{{ __('companies.field_description') }}"></textarea>
         <div class="form-text">{{ __('companies.field_description_hint') }}</div>
+        @error('brief')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
     </div>
 @else
     @php
@@ -43,13 +48,20 @@
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
-                <div class="fv-row mb-0">
-                    <label class="form-label">{{ __('companies.field_description') }} ({{ $localeProps['native'] }})</label>
-
-                    <x-tiptap-editor class="tiptap" wire:model="description.{{ $code }}" :placeholder="__('companies.field_description')" />
-                    <div class="form-text">{{ __('companies.field_description_hint') }}</div>
-                </div>
             </div>
         @endforeach
+    </div>
+
+    {{-- The brief is single-language plain text; it sits outside the
+         per-locale name tabs and is never rendered publicly. --}}
+    <div class="fv-row mb-0">
+        <label class="form-label required">{{ __('companies.field_description') }}</label>
+        <textarea wire:model="brief" rows="8"
+                  class="form-control form-control-lg form-control-solid @error('brief') is-invalid @enderror"
+                  placeholder="{{ __('companies.field_description') }}"></textarea>
+        <div class="form-text">{{ __('companies.field_description_hint') }}</div>
+        @error('brief')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
     </div>
 @endif
