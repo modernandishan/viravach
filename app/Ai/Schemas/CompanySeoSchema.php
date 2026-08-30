@@ -67,6 +67,64 @@ class CompanySeoSchema
     }
 
     /**
+     * Best-effort salvage mirroring CompanyContentSchema::repair(): strings
+     * over their max are truncated on a word boundary (preferring a sentence
+     * end within the last 20% of the allowance); under-length values are
+     * left alone for the model to fix.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public static function repair(array $payload): array
+    {
+        foreach (self::definition() as $key => $spec) {
+            $value = $payload[$key] ?? null;
+
+            if ($spec['type'] === 'strings' && is_array($value)) {
+                foreach (array_values($value) as $index => $item) {
+                    if (is_string($item) && mb_strlen($item) > $spec['item_max']) {
+                        $payload[$key][$index] = self::truncate($item, (int) $spec['item_max']);
+                    }
+                }
+            } elseif (is_string($value) && mb_strlen($value) > $spec['max']) {
+                $payload[$key] = self::truncate($value, (int) $spec['max']);
+            }
+        }
+
+        return $payload;
+    }
+
+    private static function truncate(string $text, int $max): string
+    {
+        $cut = mb_substr($text, 0, $max);
+
+        $windowStart = (int) floor($max * 0.8);
+        $window = mb_substr($cut, $windowStart);
+
+        $lastSentence = -1;
+
+        foreach (['.', '!', '?', '؟', '۔', '。', '…'] as $punctuation) {
+            $pos = mb_strrpos($window, $punctuation);
+
+            if ($pos !== false) {
+                $lastSentence = max($lastSentence, $pos);
+            }
+        }
+
+        if ($lastSentence >= 0) {
+            return rtrim(mb_substr($cut, 0, $windowStart + $lastSentence + 1));
+        }
+
+        $space = mb_strrpos($cut, ' ');
+
+        if ($space !== false && $space > 0) {
+            return rtrim(mb_substr($cut, 0, $space));
+        }
+
+        return $cut;
+    }
+
+    /**
      * Validate ONE locale's payload: the Laravel rules plus the same extras
      * as CompanyContentSchema — no HTML tags inside any string, and a
      * strict shape (no keys outside the definition).

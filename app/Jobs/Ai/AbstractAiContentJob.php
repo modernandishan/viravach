@@ -18,6 +18,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -136,44 +137,86 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * One gateway call, one validation, one correction retry, then a hard
-     * failure with the collected errors — never a partial payload.
+     * One gateway call, then validate → repair → (one correction retry) →
+     * throw. A payload that only violates max-length limits is salvaged via
+     * repair() instead of throwing away a completed generation; anything the
+     * repair cannot fix (missing fields, under-length text, shape errors)
+     * gets the single correction retry, and only a second hard failure
+     * throws — never a partial payload.
      *
      * @param  callable(array): array<string, string>  $validate
+     * @param  callable(array): array<string, mixed>  $repair
      * @return array<string, mixed>
      */
-    protected function completeValidated(string $system, string $user, ?string $model, callable $validate): array
+    protected function completeValidated(string $system, string $user, ?string $model, callable $validate, callable $repair): array
     {
         $generator = app(ContentGenerator::class);
 
-        $payload = $generator->complete($system, $user, $model);
-        $errors = $validate($payload);
+        $lastErrors = [];
 
-        if ($errors !== []) {
+        $payload = $this->settle($generator->complete($system, $user, $model), $validate, $repair, $lastErrors);
+
+        if ($payload === null) {
             $correction = $user."\n\n"
                 ."CORRECTION REQUIRED — your previous JSON was rejected by the validator:\n"
                 .implode("\n", array_map(
                     fn (string $field, string $message): string => "- {$field}: {$message}",
-                    array_keys($errors),
-                    $errors,
+                    array_keys($lastErrors),
+                    $lastErrors,
                 ))
                 ."\nReturn the complete corrected JSON object under the same contract.";
 
-            $payload = $generator->complete($system, $correction, $model);
-            $errors = $validate($payload);
+            $payload = $this->settle($generator->complete($system, $correction, $model), $validate, $repair, $lastErrors);
+        }
 
-            if ($errors !== []) {
-                throw new ContentGenerationException(
-                    'Generated payload failed validation: '.implode('; ', array_map(
-                        fn (string $field, string $message): string => "{$field}: {$message}",
-                        array_keys($errors),
-                        $errors,
-                    )),
-                );
-            }
+        if ($payload === null) {
+            throw new ContentGenerationException(
+                'Generated payload failed validation after repair and one correction retry.',
+            );
         }
 
         return $payload;
+    }
+
+    /**
+     * Validate, then attempt the schema repair. Returns the (possibly
+     * repaired) payload once it validates, or null when the failure is not
+     * repairable — the correction retry's cue. Rescues are logged with the
+     * rescued field paths so we can see which limits the model struggles
+     * with.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  callable(array): array<string, string>  $validate
+     * @param  callable(array): array<string, mixed>  $repair
+     * @param  array<string, string>  $lastErrors  filled with the remaining validation errors on null
+     * @return array<string, mixed>|null
+     */
+    private function settle(array $payload, callable $validate, callable $repair, array &$lastErrors): ?array
+    {
+        $errors = $validate($payload);
+
+        if ($errors === []) {
+            return $payload;
+        }
+
+        $repaired = $repair($payload);
+        $remaining = $validate($repaired);
+
+        if ($remaining === []) {
+            $rescued = array_keys(array_diff_key($errors, $remaining));
+
+            Log::info('Content generation: schema repair rescued the payload.', [
+                'company_id' => $this->companyId,
+                'step' => static::STEP,
+                'rescued_fields' => $rescued,
+            ]);
+
+            return $repaired;
+        }
+
+        $lastErrors = $remaining;
+
+        return null;
     }
 
     /**

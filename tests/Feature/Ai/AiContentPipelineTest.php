@@ -17,6 +17,7 @@ use App\Models\SeoKeywordReservation;
 use App\Settings\ContentSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class AiContentPipelineTest extends TestCase
@@ -255,13 +256,15 @@ class AiContentPipelineTest extends TestCase
         ]);
     }
 
-    public function test_one_locale_failing_still_finishes_the_others(): void
+    public function test_one_locale_failing_still_finishes_the_others_and_is_logged(): void
     {
         // The Arabic localization fails both attempts; the chain must
         // still finish every other locale. Locale order follows the config.
         Http::fake([
             'https://ai.example/v1/chat/completions*' => Http::sequence($this->chainSequence('ar')),
         ]);
+
+        Log::spy();
 
         $company = $this->makeCompany();
         $this->runChain($company);
@@ -273,6 +276,18 @@ class AiContentPipelineTest extends TestCase
         $this->assertArrayHasKey('ru', $content->ai_payload);
         $this->assertArrayHasKey('tr', $content->ai_payload);
         $this->assertArrayNotHasKey('ar', $content->ai_payload);
+
+        // The failure is loud: a warning naming the locale…
+        Log::assertLogged(
+            'warning',
+            fn (string $message, array $context): bool => $message === 'Content localization failed for locale.'
+                && $context['locale'] === 'ar'
+                && $context['company_id'] === $company->id,
+        );
+
+        // …and a partial-result marker left on the row for the admin.
+        $this->assertStringContainsString('Partial localization', (string) $content->failure_reason);
+        $this->assertStringContainsString('ar:', (string) $content->failure_reason);
     }
 
     public function test_markets_countries_come_from_export_countries_not_from_the_model(): void

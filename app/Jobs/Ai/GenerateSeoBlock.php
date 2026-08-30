@@ -43,6 +43,7 @@ class GenerateSeoBlock extends AbstractAiContentJob
             CompanySeoPrompt::user($input, $siteText),
             $this->settings()->model,
             fn (array $candidate): array => CompanySeoSchema::validate($candidate),
+            fn (array $candidate): array => CompanySeoSchema::repair($candidate),
         );
 
         $this->mergeSeoPayload($content, CompanyContentPrompt::SOURCE_LOCALE, $seo);

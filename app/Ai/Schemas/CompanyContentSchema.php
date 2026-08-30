@@ -154,6 +154,87 @@ class CompanyContentSchema
     }
 
     /**
+     * Best-effort salvage of an otherwise-valid payload: every string that
+     * exceeds its definition() max is truncated on a word boundary —
+     * preferring a sentence end within the last 20% of the allowance, so a
+     * finished sentence is kept whole when possible. Under-length fields are
+     * left alone: those are real failures the model must fix, not trimmable
+     * overflow. Fields that only violate max-length become VALID after this.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public static function repair(array $payload): array
+    {
+        return self::repairNode($payload, self::definition());
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $definition
+     * @return array<string, mixed>
+     */
+    private static function repairNode(array $payload, array $definition): array
+    {
+        foreach ($payload as $key => $value) {
+            $spec = $definition[$key] ?? null;
+
+            if (! is_array($spec)) {
+                continue; // unknown key; not repairable, validator will report it
+            }
+
+            $type = $spec['type'] ?? null;
+
+            if ($type === 'object' && is_array($value)) {
+                $payload[$key] = self::repairNode($value, $spec['fields']);
+            } elseif ($type === 'array' && is_array($value) && isset($spec['item'])) {
+                foreach (array_values($value) as $index => $item) {
+                    if (is_array($item)) {
+                        $payload[$key][$index] = self::repairNode($item, $spec['item']);
+                    }
+                }
+            } elseif ($type === 'string' && is_string($value)
+                && isset($spec['max']) && mb_strlen($value) > $spec['max']) {
+                $payload[$key] = self::truncate($value, (int) $spec['max']);
+            }
+        }
+
+        return $payload;
+    }
+
+    private static function truncate(string $text, int $max): string
+    {
+        $cut = mb_substr($text, 0, $max);
+
+        // A sentence end inside the last 20% of the allowance lets us keep
+        // that sentence whole instead of dropping its tail mid-thought.
+        $windowStart = (int) floor($max * 0.8);
+        $window = mb_substr($cut, $windowStart);
+
+        $lastSentence = -1;
+
+        foreach (['.', '!', '?', '؟', '۔', '。', '…'] as $punctuation) {
+            $pos = mb_strrpos($window, $punctuation);
+
+            if ($pos !== false) {
+                $lastSentence = max($lastSentence, $pos);
+            }
+        }
+
+        if ($lastSentence >= 0) {
+            return rtrim(mb_substr($cut, 0, $windowStart + $lastSentence + 1));
+        }
+
+        $space = mb_strrpos($cut, ' ');
+
+        if ($space !== false && $space > 0) {
+            return rtrim(mb_substr($cut, 0, $space));
+        }
+
+        return $cut; // a single word longer than the allowance
+    }
+
+    /**
      * Validate ONE locale's payload: the Laravel rules plus two extras the
      * AI output must always satisfy — no HTML tags inside any string, and
      * a strict shape (no keys outside the definition, at any depth).

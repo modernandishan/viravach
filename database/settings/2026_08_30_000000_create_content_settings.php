@@ -17,7 +17,9 @@ return new class extends SettingsMigration
         $this->migrator->add('content.translation_model', '');
         $this->migrator->add('content.timeout', 120);
         $this->migrator->add('content.max_retries', 2);
-        $this->migrator->add('content.temperature', 0.5);
+        // temperature is added by its own follow-up migration — this file
+        // had already run by the time the field was introduced, and an
+        // already-run migration must never be edited.
     }
 
     public function down(): void
@@ -30,6 +32,5 @@ return new class extends SettingsMigration
         $this->migrator->deleteIfExists('content.translation_model');
         $this->migrator->deleteIfExists('content.timeout');
         $this->migrator->deleteIfExists('content.max_retries');
-        $this->migrator->deleteIfExists('content.temperature');
     }
 };

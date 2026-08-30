@@ -43,6 +43,7 @@ class GenerateSourceContent extends AbstractAiContentJob
             CompanyContentPrompt::user($input, $siteText),
             $this->settings()->model,
             fn (array $candidate): array => CompanyContentSchema::validate($candidate),
+            fn (array $candidate): array => CompanyContentSchema::repair($candidate),
         );
 
         // Never trust the model's country guesses: rebuild the field from
