@@ -111,4 +111,43 @@ return [
     'profile_contact_info' => 'اطلاعات تماس',
     'profile_social_links' => 'شبکه‌های اجتماعی',
     'profile_no_contact_info' => 'اطلاعات تماسی ثبت نشده است.',
+
+
+    // AI-generated content sections
+    'content_offerings' => 'آنچه ارائه می‌دهیم',
+    'content_strengths' => 'نقاط قوت ما',
+    'content_markets' => 'بازارهای صادراتی',
+    'content_specs' => 'مشخصات',
+    'content_faq' => 'سؤالات متداول',
+    'content_cta' => 'همکاری با ما',
+
+    // Republish action
+    'publication_slug' => 'نامک (slug) نسخه عمومی: :slug',
+
+    // AI content generation (dashboard)
+    'content_card_title' => 'تولید محتوا با هوش مصنوعی',
+    'content_generate' => 'تولید محتوا با هوش مصنوعی',
+    'content_generate_hint' => 'بر اساس شرح کوتاه شما، محتوای صفحه عمومی شرکت تولید می‌شود. این فرایند چند دقیقه طول می‌کشد.',
+    'content_step_of' => 'گام :step از ۵ — :label',
+    'content_processing_hint' => 'می‌توانید صفحه را ببندید؛ تولید محتوا ادامه دارد.',
+    'content_regenerate' => 'تولید مجدد',
+    'content_regenerate_warning' => 'تولید مجدد، ویرایش‌های دستی روی محتوای تولیدشده را جایگزین می‌کند.',
+    'content_ready_at' => 'محتوا در تاریخ :date تولید شده است',
+    'content_failed_title' => 'تولید قبلی ناموفق بود',
+    'content_retry' => 'تلاش مجدد',
+    'content_quota_exhausted' => 'سهمیه تولید محتوای هوشمند این ماه شما به پایان رسیده است.',
+    'content_upgrade_plans' => 'مشاهده پلن‌ها',
+    'content_rate_limited' => 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.',
+    'content_generation_queued' => 'درخواست شما به صف تولید محتوا اضافه شد.',
+    'content_disabled' => 'تولید محتوای هوشمند در حال حاضر غیرفعال است.',
+    'content_already_running' => 'یک تولید محتوا هم‌اکنون در جریان است.',
+    'content_unchanged' => 'محتوای ذخیره‌شده با آخرین ورودی‌ها یکسان است؛ نیازی به تولید مجدد نیست.',
+    'content_locked' => 'تولید محتوا در جریان است؛ ویرایش موقتاً غیرفعال است.',
+
+    // AI generation progress steps
+    'ai_step_1' => 'تحلیل اطلاعات و تولید متن اصلی',
+    'ai_step_2' => 'تولید اطلاعات سئو',
+    'ai_step_3' => 'رزرو کلمه کلیدی',
+    'ai_step_4' => 'بومی‌سازی برای زبان‌های دیگر',
+    'ai_step_5' => 'ذخیره‌سازی نهایی',
 ];

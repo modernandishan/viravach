@@ -146,6 +146,11 @@ class PlanSeeder extends Seeder
                 'ar' => 'محتوى ViraWP الشهري بالذكاء الاصطناعي', 'ru' => 'Ежемесячный ИИ-контент ViraWP',
                 'tr' => 'Aylık ViraWP yapay zekâ içeriği',
             ]],
+            'ai-content-generations' => ['resettable' => true, 'name' => [
+                'en' => 'Monthly AI content generations', 'fa' => 'تولید محتوای هوشمند ماهانه',
+                'ar' => 'توليد المحتوى الشهري بالذكاء الاصطناعي', 'ru' => 'Ежемесячная генерация ИИ-контента',
+                'tr' => 'Aylık yapay zekâ içerik üretimi',
+            ]],
             'multilingual-catalog' => ['name' => [
                 'en' => 'Multilingual catalog', 'fa' => 'کاتالوگ چندزبانه',
                 'ar' => 'كتالوج متعدد اللغات', 'ru' => 'Многоязычный каталог',
@@ -200,6 +205,7 @@ class PlanSeeder extends Seeder
             // 'gallery-images' => '5',
             // 'team-members' => '1',
             'support' => 'true',
+            'ai-content-generations' => '1',
         ];
     }
 
@@ -220,6 +226,7 @@ class PlanSeeder extends Seeder
             'verified-badge' => 'true',
             'certifications' => 'true',
             'virawp-monthly-contents' => '10',
+            'ai-content-generations' => '3',
         ];
     }
 
@@ -233,6 +240,7 @@ class PlanSeeder extends Seeder
             // 'team-members' => '10',
             // 'rfq-monthly-limit' => 'unlimited',
             'virawp-monthly-contents' => '50',
+            'ai-content-generations' => '10',
             'premium-placement' => 'true',
             'multilingual-catalog' => 'true',
             'ad-banners' => 'true',

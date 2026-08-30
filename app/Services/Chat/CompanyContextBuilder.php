@@ -42,7 +42,8 @@ class CompanyContextBuilder
             $lines[] = 'Location: '.$publication->state->name;
         }
 
-        $about = trim((string) $publication->summary) ?: trim(strip_tags((string) $publication->description));
+        $about = trim((string) $publication->summary)
+            ?: trim((string) data_get($publication->contentFor(app()->getLocale()), 'about.body', ''));
 
         if ($about !== '') {
             $lines[] = 'About: '.Str::limit($about, 350);

@@ -91,10 +91,6 @@ class CompanyPublicationInfolist
                             ->label('خلاصه')
                             ->state(fn (CompanyPublication $record) => $record->summary)
                             ->placeholder('—'),
-                        TextEntry::make('description')
-                            ->label('توضیحات')
-                            ->state(fn (CompanyPublication $record) => $record->description)
-                            ->html(),
                     ]),
 
                 Section::make('تصاویر')

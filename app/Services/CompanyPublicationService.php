@@ -29,10 +29,9 @@ class CompanyPublicationService
                     'registration_number' => $company->registration_number,
                     'national_id' => $company->national_id,
                     'established_at' => $company->established_at,
-                    // description is deliberately NOT re-copied: the column
-                    // is repurposed into the single-language brief, and the
-                    // snapshot keeps its last published description until the
-                    // AI content renderer ships and writes `content`.
+                    // description is dead: never read or written any more —
+                    // the AI-generated content payload (content) replaced it.
+                    // The column itself is dropped by a later migration.
                     'summary' => $company->getTranslations('summary'),
                     'content' => $company->content,
                     'website' => $company->website,

@@ -85,6 +85,85 @@ class CreateCompanyPageTest extends TestCase
         $this->assertTrue($company->subscribedTo($freePlan->id));
     }
 
+    public function test_the_website_bare_domain_is_normalized_and_stored_with_https(): void
+    {
+        $this->seed(PlanSeeder::class);
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.create-company')
+            ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
+            ->call('nextStep')
+            ->set('categoryIds', [$category->id])
+            ->call('nextStep')
+            ->set('addresses.0.state_id', $state->id)
+            ->set('addresses.0.address_line', '123 Example Street')
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('website', 'geosaz.com')
+            ->call('createCompany')
+            ->assertHasNoErrors();
+
+        $company = Company::where('user_id', $user->id)->firstOrFail();
+
+        $this->assertSame('https://geosaz.com', $company->website);
+    }
+
+    public function test_the_website_prefixed_domain_is_stored_once_without_a_double_scheme(): void
+    {
+        $this->seed(PlanSeeder::class);
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.create-company')
+            ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
+            ->call('nextStep')
+            ->set('categoryIds', [$category->id])
+            ->call('nextStep')
+            ->set('addresses.0.state_id', $state->id)
+            ->set('addresses.0.address_line', '123 Example Street')
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('website', 'https://geosaz.com')
+            ->call('createCompany')
+            ->assertHasNoErrors();
+
+        $company = Company::where('user_id', $user->id)->firstOrFail();
+
+        $this->assertSame('https://geosaz.com', $company->website);
+    }
+
+    public function test_the_website_garbage_input_is_rejected_with_the_localized_message(): void
+    {
+        $this->seed(PlanSeeder::class);
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.create-company')
+            ->set('name', 'Acme Trading Co')
+            ->set('brief', $this->validBrief())
+            ->call('nextStep')
+            ->set('categoryIds', [$category->id])
+            ->call('nextStep')
+            ->set('addresses.0.state_id', $state->id)
+            ->set('addresses.0.address_line', '123 Example Street')
+            ->call('nextStep')
+            ->call('nextStep')
+            ->set('website', 'not a url at all')
+            ->call('createCompany')
+            ->assertHasErrors(['website']);
+
+        $this->assertNull(Company::where('user_id', $user->id)->first());
+    }
+
     public function test_it_rejects_advancing_past_step_one_without_a_required_name(): void
     {
         $this->seed(PlanSeeder::class);

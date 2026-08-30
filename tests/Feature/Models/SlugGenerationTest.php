@@ -112,4 +112,44 @@ class SlugGenerationTest extends TestCase
 
         $this->assertSame($slug, $company->fresh()->slug);
     }
+
+    public function test_the_slug_regeneration_command_dry_run_writes_nothing(): void
+    {
+        $company = Company::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => ['fa' => 'شرکت آکمی صنعتی'],
+            'brief' => 'b',
+            'brief_locale' => 'fa',
+        ]);
+        $oldSlug = $company->slug;
+
+        $company->forceFill([
+            'content' => ['en' => ['hero' => ['headline' => 'Premium Industrial Insulation Panels for Export']]],
+        ])->save();
+
+        $this->artisan('app:regenerate-company-slugs', ['--dry-run' => true])->assertSuccessful();
+
+        $this->assertSame($oldSlug, $company->fresh()->slug);
+    }
+
+    public function test_the_slug_regeneration_command_rewrites_machine_slugs(): void
+    {
+        $company = Company::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => ['fa' => 'شرکت آکمی صنعتی'],
+            'brief' => 'b',
+            'brief_locale' => 'fa',
+        ]);
+
+        $company->forceFill([
+            'content' => ['en' => ['hero' => ['headline' => 'Premium Industrial Insulation Panels for Export']]],
+        ])->save();
+
+        $this->artisan('app:regenerate-company-slugs')->assertSuccessful();
+
+        $this->assertMatchesRegularExpression(
+            '/^premium-industrial-insulation-panels-[a-z0-9]{6}$/',
+            $company->fresh()->slug,
+        );
+    }
 }

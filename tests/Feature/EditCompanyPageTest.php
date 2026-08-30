@@ -2,15 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CompanyContentStatus;
 use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Models\CompanyCategory;
+use App\Models\CompanyContent;
 use App\Models\Country;
 use App\Models\State;
 use App\Models\User;
 use App\Services\CompanyPublicationService;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class EditCompanyPageTest extends TestCase
@@ -39,6 +43,88 @@ class EditCompanyPageTest extends TestCase
             'code' => 'THR',
             'is_active' => true,
         ]);
+    }
+
+    public function test_saving_while_content_generation_is_running_is_rejected_with_409(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->for($user)->create();
+        CompanyContent::firstOrCreate(['company_id' => $company->id])->forceFill([
+            'status' => CompanyContentStatus::Generating,
+            'step' => 1,
+        ])->save();
+
+        $this->withoutExceptionHandling();
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage(__('companies.content_locked'));
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.edit-company', ['company' => $company->id])
+            ->call('updateCompany');
+    }
+
+    private function makeCompanyForWebsiteTests(): Company
+    {
+        $this->seed(PlanSeeder::class);
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        $company = Company::factory()->for($user)->create([
+            'name' => ['fa' => 'شرکت آکمی'],
+            'brief' => str_repeat('Acme designs and exports handwoven carpets. ', 3),
+            'brief_locale' => 'fa',
+        ]);
+        $company->categories()->attach($category);
+        $company->addresses()->create([
+            'country_id' => $state->country_id,
+            'state_id' => $state->id,
+            'type' => 'office',
+            'address_line' => ['en' => 'Street'],
+            'is_primary' => true,
+        ]);
+
+        return $company;
+    }
+
+    public function test_the_website_bare_domain_is_normalized_and_stored_with_https(): void
+    {
+        $company = $this->makeCompanyForWebsiteTests();
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.edit-company', ['company' => $company->id])
+            ->set('website', 'geosaz.com')
+            ->call('updateCompany')
+            ->assertHasNoErrors();
+
+        $this->assertSame('https://geosaz.com', $company->fresh()->website);
+    }
+
+    public function test_the_website_prefixed_domain_is_stored_once_without_a_double_scheme(): void
+    {
+        $company = $this->makeCompanyForWebsiteTests();
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.edit-company', ['company' => $company->id])
+            ->set('website', 'https://geosaz.com')
+            ->call('updateCompany')
+            ->assertHasNoErrors();
+
+        $this->assertSame('https://geosaz.com', $company->fresh()->website);
+    }
+
+    public function test_the_website_garbage_input_is_rejected_and_not_stored(): void
+    {
+        $company = $this->makeCompanyForWebsiteTests();
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.edit-company', ['company' => $company->id])
+            ->set('website', 'not a url at all')
+            ->call('updateCompany')
+            ->assertHasErrors(['website']);
+
+        $this->assertNull($company->fresh()->website);
     }
 
     public function test_it_403s_for_a_non_owner(): void

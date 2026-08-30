@@ -392,7 +392,7 @@
                                 <!--begin::Heading-->
                                 <div class="pb-10 pb-lg-12">
                                     <!--begin::Title-->
-                                    <h1 class="fw-bold text-gray-900">آپلود فایل</h1>
+                                    <h3 class="fw-bold text-gray-900">آپلود فایل</h3>
                                     <!--end::Title-->
                                     <!--begin::توضیحات-->
                                     <div class="text-muted fw-semibold fs-4">اگر به اطلاعات لازم دارید ، لطفاً بررسی کنید
@@ -607,7 +607,7 @@
                                 <!--begin::Heading-->
                                 <div class="pb-10 pb-lg-12">
                                     <!--begin::Title-->
-                                    <h1 class="fw-bold text-gray-900">پیکربندی</h1>
+                                    <h3 class="fw-bold text-gray-900">پیکربندی</h3>
                                     <!--end::Title-->
                                     <!--begin::توضیحات-->
                                     <div class="text-muted fw-semibold fs-4">اگر به اطلاعات لازم دارید ، لطفاً بررسی کنید
@@ -736,7 +736,7 @@
                                 <!--begin::Heading-->
                                 <div class="pb-10 pb-lg-12">
                                     <!--begin::Title-->
-                                    <h1 class="fw-bold text-gray-900">برآورد بودجه</h1>
+                                    <h3 class="fw-bold text-gray-900">برآورد بودجه</h3>
                                     <!--end::Title-->
                                     <!--begin::توضیحات-->
                                     <div class="text-muted fw-semibold fs-4">اگر به اطلاعات لازم دارید ، لطفاً بررسی کنید
@@ -810,7 +810,7 @@
                                 <!--begin::Heading-->
                                 <div class="pb-12 text-center">
                                     <!--begin::Title-->
-                                    <h1 class="fw-bold text-gray-900">کمپین زمان ایجاد!</h1>
+                                    <h3 class="fw-bold text-gray-900">کمپین زمان ایجاد!</h3>
                                     <!--end::Title-->
                                     <!--begin::توضیحات-->
                                     <div class="fw-semibold text-muted fs-4">شما یک ایمیل با خلاصه کمپین تازه ایجاد شده خود دریافت خواهید کرد!</div>

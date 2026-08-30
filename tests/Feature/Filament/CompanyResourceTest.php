@@ -15,6 +15,7 @@ use App\Models\CompanyPublication;
 use App\Models\Country;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\CompanyPublicationService;
 use App\Services\CompanySubscriptionService;
 use Database\Seeders\PlanSeeder;
 use Filament\Actions\Testing\TestAction;
@@ -231,6 +232,63 @@ class CompanyResourceTest extends TestCase
 
         Livewire::test(ListCompanies::class)
             ->assertActionHidden(TestAction::make('approve')->table($company));
+    }
+
+    public function test_republish_action_updates_the_published_snapshot(): void
+    {
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::Approved,
+            'name' => ['en' => 'First Name', 'fa' => 'نام اول'],
+        ]);
+
+        $publication = app(CompanyPublicationService::class)->publish($company);
+
+        $company->update(['name' => ['en' => 'Renamed Company', 'fa' => 'نام جدید']]);
+
+        Livewire::test(ListCompanies::class)
+            ->callAction(TestAction::make('republish')->table($company));
+
+        $publication->refresh();
+
+        // The snapshot now carries the current draft data.
+        $this->assertSame('Renamed Company', $publication->getTranslation('name', 'en', false));
+        $this->assertSame($company->slug, $publication->fresh()->slug);
+    }
+
+    public function test_republish_action_is_hidden_for_a_company_without_a_publication(): void
+    {
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::Approved,
+        ]);
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('republish')->table($company));
+    }
+
+    public function test_republish_action_is_hidden_when_review_status_is_not_approved(): void
+    {
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::PendingReview,
+        ]);
+        app(CompanyPublicationService::class)->publish($company);
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('republish')->table($company));
+    }
+
+    public function test_republish_action_is_hidden_without_the_approve_permission(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'ViewAny:Company', 'guard_name' => 'web']));
+        $this->actingAs($user);
+
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::Approved,
+        ]);
+        CompanyPublication::factory()->create(['company_id' => $company->id]);
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('republish')->table($company));
     }
 
     public function test_reject_action_sets_status(): void

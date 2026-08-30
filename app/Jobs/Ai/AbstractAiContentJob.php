@@ -6,6 +6,7 @@ use App\Ai\ContentGenerator;
 use App\Ai\Exceptions\ContentGenerationException;
 use App\Ai\Prompts\CompanyContentPrompt;
 use App\Enums\CompanyContentStatus;
+use App\Events\Ai\ContentGenerationProgressed;
 use App\Models\Company;
 use App\Models\CompanyContent;
 use App\Models\SeoKeywordReservation;
@@ -114,6 +115,10 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
             'status' => CompanyContentStatus::Generating,
             'step' => static::STEP,
         ])->save();
+
+        // $afterCommit makes the broadcast job wait for any surrounding
+        // transaction to commit before it goes out.
+        ContentGenerationProgressed::dispatch($content);
     }
 
     /**

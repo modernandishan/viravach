@@ -1,15 +1,23 @@
 <?php
 
+use App\Enums\CompanyContentStatus;
+use App\Events\Ai\ContentGenerationProgressed;
 use App\Enums\CompanyReviewStatus;
+use App\Jobs\Ai\GenerateSourceContent;
 use App\Models\City;
 use App\Models\Company;
 use App\Models\CompanyAddress;
 use App\Models\CompanyCategory;
+use App\Models\CompanyContent;
 use App\Models\State;
+use App\Services\Ai\ContentGenerationService;
+use App\Settings\ContentSettings;
 use App\Support\CompanySocialPlatforms;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Laravelcm\Subscriptions\Models\Subscription;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -280,8 +288,142 @@ class extends Component
         $this->website = $website !== '' ? 'https://'.$website : null;
     }
 
+    /**
+     * The AI content generation card state. Every branch is derived from
+     * the CompanyContent row + the plan feature, never cached between
+     * requests, so the UI always reflects the pipeline's real state.
+     */
+    public function contentIsProcessing(): bool
+    {
+        return $this->record->contentRecord?->status->isProcessing() ?? false;
+    }
+
+    public function contentStatus(): ?CompanyContentStatus
+    {
+        return $this->record->contentRecord?->status;
+    }
+
+    public function contentStepLabel(int $step): string
+    {
+        return __('companies.ai_step_'.max(1, min(5, $step)));
+    }
+
+    private function contentSubscription(): ?Subscription
+    {
+        return $this->record->activeSubscription();
+    }
+
+    /**
+     * Feature slugs are prefixed with their plan slug in the seeder
+     * (see PlanSeeder::seedFeatures), so lookups must be too.
+     */
+    private function contentFeatureSlug(): ?string
+    {
+        $plan = $this->contentSubscription()?->plan;
+
+        return $plan !== null ? $plan->slug.'-ai-content-generations' : null;
+    }
+
+    /**
+     * Remaining generations this month; null means unlimited. Zero when the
+     * plan has no usable feature or the quota is burnt.
+     */
+    public function contentQuotaRemaining(): ?int
+    {
+        $subscription = $this->contentSubscription();
+        $slug = $this->contentFeatureSlug();
+
+        if ($subscription === null || $slug === null || ! $subscription->canUseFeature($slug)) {
+            return 0;
+        }
+
+        $remaining = $subscription->getFeatureRemainings($slug);
+
+        return is_numeric($remaining) ? (int) $remaining : null;
+    }
+
+    public function requestContentGeneration(): void
+    {
+        // Per-company rate limit, independent of the plan quota: even with
+        // quota left, a company cannot hammer the pipeline.
+        $rateLimitKey = 'ai-content:'.$this->record->id;
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            $this->notifyContent(__('companies.content_rate_limited'));
+
+            return;
+        }
+
+        $subscription = $this->contentSubscription();
+        $featureSlug = $this->contentFeatureSlug();
+
+        if ($subscription === null || $featureSlug === null || ! $subscription->canUseFeature($featureSlug)) {
+            $this->notifyContent(__('companies.content_quota_exhausted'));
+
+            return;
+        }
+
+        RateLimiter::hit($rateLimitKey, 6 * 3600);
+
+        if (app(ContentGenerationService::class)->request($this->record)) {
+            // Quota is burnt ONLY here: rejections (disabled, already
+            // running, unchanged input) must never consume a generation.
+            $subscription->recordFeatureUsage($featureSlug);
+
+            $this->notifyContent(__('companies.content_generation_queued'));
+
+            return;
+        }
+
+        $this->notifyContent(app(ContentSettings::class)->enabled
+            ? ($this->contentIsProcessing()
+                ? __('companies.content_already_running')
+                : __('companies.content_unchanged'))
+            : __('companies.content_disabled'));
+    }
+
+    private function notifyContent(string $message): void
+    {
+        session()->flash('company-status', $message);
+    }
+
+    /**
+     * Echo listeners — same wiring as the chat pages (chat.blade.php):
+     * registered here because the channel name embeds the company id.
+     * ContentGenerationProgressed carries status/step; terminal statuses
+     * re-enable the form automatically because the disabled fieldset keys
+     * off isProcessing(), and the ready state renders the generated text
+     * straight from the reloaded contentRecord — no manual refresh.
+     */
+    public function getListeners(): array
+    {
+        return [
+            'echo-private:'.ContentGenerationProgressed::channelNameFor($this->record->id).',ContentGenerationProgressed' => 'onContentProgress',
+        ];
+    }
+
+    public function onContentProgress(array $payload = []): void
+    {
+        $this->refreshContentState();
+    }
+
+    /**
+     * Fallback for a dropped socket: the card polls only while the run is
+     * live, so the poll stops on its own once the status is terminal.
+     */
+    public function refreshContentState(): void
+    {
+        $this->record->loadMissing('contentRecord');
+    }
+
     public function updateCompany(): void
     {
+        // Server-side lock: the disabled form is a courtesy, this is the
+        // actual gate. 409 while a generation run owns the row.
+        if ($this->contentIsProcessing()) {
+            abort(409, __('companies.content_locked'));
+        }
+
         $this->normalizeWebsite();
 
         $this->validate([
@@ -418,7 +560,76 @@ class extends Component
     <div class="content flex-row-fluid">
         <livewire:dashboard-elements.infobar/>
 
+        @php
+            $content = $this->record->contentRecord;
+            $contentStatus = $this->contentStatus();
+            $contentQuota = $this->contentQuotaRemaining();
+        @endphp
+
+        {{-- AI content generation: trigger, lock, and live progress.
+             wire:poll is a FALLBACK for a dropped Echo socket and renders
+             only while the run is live — it disappears on terminal status. --}}
+        <div class="card mb-5 mb-xl-10" @if ($contentStatus?->isProcessing()) wire:poll.10s="refreshContentState" @endif>
+            <div class="card-header border-0 pt-6">
+                <div class="card-title">
+                    <h2>{{ __('companies.content_card_title') }}</h2>
+                </div>
+            </div>
+            <div class="card-body border-top p-9">
+                @if ($contentStatus?->isProcessing())
+                    <div class="d-flex flex-column gap-3">
+                        <div class="fw-semibold text-gray-700">
+                            {{ __('companies.content_step_of', ['step' => $content->step, 'label' => $this->contentStepLabel($content->step)]) }}
+                        </div>
+                        <div class="progress h-8px bg-light w-100">
+                            <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: {{ max(10, (int) ($content->step / 5 * 100)) }}%"></div>
+                        </div>
+                        <div class="text-muted fs-7">{{ __('companies.content_processing_hint') }}</div>
+                    </div>
+                @elseif ($contentStatus === \App\Enums\CompanyContentStatus::Failed)
+                    <div class="d-flex flex-column gap-3">
+                        <div class="text-danger fw-bold">{{ __('companies.content_failed_title') }}</div>
+                        <div class="text-gray-700">{{ $content->failure_reason }}</div>
+                        <div>
+                            <button type="button" wire:click="requestContentGeneration" class="btn btn-light-primary">
+                                {{ __('companies.content_retry') }}
+                            </button>
+                        </div>
+                    </div>
+                @elseif ($contentQuota === 0)
+                    <div class="d-flex flex-column gap-3">
+                        @if ($contentStatus === \App\Enums\CompanyContentStatus::Ready)
+                            <div class="text-gray-700">
+                                {{ __('companies.content_ready_at', ['date' => \App\Support\LocalizedDate::format($content->updated_at, \App\Support\LocalizedDate::FORMAT_DATETIME)]) }}
+                            </div>
+                        @endif
+                        <div class="text-gray-700">{{ __('companies.content_quota_exhausted') }}</div>
+                        <div>
+                            <a href="{{ route('subscriptions') }}" class="btn btn-light-primary">
+                                {{ __('companies.content_upgrade_plans') }}
+                            </a>
+                        </div>
+                    </div>
+                @else
+                    @if ($contentStatus === \App\Enums\CompanyContentStatus::Ready)
+                        <div class="text-gray-700 mb-3">
+                            {{ __('companies.content_ready_at', ['date' => \App\Support\LocalizedDate::format($content->updated_at, \App\Support\LocalizedDate::FORMAT_DATETIME)]) }}
+                            <div class="text-warning fw-semibold mt-2">{{ __('companies.content_regenerate_warning') }}</div>
+                        </div>
+                    @else
+                        <div class="text-gray-700 mb-3">{{ __('companies.content_generate_hint') }}</div>
+                    @endif
+                    <button type="button" wire:click="requestContentGeneration" class="btn {{ $contentStatus === \App\Enums\CompanyContentStatus::Ready ? 'btn-light' : 'btn-primary' }}">
+                        {{ $contentStatus === \App\Enums\CompanyContentStatus::Ready ? __('companies.content_regenerate') : __('companies.content_generate') }}
+                    </button>
+                @endif
+            </div>
+        </div>
+
         <form wire:submit.prevent="updateCompany">
+        <fieldset {{ $contentStatus?->isProcessing() ? 'disabled' : '' }}>
             <div class="card mb-5 mb-xl-10">
                 <div class="card-header border-0 pt-6">
                     <div class="card-title">
@@ -485,6 +696,7 @@ class extends Component
                     {{ __('companies.button_update') }}
                 </button>
             </div>
+        </fieldset>
         </form>
     </div>
 </div>

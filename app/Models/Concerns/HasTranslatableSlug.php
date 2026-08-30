@@ -59,6 +59,20 @@ trait HasTranslatableSlug
             $base = Str::slug((string) ($translations[(string) config('app.fallback_locale')] ?? ''));
         }
 
+        return $this->regenerateSlugFromBase($base);
+    }
+
+    /**
+     * Public regeneration entry point: turn an already-chosen base string
+     * into the model's final slug form — Str::slug() plus the model's own
+     * suffix policy. Used by the AI pipeline and the slug backfill command
+     * to rebuild slugs from generated content WITHOUT duplicating the
+     * suffix logic here.
+     */
+    public function regenerateSlugFromBase(string $base): string
+    {
+        $base = Str::slug($base);
+
         if ($base === '') {
             return Str::lower(Str::random(8));
         }

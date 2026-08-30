@@ -111,4 +111,43 @@ return [
     'profile_contact_info' => 'معلومات الاتصال',
     'profile_social_links' => 'شبكات التواصل الاجتماعي',
     'profile_no_contact_info' => 'لم يتم تسجيل معلومات اتصال.',
+
+
+    // AI-generated content sections
+    'content_offerings' => 'ما نقدمه',
+    'content_strengths' => 'نقاط قوتنا',
+    'content_markets' => 'أسواق التصدير',
+    'content_specs' => 'المواصفات',
+    'content_faq' => 'الأسئلة الشائعة',
+    'content_cta' => 'اعمل معنا',
+
+    // Republish action
+    'publication_slug' => 'المُعرّف العام (slug): :slug',
+
+    // AI content generation (dashboard)
+    'content_card_title' => 'توليد المحتوى بالذكاء الاصطناعي',
+    'content_generate' => 'توليد المحتوى بالذكاء الاصطناعي',
+    'content_generate_hint' => 'سيتم استخدام نبذة شركتك لتوليد محتوى صفحتك العامة. تستغرق العملية عدة دقائق.',
+    'content_step_of' => 'الخطوة :step من 5 — :label',
+    'content_processing_hint' => 'يمكنك إغلاق الصفحة؛ تستمر العملية في الخلفية.',
+    'content_regenerate' => 'إعادة التوليد',
+    'content_regenerate_warning' => 'إعادة التوليد تستبدل التعديلات اليدوية على المحتوى المولّد.',
+    'content_ready_at' => 'تم توليد المحتوى في :date',
+    'content_failed_title' => 'فشلت عملية التوليد السابقة',
+    'content_retry' => 'المحاولة مجددًا',
+    'content_quota_exhausted' => 'انتهت حصة توليد المحتوى لهذا الشهر.',
+    'content_upgrade_plans' => 'عرض الباقات',
+    'content_rate_limited' => 'طلبات كثيرة جدًا؛ حاول لاحقًا.',
+    'content_generation_queued' => 'تمت إضافة طلبك إلى قائمة التوليد.',
+    'content_disabled' => 'توليد المحتوى معطّل حاليًا.',
+    'content_already_running' => 'عملية توليد قيد التنفيذ حاليًا.',
+    'content_unchanged' => 'المحتوى المحفوظ مطابق لآخر المدخلات؛ لا حاجة لإعادة التوليد.',
+    'content_locked' => 'عملية التوليد جارية؛ التعديل معطّل مؤقتًا.',
+
+    // AI generation progress steps
+    'ai_step_1' => 'تحليل المدخلات وكتابة المحتوى',
+    'ai_step_2' => 'توليد بيانات SEO',
+    'ai_step_3' => 'حجز الكلمة المفتاحية',
+    'ai_step_4' => 'التوطين للغات أخرى',
+    'ai_step_5' => 'اللمسات الأخيرة',
 ];

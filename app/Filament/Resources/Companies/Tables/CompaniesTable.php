@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Companies\Tables;
 
+use App\Enums\CompanyContentStatus;
 use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
+use App\Services\Ai\ContentGenerationService;
 use App\Services\CompanyPublicationService;
+use App\Settings\ContentSettings;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -19,6 +22,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CompaniesTable
 {
@@ -48,6 +52,11 @@ class CompaniesTable
                 TextColumn::make('review_status')
                     ->label('وضعیت بررسی')
                     ->badge(),
+                TextColumn::make('content_status')
+                    ->label('وضعیت محتوا')
+                    ->badge()
+                    ->state(fn (Company $record) => $record->contentRecord?->status?->getLabel() ?? 'بدون محتوا')
+                    ->color(fn (Company $record) => $record->contentRecord?->status?->getColor() ?? 'gray'),
                 TextColumn::make('plan')
                     ->label('پلن')
                     ->state(fn (Company $record) => $record->activeSubscription()?->plan?->name ?? '—'),
@@ -68,11 +77,33 @@ class CompaniesTable
                 SelectFilter::make('review_status')
                     ->label('وضعیت بررسی')
                     ->options(CompanyReviewStatus::class),
+                SelectFilter::make('content_status')
+                    ->label('وضعیت محتوا')
+                    ->options(['none' => 'بدون محتوا'] + collect(CompanyContentStatus::cases())
+                        ->mapWithKeys(fn (CompanyContentStatus $status) => [$status->value => $status->getLabel()])
+                        ->all())
+                    ->query(function (Builder $query, array $data): void {
+                        $status = $data['value'] ?? null;
+
+                        if (blank($status)) {
+                            return;
+                        }
+
+                        if ($status === 'none') {
+                            $query->whereDoesntHave('contentRecord');
+
+                            return;
+                        }
+
+                        $query->whereHas('contentRecord', fn (Builder $query) => $query->where('status', $status));
+                    }),
                 TrashedFilter::make(),
             ])
             ->recordActions([
                 static::approveAction(),
                 static::rejectAction(),
+                static::republishAction(),
+                static::generateContentAction(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -111,6 +142,87 @@ class CompaniesTable
                 Notification::make()
                     ->title('شرکت تأیید و منتشر شد')
                     ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Republishing replaces the live snapshot with the company's CURRENT
+     * data (including AI-generated content and regenerated SEO). Guarded by
+     * the same Approve:Company Shield permission as the approve action, via
+     * closure-free ->authorize('approve') so shield:generate --all cannot
+     * break it.
+     */
+    public static function republishAction(): Action
+    {
+        return Action::make('republish')
+            ->label('انتشار مجدد')
+            ->icon(Heroicon::ArrowPath)
+            ->color('warning')
+            ->visible(fn (Company $record): bool => $record->publication()->exists()
+                && $record->review_status === CompanyReviewStatus::Approved)
+            ->authorize('approve')
+            ->requiresConfirmation()
+            ->modalHeading('انتشار مجدد شرکت')
+            ->modalDescription('نسخه منتشرشده با اطلاعات فعلی جایگزین می‌شود. این کار برگشت‌پذیر نیست.')
+            ->action(function (Company $record) {
+                $publication = app(CompanyPublicationService::class)->publish($record);
+
+                Notification::make()
+                    ->title('نسخه عمومی با موفقیت جایگزین شد')
+                    ->body(__('companies.publication_slug', ['slug' => $publication->slug]))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Manual (re)generation trigger. Authorization mirrors the approve
+     * action (same Approve:Company permission) via a closure, so it does
+     * not depend on shield-generated policy stubs. Reports WHY a request
+     * was rejected: feature disabled, run in progress, or unchanged input.
+     */
+    public static function generateContentAction(): Action
+    {
+        return Action::make('generate_content')
+            ->label('تولید محتوا')
+            ->icon(Heroicon::Sparkles)
+            ->color('info')
+            ->authorize(fn (Company $record): bool => auth()->user()?->can('Approve:Company') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('تولید محتوا')
+            ->modalDescription('درخواست تولید/بازتولید محتوای هوش مصنوعی برای این شرکت ارسال می‌شود.')
+            ->action(function (Company $record) {
+                $service = app(ContentGenerationService::class);
+
+                if (! app(ContentSettings::class)->enabled) {
+                    Notification::make()
+                        ->title('تولید محتوا انجام نشد')
+                        ->body('تولید محتوا در تنظیمات غیرفعال است.')
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                if ($service->request($record)) {
+                    Notification::make()
+                        ->title('تولید محتوا آغاز شد')
+                        ->body('شرکت به صف تولید محتوا اضافه شد.')
+                        ->success()
+                        ->send();
+
+                    return;
+                }
+
+                $reason = $record->contentRecord?->status?->isProcessing()
+                    ? 'تولید محتوای این شرکت هم‌اکنون در جریان است.'
+                    : 'محتوای ذخیره‌شده با آخرین ورودی‌ها یکسان است؛ نیازی به تولید مجدد نیست.';
+
+                Notification::make()
+                    ->title('تولید محتوا انجام نشد')
+                    ->body($reason)
+                    ->warning()
                     ->send();
             });
     }

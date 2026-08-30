@@ -111,4 +111,43 @@ return [
     'profile_contact_info' => 'Контактная информация',
     'profile_social_links' => 'Социальные сети',
     'profile_no_contact_info' => 'Контактная информация не указана.',
+
+
+    // AI-generated content sections
+    'content_offerings' => 'Что мы предлагаем',
+    'content_strengths' => 'Наши преимущества',
+    'content_markets' => 'Рынки экспорта',
+    'content_specs' => 'Характеристики',
+    'content_faq' => 'Частые вопросы',
+    'content_cta' => 'Сотрудничайте с нами',
+
+    // Republish action
+    'publication_slug' => 'Публичный адрес (slug): :slug',
+
+    // AI content generation (dashboard)
+    'content_card_title' => 'Генерация контента с ИИ',
+    'content_generate' => 'Сгенерировать контент с ИИ',
+    'content_generate_hint' => 'На основе вашего описания будет создан контент публичной страницы. Это занимает несколько минут.',
+    'content_step_of' => 'Шаг :step из 5 — :label',
+    'content_processing_hint' => 'Можно закрыть страницу — процесс продолжается.',
+    'content_regenerate' => 'Сгенерировать заново',
+    'content_regenerate_warning' => 'Повторная генерация заменит ручные правки сгенерированного контента.',
+    'content_ready_at' => 'Контент сгенерирован :date',
+    'content_failed_title' => 'Прошлая генерация не удалась',
+    'content_retry' => 'Повторить попытку',
+    'content_quota_exhausted' => 'Лимит генерации контента на этот месяц исчерпан.',
+    'content_upgrade_plans' => 'Посмотреть тарифы',
+    'content_rate_limited' => 'Слишком много запросов; попробуйте позже.',
+    'content_generation_queued' => 'Ваш запрос добавлен в очередь генерации.',
+    'content_disabled' => 'Генерация контента сейчас отключена.',
+    'content_already_running' => 'Генерация уже выполняется.',
+    'content_unchanged' => 'Сохранённый контент соответствует текущим данным; регенерация не нужна.',
+    'content_locked' => 'Идёт генерация контента; редактирование временно недоступно.',
+
+    // AI generation progress steps
+    'ai_step_1' => 'Анализ данных и написание основного текста',
+    'ai_step_2' => 'Генерация SEO',
+    'ai_step_3' => 'Резервирование ключевого слова',
+    'ai_step_4' => 'Локализация для других языков',
+    'ai_step_5' => 'Завершение',
 ];

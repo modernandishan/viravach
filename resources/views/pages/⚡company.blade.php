@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Concerns\RecordsPageView;
+use Artesaos\SEOTools\Facades\SEOTools;
 use App\Models\CompanyPublication;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -25,6 +26,40 @@ class extends Component {
         $this->recordPageView($this->publication);
 
         $this->publication->applySeoTags();
+
+        // Extend the page's existing JSON-LD output (SEOTools jsonLdMulti,
+        // driven by applySeoTags) with content-derived blocks. The specs go
+        // onto the default Organization block as additionalProperty; the
+        // FAQ becomes its own FAQPage block, only when there is a real FAQ.
+        $content = $this->publication->contentFor(app()->getLocale());
+
+        if ($content !== null && ! empty($content['specs'])) {
+            SEOTools::jsonLdMulti()->addValue('additionalProperty', collect($content['specs'])
+                ->map(fn (array $spec): array => [
+                    '@type' => 'AdditionalProperty',
+                    'name' => (string) ($spec['label'] ?? ''),
+                    'value' => (string) ($spec['value'] ?? ''),
+                ])
+                ->all());
+        }
+
+        if ($content !== null && count($content['faq'] ?? []) >= 2) {
+            $jsonLd = SEOTools::jsonLdMulti();
+
+            $jsonLd->newJsonLd();
+            $jsonLd->setType('FAQPage');
+            $jsonLd->addValue('mainEntity', collect($content['faq'])
+                ->map(fn (array $item): array => [
+                    '@type' => 'Question',
+                    'name' => (string) ($item['q'] ?? ''),
+                    'acceptedAnswer' => [
+                        '@type' => 'Answer',
+                        'text' => (string) ($item['a'] ?? ''),
+                    ],
+                ])
+                ->values()
+                ->all());
+        }
     }
 
     public function render()
@@ -112,17 +147,15 @@ class extends Component {
             <!--begin::Main column-->
             <div class="flex-lg-row-fluid me-lg-7 me-xl-10">
 
-                @if ($publication->description)
-                    <div class="card mb-6 mb-xl-9">
-                        <div class="card-header border-0 pt-6">
-                            <div class="card-title">
-                                <h2>{{ __('companies.profile_about') }}</h2>
-                            </div>
-                        </div>
-                        <div class="card-body pt-0 fs-6 text-gray-700">
-                            {!! $publication->description !!}
-                        </div>
-                    </div>
+                @if (($content = $publication->contentFor(app()->getLocale())) !== null)
+                    <x-company-content.hero :data="$content['hero'] ?? []" />
+                    <x-company-content.about :data="$content['about'] ?? []" />
+                    <x-company-content.offerings :data="$content['offerings'] ?? []" />
+                    <x-company-content.strengths :data="$content['strengths'] ?? []" />
+                    <x-company-content.markets :data="$content['markets'] ?? []" />
+                    <x-company-content.specs :data="$content['specs'] ?? []" />
+                    <x-company-content.faq :data="$content['faq'] ?? []" />
+                    <x-company-content.cta :data="$content['cta'] ?? []" />
                 @endif
 
                 @if ($publication->company?->brands->isNotEmpty())

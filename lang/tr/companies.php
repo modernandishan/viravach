@@ -111,4 +111,43 @@ return [
     'profile_contact_info' => 'İletişim bilgileri',
     'profile_social_links' => 'Sosyal ağlar',
     'profile_no_contact_info' => 'İletişim bilgisi girilmemiş.',
+
+
+    // AI-generated content sections
+    'content_offerings' => 'Sunduklarımız',
+    'content_strengths' => 'Güçlü yönlerimiz',
+    'content_markets' => 'İhracat pazarları',
+    'content_specs' => 'Özellikler',
+    'content_faq' => 'Sık sorulan sorular',
+    'content_cta' => 'Bizimle çalışın',
+
+    // Republish action
+    'publication_slug' => 'Halka açık URL kısaltması: :slug',
+
+    // AI content generation (dashboard)
+    'content_card_title' => 'Yapay zekâ ile içerik üretimi',
+    'content_generate' => 'Yapay zekâ ile içerik üret',
+    'content_generate_hint' => 'Kısa tanıtımınız kullanılarak genel sayfa içeriğiniz oluşturulacak. Bu işlem birkaç dakika sürer.',
+    'content_step_of' => 'Adım :step / 5 — :label',
+    'content_processing_hint' => 'Sayfayı kapatabilirsiniz; süreç devam ediyor.',
+    'content_regenerate' => 'Yeniden üret',
+    'content_regenerate_warning' => 'Yeniden üretim, üretilen içerikteki manuel düzenlemeleri değiştirir.',
+    'content_ready_at' => 'İçerik :date tarihinde üretildi',
+    'content_failed_title' => 'Son üretim başarısız oldu',
+    'content_retry' => 'Tekrar dene',
+    'content_quota_exhausted' => 'Bu ayki yapay zekâ içerik üretim hakkınız bitti.',
+    'content_upgrade_plans' => 'Planları görüntüle',
+    'content_rate_limited' => 'Çok fazla istek; lütfen sonra tekrar deneyin.',
+    'content_generation_queued' => 'İsteğiniz üretim kuyruğuna eklendi.',
+    'content_disabled' => 'Yapay zekâ içerik üretimi şu anda devre dışı.',
+    'content_already_running' => 'Bir üretim şu anda devam ediyor.',
+    'content_unchanged' => 'Kayıtlı içerik güncel girdilerle aynı; yeniden üretim gerekmiyor.',
+    'content_locked' => 'İçerik üretimi devam ediyor; düzenleme geçici olarak kapalı.',
+
+    // AI generation progress steps
+    'ai_step_1' => 'Girdileri analiz ve ana içeriği yazma',
+    'ai_step_2' => 'SEO bilgisi üretimi',
+    'ai_step_3' => 'Anahtar kelime rezervi',
+    'ai_step_4' => 'Diğer diller için yerelleştirme',
+    'ai_step_5' => 'Sonlandırma',
 ];

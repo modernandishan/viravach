@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use App\Ai\Input\CompanyInputCollector;
 use App\Enums\CompanyContentStatus;
+use App\Events\Ai\ContentGenerationProgressed;
 use App\Jobs\Ai\FinalizeContent;
 use App\Jobs\Ai\GenerateSeoBlock;
 use App\Jobs\Ai\GenerateSourceContent;
@@ -78,6 +79,10 @@ class ContentGenerationService
             return false;
         }
 
+        // No transaction wraps the claim (it is a single conditional
+        // UPDATE), so the broadcast goes out immediately.
+        $this->broadcastProgress($this->rowFor($company));
+
         Bus::chain([
             new GenerateSourceContent($company->id),
             new GenerateSeoBlock($company->id),
@@ -103,6 +108,8 @@ class ContentGenerationService
             'company_id' => $content->company_id,
             'reason' => $reason,
         ]);
+
+        $this->broadcastProgress($content);
     }
 
     public function markReady(CompanyContent $content): void
@@ -111,6 +118,16 @@ class ContentGenerationService
             'status' => CompanyContentStatus::Ready,
             'locked_at' => null,
         ])->save();
+
+        $this->broadcastProgress($content);
+    }
+
+    /**
+     * Push one progress event to the company's private ai-content channel.
+     */
+    protected function broadcastProgress(CompanyContent $content): void
+    {
+        ContentGenerationProgressed::dispatch($content);
     }
 
     protected function loadOrCreateRow(Company $company): CompanyContent

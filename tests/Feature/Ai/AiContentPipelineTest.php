@@ -12,8 +12,10 @@ use App\Jobs\Ai\ReserveKeyword;
 use App\Models\Company;
 use App\Models\CompanyCategory;
 use App\Models\CompanyContent;
+use App\Models\CompanyPublication;
 use App\Models\Country;
 use App\Models\SeoKeywordReservation;
+use App\Models\User;
 use App\Settings\ContentSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -344,5 +346,70 @@ class AiContentPipelineTest extends TestCase
         $this->assertSame(str_repeat('t', 35), $company->seo->getTranslation('meta_title', 'en', false));
         $this->assertSame(str_repeat('t', 35), $company->seo->getTranslation('meta_title', 'fa', false));
         $this->assertSame('insulation supplier,export panels,thermal boards', $company->seo->getTranslation('meta_keywords', 'en', false));
+    }
+
+    public function test_finalize_regenerates_a_machine_slug_from_generated_english_content(): void
+    {
+        $company = Company::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => ['fa' => 'شرکت آکمی صنعتی'],
+            'brief' => 'b',
+            'brief_locale' => 'fa',
+        ]);
+        $oldSlug = $company->slug; // machine-transliterated Persian, e.g. shrkt-akmy-snaaty-xxxxxx
+
+        $content = CompanyContent::firstOrCreate(['company_id' => $company->id]);
+        $content->forceFill([
+            'ai_payload' => ['en' => ['hero' => ['headline' => 'Premium Industrial Insulation Panels for Export']]],
+        ])->save();
+
+        (new FinalizeContent($company->id))->handle();
+
+        $company->refresh();
+        $this->assertNotSame($oldSlug, $company->slug);
+        $this->assertMatchesRegularExpression(
+            '/^premium-industrial-insulation-panels-[a-z0-9]{6}$/',
+            $company->slug,
+        );
+    }
+
+    public function test_finalize_never_touches_the_slug_once_the_company_is_published(): void
+    {
+        $company = Company::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => ['fa' => 'شرکت آکمی صنعتی'],
+            'brief' => 'b',
+            'brief_locale' => 'fa',
+        ]);
+        $oldSlug = $company->slug;
+
+        CompanyPublication::factory()->create(['company_id' => $company->id, 'slug' => $oldSlug]);
+
+        CompanyContent::firstOrCreate(['company_id' => $company->id])->forceFill([
+            'ai_payload' => ['en' => ['hero' => ['headline' => 'Premium Industrial Insulation Panels for Export']]],
+        ])->save();
+
+        (new FinalizeContent($company->id))->handle();
+
+        $this->assertSame($oldSlug, $company->fresh()->slug);
+    }
+
+    public function test_finalize_never_touches_an_explicitly_set_human_slug(): void
+    {
+        $company = Company::create([
+            'user_id' => User::factory()->create()->id,
+            'slug' => 'chosen-by-owner',
+            'name' => ['en' => 'Something Else Entirely'],
+            'brief' => 'b',
+            'brief_locale' => 'en',
+        ]);
+
+        CompanyContent::firstOrCreate(['company_id' => $company->id])->forceFill([
+            'ai_payload' => ['en' => ['hero' => ['headline' => 'Premium Industrial Insulation Panels for Export']]],
+        ])->save();
+
+        (new FinalizeContent($company->id))->handle();
+
+        $this->assertSame('chosen-by-owner', $company->fresh()->slug);
     }
 }

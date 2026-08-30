@@ -111,4 +111,43 @@ return [
     'profile_contact_info' => 'Contact information',
     'profile_social_links' => 'Social networks',
     'profile_no_contact_info' => 'No contact information provided.',
+
+
+    // AI-generated content sections
+    'content_offerings' => 'What we offer',
+    'content_strengths' => 'Our strengths',
+    'content_markets' => 'Export markets',
+    'content_specs' => 'Specifications',
+    'content_faq' => 'Frequently asked questions',
+    'content_cta' => 'Work with us',
+
+    // Republish action
+    'publication_slug' => 'Public URL slug: :slug',
+
+    // AI content generation (dashboard)
+    'content_card_title' => 'AI content generation',
+    'content_generate' => 'Generate content with AI',
+    'content_generate_hint' => 'Your brief will be used to generate your public page content. This takes several minutes.',
+    'content_step_of' => 'Step :step of 5 — :label',
+    'content_processing_hint' => 'You can leave this page; the pipeline keeps running.',
+    'content_regenerate' => 'Regenerate',
+    'content_regenerate_warning' => 'Regenerating replaces manual edits to the generated content.',
+    'content_ready_at' => 'Content generated on :date',
+    'content_failed_title' => 'The last generation failed',
+    'content_retry' => 'Try again',
+    'content_quota_exhausted' => 'Your AI content generation quota is used up for this month.',
+    'content_upgrade_plans' => 'View plans',
+    'content_rate_limited' => 'Too many requests. Please try again later.',
+    'content_generation_queued' => 'Your content was queued for generation.',
+    'content_disabled' => 'AI content generation is currently disabled.',
+    'content_already_running' => 'A generation is already in progress.',
+    'content_unchanged' => 'The stored content already matches your current input.',
+    'content_locked' => 'Content generation is in progress; editing is temporarily disabled.',
+
+    // AI generation progress steps
+    'ai_step_1' => 'Analysing input & writing the main content',
+    'ai_step_2' => 'Generating SEO',
+    'ai_step_3' => 'Reserving the keyword',
+    'ai_step_4' => 'Localizing other languages',
+    'ai_step_5' => 'Finalizing',
 ];

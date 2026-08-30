@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Companies\Schemas;
 
 use App\Enums\CompanyReviewStatus;
 use App\Enums\CompanyType;
+use App\Filament\Schemas\Components\CompanyContentSection;
 use App\Filament\Schemas\Components\SeoMetaSection;
 use App\Models\Company;
 use App\Models\CompanyCategory;
@@ -245,6 +246,7 @@ class CompanyForm
                     ->columnSpanFull(),
 
                 SeoMetaSection::make(),
+                CompanyContentSection::make(),
             ]);
     }
 }

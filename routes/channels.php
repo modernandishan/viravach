@@ -66,3 +66,13 @@ Broadcast::channel('chat-participant.user.{id}', function (User $user, int $id) 
 Broadcast::channel('chat-participant.company.{id}', function (User $user, int $id) {
     return $user->companies()->whereKey($id)->exists();
 });
+
+/*
+ * App\Events\Ai\ContentGenerationProgressed announces AI content
+ * generation progress on a channel named after the company, following the
+ * same naming and authorization rule as the chat company channel above:
+ * the company owner only.
+ */
+Broadcast::channel('ai-content.company.{id}', function (User $user, int $id) {
+    return $user->companies()->whereKey($id)->exists();
+});
