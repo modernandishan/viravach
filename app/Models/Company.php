@@ -7,6 +7,7 @@ use App\Enums\CompanyType;
 use App\Models\Concerns\HasSeo;
 use App\Models\Concerns\HasTranslatableSlug;
 use App\Observers\CompanyObserver;
+use Carbon\CarbonInterface;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -197,6 +198,30 @@ class Company extends Model implements HasMedia
     public function activeSubscription(): ?Subscription
     {
         return $this->activePlanSubscriptions()->first();
+    }
+
+    /**
+     * The dashboard's one-company-per-user-every-48-hours cooldown: the
+     * moment the window ends, or null when the user may create now. Keyed
+     * off the user's most recently created company INCLUDING soft-deleted
+     * ones, so deleting and re-creating cannot bypass it. This only reports
+     * the data — the Filament-exemption and role-exemption are the
+     * caller's job (this rule is dashboard-only).
+     */
+    public static function creationCooldownEndsAt(int $userId): ?CarbonInterface
+    {
+        $latest = static::withTrashed()
+            ->where('user_id', $userId)
+            ->latest('created_at')
+            ->first();
+
+        if ($latest === null) {
+            return null;
+        }
+
+        $cooldownEndsAt = $latest->created_at->copy()->addHours(48);
+
+        return $cooldownEndsAt->isFuture() ? $cooldownEndsAt : null;
     }
 
     public function primaryAddress(): HasOne

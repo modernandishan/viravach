@@ -112,7 +112,6 @@ return [
     'profile_social_links' => 'Социальные сети',
     'profile_no_contact_info' => 'Контактная информация не указана.',
 
-
     // AI-generated content sections
     'content_offerings' => 'Что мы предлагаем',
     'content_strengths' => 'Наши преимущества',
@@ -130,8 +129,6 @@ return [
     'content_generate_hint' => 'На основе вашего описания будет создан контент публичной страницы. Это занимает несколько минут.',
     'content_step_of' => 'Шаг :step из 5 — :label',
     'content_processing_hint' => 'Можно закрыть страницу — процесс продолжается.',
-    'content_regenerate' => 'Сгенерировать заново',
-    'content_regenerate_warning' => 'Повторная генерация заменит ручные правки сгенерированного контента.',
     'content_ready_at' => 'Контент сгенерирован :date',
     'content_failed_title' => 'Прошлая генерация не удалась',
     'content_retry' => 'Повторить попытку',
@@ -143,6 +140,29 @@ return [
     'content_already_running' => 'Генерация уже выполняется.',
     'content_unchanged' => 'Сохранённый контент соответствует текущим данным; регенерация не нужна.',
     'content_locked' => 'Идёт генерация контента; редактирование временно недоступно.',
+    'ai_already_generated' => 'Контент для этой компании уже был сгенерирован один раз. Теперь вы можете его редактировать.',
+    'ai_regeneration_not_allowed' => 'Повторная генерация контента недоступна.',
+
+    // Company creation cooldown (dashboard)
+    'company_creation_cooldown' => 'Следующую компанию можно зарегистрировать после :time.',
+
+    // AI content editor (dashboard)
+    'content_editor_title' => 'Редактировать содержимое страницы',
+    'content_editor_hint' => 'Этот текст отображается на публичной странице вашей компании. После редактирования изменения отправляются на проверку.',
+    'content_editor_saved' => 'Изменения сохранены и отправлены на проверку.',
+    'content_editor_locked' => 'Идёт генерация контента; попробуйте через несколько минут.',
+    'content_add_item' => 'Добавить',
+    'content_remove_item' => 'Удалить',
+    'content_field_hero_headline' => 'Заголовок',
+    'content_field_hero_subheadline' => 'Подзаголовок',
+    'content_field_hero_image_alt' => 'Альтернативный текст изображения',
+    'content_field_heading' => 'Заголовок',
+    'content_field_body' => 'Текст',
+    'content_field_title' => 'Название',
+    'content_field_label' => 'Метка',
+    'content_field_value' => 'Значение',
+    'content_field_question' => 'Вопрос',
+    'content_field_answer' => 'Ответ',
 
     // AI generation progress steps
     'ai_step_1' => 'Анализ данных и написание основного текста',

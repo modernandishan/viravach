@@ -112,7 +112,6 @@ return [
     'profile_social_links' => 'Sosyal ağlar',
     'profile_no_contact_info' => 'İletişim bilgisi girilmemiş.',
 
-
     // AI-generated content sections
     'content_offerings' => 'Sunduklarımız',
     'content_strengths' => 'Güçlü yönlerimiz',
@@ -130,8 +129,6 @@ return [
     'content_generate_hint' => 'Kısa tanıtımınız kullanılarak genel sayfa içeriğiniz oluşturulacak. Bu işlem birkaç dakika sürer.',
     'content_step_of' => 'Adım :step / 5 — :label',
     'content_processing_hint' => 'Sayfayı kapatabilirsiniz; süreç devam ediyor.',
-    'content_regenerate' => 'Yeniden üret',
-    'content_regenerate_warning' => 'Yeniden üretim, üretilen içerikteki manuel düzenlemeleri değiştirir.',
     'content_ready_at' => 'İçerik :date tarihinde üretildi',
     'content_failed_title' => 'Son üretim başarısız oldu',
     'content_retry' => 'Tekrar dene',
@@ -143,6 +140,29 @@ return [
     'content_already_running' => 'Bir üretim şu anda devam ediyor.',
     'content_unchanged' => 'Kayıtlı içerik güncel girdilerle aynı; yeniden üretim gerekmiyor.',
     'content_locked' => 'İçerik üretimi devam ediyor; düzenleme geçici olarak kapalı.',
+    'ai_already_generated' => 'Bu işletme için içerik bir kez üretildi. Artık yalnızca düzenleyebilirsiniz.',
+    'ai_regeneration_not_allowed' => 'İçeriği yeniden üretmeye izin verilmiyor.',
+
+    // Company creation cooldown (dashboard)
+    'company_creation_cooldown' => 'Bir sonraki işletmeyi kaydetmek için :time saatine kadar beklemelisiniz.',
+
+    // AI content editor (dashboard)
+    'content_editor_title' => 'Sayfa içeriğini düzenle',
+    'content_editor_hint' => 'Bu metinler işletmenizin genel sayfasında görünür. Düzenlemeler incelemeye gönderilir.',
+    'content_editor_saved' => 'Değişiklikler kaydedildi ve incelemeye gönderildi.',
+    'content_editor_locked' => 'İçerik üretiliyor; lütfen birkaç dakika sonra tekrar deneyin.',
+    'content_add_item' => 'Ekle',
+    'content_remove_item' => 'Kaldır',
+    'content_field_hero_headline' => 'Başlık',
+    'content_field_hero_subheadline' => 'Alt başlık',
+    'content_field_hero_image_alt' => 'Görsel alternatif metni',
+    'content_field_heading' => 'Başlık',
+    'content_field_body' => 'Metin',
+    'content_field_title' => 'Ad',
+    'content_field_label' => 'Etiket',
+    'content_field_value' => 'Değer',
+    'content_field_question' => 'Soru',
+    'content_field_answer' => 'Cevap',
 
     // AI generation progress steps
     'ai_step_1' => 'Girdileri analiz ve ana içeriği yazma',

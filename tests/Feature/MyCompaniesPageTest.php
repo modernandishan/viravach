@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Support\LocalizedDate;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -67,6 +68,22 @@ class MyCompaniesPageTest extends TestCase
             ->call('delete');
 
         $this->assertDatabaseHas('companies', ['id' => $other->id, 'deleted_at' => null]);
+    }
+
+    public function test_the_create_button_is_disabled_during_the_cooldown_window(): void
+    {
+        $user = User::factory()->create();
+        Company::factory()->for($user)->create(['created_at' => now()->subHour()]);
+
+        $cooldownEndsAt = Company::creationCooldownEndsAt($user->id);
+        $this->assertNotNull($cooldownEndsAt);
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.my-companies')
+            ->assertSee(__('companies.company_creation_cooldown', [
+                'time' => LocalizedDate::format($cooldownEndsAt, LocalizedDate::FORMAT_DATETIME),
+            ]))
+            ->assertDontSeeHtml('href="'.route('create.company').'"');
     }
 
     public function test_search_filters_by_translated_name(): void

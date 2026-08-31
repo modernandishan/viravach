@@ -303,6 +303,17 @@ class extends Component
         return $this->record->contentRecord?->status;
     }
 
+    /**
+     * The once-per-company generation lock — separate from and on top of
+     * the monthly plan quota below. Once true, the user has no path to
+     * trigger another generation; only the admin's
+     * allow_content_regeneration action can lift it.
+     */
+    public function contentAlreadyGenerated(): bool
+    {
+        return app(ContentGenerationService::class)->alreadyGenerated($this->record);
+    }
+
     public function contentStepLabel(int $step): string
     {
         return __('companies.ai_step_'.max(1, min(5, $step)));
@@ -350,6 +361,15 @@ class extends Component
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
             $this->notifyContent(__('companies.content_rate_limited'));
+
+            return;
+        }
+
+        // Server-side gate for the once-per-company lock: the UI never
+        // renders a button that reaches here once this is true, but a
+        // stale page (or a direct wire:click) must still be refused.
+        if ($this->contentAlreadyGenerated()) {
+            $this->notifyContent(__('companies.ai_regeneration_not_allowed'));
 
             return;
         }
@@ -588,6 +608,13 @@ class extends Component
                         </div>
                         <div class="text-muted fs-7">{{ __('companies.content_processing_hint') }}</div>
                     </div>
+                @elseif ($this->contentAlreadyGenerated())
+                    <div class="d-flex flex-column gap-3">
+                        <div class="text-gray-700">
+                            {{ __('companies.content_ready_at', ['date' => \App\Support\LocalizedDate::format($content->updated_at, \App\Support\LocalizedDate::FORMAT_DATETIME)]) }}
+                        </div>
+                        <div class="text-muted">{{ __('companies.ai_already_generated') }}</div>
+                    </div>
                 @elseif ($contentStatus === \App\Enums\CompanyContentStatus::Failed)
                     <div class="d-flex flex-column gap-3">
                         <div class="text-danger fw-bold">{{ __('companies.content_failed_title') }}</div>
@@ -600,11 +627,6 @@ class extends Component
                     </div>
                 @elseif ($contentQuota === 0)
                     <div class="d-flex flex-column gap-3">
-                        @if ($contentStatus === \App\Enums\CompanyContentStatus::Ready)
-                            <div class="text-gray-700">
-                                {{ __('companies.content_ready_at', ['date' => \App\Support\LocalizedDate::format($content->updated_at, \App\Support\LocalizedDate::FORMAT_DATETIME)]) }}
-                            </div>
-                        @endif
                         <div class="text-gray-700">{{ __('companies.content_quota_exhausted') }}</div>
                         <div>
                             <a href="{{ route('subscriptions') }}" class="btn btn-light-primary">
@@ -613,20 +635,17 @@ class extends Component
                         </div>
                     </div>
                 @else
-                    @if ($contentStatus === \App\Enums\CompanyContentStatus::Ready)
-                        <div class="text-gray-700 mb-3">
-                            {{ __('companies.content_ready_at', ['date' => \App\Support\LocalizedDate::format($content->updated_at, \App\Support\LocalizedDate::FORMAT_DATETIME)]) }}
-                            <div class="text-warning fw-semibold mt-2">{{ __('companies.content_regenerate_warning') }}</div>
-                        </div>
-                    @else
-                        <div class="text-gray-700 mb-3">{{ __('companies.content_generate_hint') }}</div>
-                    @endif
-                    <button type="button" wire:click="requestContentGeneration" class="btn {{ $contentStatus === \App\Enums\CompanyContentStatus::Ready ? 'btn-light' : 'btn-primary' }}">
-                        {{ $contentStatus === \App\Enums\CompanyContentStatus::Ready ? __('companies.content_regenerate') : __('companies.content_generate') }}
+                    <div class="text-gray-700 mb-3">{{ __('companies.content_generate_hint') }}</div>
+                    <button type="button" wire:click="requestContentGeneration" class="btn btn-primary">
+                        {{ __('companies.content_generate') }}
                     </button>
                 @endif
             </div>
         </div>
+
+        @if (! empty($this->record->content))
+            <livewire:company-content.content-editor :company="$this->record" />
+        @endif
 
         <form wire:submit.prevent="updateCompany">
         <fieldset {{ $contentStatus?->isProcessing() ? 'disabled' : '' }}>

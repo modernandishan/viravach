@@ -7,6 +7,8 @@ use App\Models\CompanyCategory;
 use App\Models\State;
 use App\Services\CompanySubscriptionService;
 use App\Support\CompanySocialPlatforms;
+use App\Support\LocalizedDate;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -271,8 +273,30 @@ class extends Component
         $this->website = $website !== '' ? 'https://'.$website : null;
     }
 
+    /**
+     * ONE COMPANY PER USER EVERY 48 HOURS: this rule is the public
+     * dashboard's alone — Filament company creation is exempt entirely,
+     * and super_admin/admin users are exempt here too.
+     */
+    public function companyCreationCooldownEndsAt(): ?CarbonInterface
+    {
+        if (auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
+            return null;
+        }
+
+        return Company::creationCooldownEndsAt(auth()->id());
+    }
+
     public function createCompany(): void
     {
+        if (($cooldownEndsAt = $this->companyCreationCooldownEndsAt()) !== null) {
+            $this->addError('cooldown', __('companies.company_creation_cooldown', [
+                'time' => LocalizedDate::format($cooldownEndsAt, LocalizedDate::FORMAT_DATETIME),
+            ]));
+
+            return;
+        }
+
         $this->normalizeWebsite();
 
         $this->validate($this->rulesForStep(5));
@@ -364,6 +388,10 @@ class extends Component
 <div class="d-flex flex-column-fluid align-items-start container-xxl">
     <div class="content flex-row-fluid">
         <livewire:dashboard-elements.infobar/>
+
+        @error('cooldown')
+            <div class="alert alert-danger">{{ $message }}</div>
+        @enderror
 
         <div class="content flex-row-fluid" id="kt_content">
             <!--begin::Stepper-->

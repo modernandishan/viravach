@@ -44,6 +44,15 @@ class ContentGenerationService
 
         $content = $this->rowFor($company);
 
+        // ONE GENERATION PER COMPANY, FOREVER: this sits on top of the
+        // monthly plan quota, not in place of it. Once a generation has
+        // ever completed, only the admin's allow_content_regeneration
+        // action (which resets generations_count back to 0) can open this
+        // back up — see CompaniesTable::allowContentRegenerationAction().
+        if ($content->generations_count >= 1) {
+            return false;
+        }
+
         // A row that is queued or generating belongs to a live run; a
         // second request must not disturb it.
         if ($content->status->isProcessing()) {
@@ -97,6 +106,17 @@ class ContentGenerationService
             ->dispatch();
 
         return true;
+    }
+
+    /**
+     * Whether this company has already used its one-time generation — the
+     * distinct rejection reason request() enforces above, kept separate
+     * from "quota exhausted" (plan feature usage) and "already running"
+     * (isProcessing) so callers can tell the three apart.
+     */
+    public function alreadyGenerated(Company $company): bool
+    {
+        return ($company->contentRecord?->generations_count ?? 0) >= 1;
     }
 
     public function markFailed(CompanyContent $content, string $reason): void

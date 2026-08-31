@@ -5,6 +5,7 @@ use Artesaos\SEOTools\Facades\SEOTools;
 use App\Models\CompanyPublication;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 new
 #[Layout('layouts::landing')]
@@ -12,6 +13,14 @@ class extends Component {
     use RecordsPageView;
 
     public CompanyPublication $publication;
+
+    public ?string $featuredImageUrl = null;
+
+    public ?string $featuredImageAlt = null;
+
+    public ?string $featuredImageTitle = null;
+
+    public ?string $featuredImageCaption = null;
 
     public function mount(string $slug): void
     {
@@ -60,6 +69,64 @@ class extends Component {
                 ->values()
                 ->all());
         }
+
+        $this->loadFeaturedImage();
+    }
+
+    /**
+     * The featured_image media item (1024x576, 16:9), its localized
+     * alt/title/caption/description, and an ImageObject added onto the
+     * SAME default JSON-LD block the specs/additionalProperty above uses
+     * — not a second jsonLdMulti() group. Nothing is set when there is no
+     * featured image, so the page renders no image element at all.
+     */
+    private function loadFeaturedImage(): void
+    {
+        $featuredImage = $this->publication->getFirstMedia('featured_image');
+
+        if ($featuredImage === null) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+
+        $this->featuredImageUrl = $featuredImage->getUrl('webp');
+        $this->featuredImageAlt = $this->localizedMediaProperty($featuredImage, 'alt', $locale)
+            ?? (string) $this->publication->name;
+        $this->featuredImageTitle = $this->localizedMediaProperty($featuredImage, 'title', $locale)
+            ?? (string) $this->publication->name;
+        $this->featuredImageCaption = $this->localizedMediaProperty($featuredImage, 'caption', $locale);
+
+        SEOTools::jsonLdMulti()->addValue('image', array_filter([
+            '@type' => 'ImageObject',
+            'contentUrl' => $this->featuredImageUrl,
+            'caption' => $this->featuredImageCaption,
+            'description' => $this->localizedMediaProperty($featuredImage, 'description', $locale),
+        ]));
+    }
+
+    /**
+     * $property's value for $locale, falling back to the site's fallback
+     * locale, then null — the shared two-step chain every featured_image
+     * custom property (alt/title/caption/description) starts from. alt
+     * and title fall back further to the company name (see
+     * loadFeaturedImage()); caption/description are simply omitted when
+     * both steps come up empty.
+     */
+    private function localizedMediaProperty(Media $media, string $property, string $locale): ?string
+    {
+        $values = (array) $media->getCustomProperty($property, []);
+
+        $value = trim((string) ($values[$locale] ?? ''));
+
+        if ($value !== '') {
+            return $value;
+        }
+
+        $fallbackLocale = (string) config('app.fallback_locale');
+        $fallbackValue = trim((string) ($values[$fallbackLocale] ?? ''));
+
+        return $fallbackValue !== '' ? $fallbackValue : null;
     }
 
     public function render()
@@ -147,19 +214,28 @@ class extends Component {
             <!--begin::Main column-->
             <div class="flex-lg-row-fluid me-lg-7 me-xl-10">
 
+                {{-- Featured image: the LCP element, so eager/high-priority
+                     rather than lazy. Independent of $content — gated only
+                     on whether an image actually exists. --}}
+                @if ($featuredImageUrl)
+                    <div class="mb-6 mb-xl-9">
+                        <img
+                            src="{{ $featuredImageUrl }}"
+                            alt="{{ $featuredImageAlt }}"
+                            @if ($featuredImageTitle) title="{{ $featuredImageTitle }}" @endif
+                            class="rounded w-100"
+                            style="aspect-ratio: 16 / 9; object-fit: cover;"
+                            loading="eager"
+                            fetchpriority="high"
+                        >
+                        @if ($featuredImageCaption)
+                            <div class="text-muted fs-7 mt-2">{{ $featuredImageCaption }}</div>
+                        @endif
+                    </div>
+                @endif
+
                 @if (($content = $publication->contentFor(app()->getLocale())) !== null)
-                    @php
-                        $featuredImage = $publication->getFirstMedia('featured_image');
-                        $featuredImageAlt = $featuredImage?->getCustomProperty('alt', [])[app()->getLocale()]
-                            ?? $featuredImage?->getCustomProperty('alt', [])[config('app.fallback_locale')]
-                            ?? $content['hero']['image_alt']
-                            ?? $publication->name;
-                    @endphp
-                    <x-company-content.hero
-                        :data="$content['hero'] ?? []"
-                        :image-url="$featuredImage?->getUrl('webp')"
-                        :image-alt="$featuredImageAlt"
-                    />
+                    <x-company-content.hero :data="$content['hero'] ?? []" />
                     <x-company-content.about :data="$content['about'] ?? []" />
                     <x-company-content.offerings :data="$content['offerings'] ?? []" />
                     <x-company-content.strengths :data="$content['strengths'] ?? []" />

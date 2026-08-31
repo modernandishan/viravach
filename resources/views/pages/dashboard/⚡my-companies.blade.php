@@ -3,6 +3,7 @@
 use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Support\LocalizedDate;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -52,6 +53,20 @@ class extends Component
             ->when($this->status !== '', fn ($query) => $query->where('review_status', $this->status))
             ->latest()
             ->paginate(10);
+    }
+
+    /**
+     * Same 48-hour, dashboard-only cooldown createCompany() enforces
+     * server-side — this only surfaces it here so the button can be
+     * disabled before the user fills the whole wizard.
+     */
+    public function companyCreationCooldownEndsAt(): ?CarbonInterface
+    {
+        if (auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
+            return null;
+        }
+
+        return Company::creationCooldownEndsAt(auth()->id());
     }
 
     /**
@@ -118,11 +133,29 @@ class extends Component
                                     @endforeach
                                 </select>
                             </div>
-                            <a href="{{ route('create.company') }}" class="btn btn-primary text-nowrap">
-                                {{ __('menu.create_new_company') }}
-                            </a>
+                            @php
+                                $cooldownEndsAt = $this->companyCreationCooldownEndsAt();
+                            @endphp
+                            @if ($cooldownEndsAt !== null)
+                                <button type="button" class="btn btn-primary text-nowrap" disabled
+                                        data-bs-toggle="tooltip"
+                                        title="{{ __('companies.company_creation_cooldown', ['time' => LocalizedDate::format($cooldownEndsAt, LocalizedDate::FORMAT_DATETIME)]) }}">
+                                    {{ __('menu.create_new_company') }}
+                                </button>
+                            @else
+                                <a href="{{ route('create.company') }}" class="btn btn-primary text-nowrap">
+                                    {{ __('menu.create_new_company') }}
+                                </a>
+                            @endif
                         </div>
                     </div>
+                    @if ($cooldownEndsAt !== null)
+                        <div class="px-9">
+                            <div class="alert alert-warning">
+                                {{ __('companies.company_creation_cooldown', ['time' => LocalizedDate::format($cooldownEndsAt, LocalizedDate::FORMAT_DATETIME)]) }}
+                            </div>
+                        </div>
+                    @endif
                     <div class="card-body pt-0">
                         <div class="table-responsive">
                             <table class="table align-middle table-row-dashed fs-6 gy-5">

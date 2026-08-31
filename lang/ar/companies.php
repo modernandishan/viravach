@@ -112,7 +112,6 @@ return [
     'profile_social_links' => 'شبكات التواصل الاجتماعي',
     'profile_no_contact_info' => 'لم يتم تسجيل معلومات اتصال.',
 
-
     // AI-generated content sections
     'content_offerings' => 'ما نقدمه',
     'content_strengths' => 'نقاط قوتنا',
@@ -130,8 +129,6 @@ return [
     'content_generate_hint' => 'سيتم استخدام نبذة شركتك لتوليد محتوى صفحتك العامة. تستغرق العملية عدة دقائق.',
     'content_step_of' => 'الخطوة :step من 5 — :label',
     'content_processing_hint' => 'يمكنك إغلاق الصفحة؛ تستمر العملية في الخلفية.',
-    'content_regenerate' => 'إعادة التوليد',
-    'content_regenerate_warning' => 'إعادة التوليد تستبدل التعديلات اليدوية على المحتوى المولّد.',
     'content_ready_at' => 'تم توليد المحتوى في :date',
     'content_failed_title' => 'فشلت عملية التوليد السابقة',
     'content_retry' => 'المحاولة مجددًا',
@@ -143,6 +140,29 @@ return [
     'content_already_running' => 'عملية توليد قيد التنفيذ حاليًا.',
     'content_unchanged' => 'المحتوى المحفوظ مطابق لآخر المدخلات؛ لا حاجة لإعادة التوليد.',
     'content_locked' => 'عملية التوليد جارية؛ التعديل معطّل مؤقتًا.',
+    'ai_already_generated' => 'تم توليد محتوى هذا النشاط التجاري مرة واحدة بالفعل. يمكنك الآن تعديله.',
+    'ai_regeneration_not_allowed' => 'إعادة توليد المحتوى غير مسموحة.',
+
+    // Company creation cooldown (dashboard)
+    'company_creation_cooldown' => 'يجب الانتظار حتى :time لتسجيل نشاطك التجاري التالي.',
+
+    // AI content editor (dashboard)
+    'content_editor_title' => 'تعديل محتوى الصفحة',
+    'content_editor_hint' => 'يظهر هذا النص في صفحتك العامة. التعديلات تُرسل للمراجعة.',
+    'content_editor_saved' => 'تم حفظ التعديلات وإرسالها للمراجعة.',
+    'content_editor_locked' => 'جارٍ توليد المحتوى؛ يرجى المحاولة بعد بضع دقائق.',
+    'content_add_item' => 'إضافة',
+    'content_remove_item' => 'حذف',
+    'content_field_hero_headline' => 'العنوان الرئيسي',
+    'content_field_hero_subheadline' => 'العنوان الفرعي',
+    'content_field_hero_image_alt' => 'النص البديل للصورة',
+    'content_field_heading' => 'العنوان',
+    'content_field_body' => 'النص',
+    'content_field_title' => 'العنوان',
+    'content_field_label' => 'التسمية',
+    'content_field_value' => 'القيمة',
+    'content_field_question' => 'السؤال',
+    'content_field_answer' => 'الإجابة',
 
     // AI generation progress steps
     'ai_step_1' => 'تحليل المدخلات وكتابة المحتوى',

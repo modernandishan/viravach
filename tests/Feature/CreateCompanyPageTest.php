@@ -10,7 +10,9 @@ use App\Models\Plan;
 use App\Models\State;
 use App\Models\User;
 use Database\Seeders\PlanSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -45,6 +47,26 @@ class CreateCompanyPageTest extends TestCase
     private function validBrief(): string
     {
         return str_repeat('Acme designs and exports handwoven carpets. ', 3);
+    }
+
+    /**
+     * Fills every wizard step and submits, for tests only interested in
+     * whether createCompany() itself accepted or rejected the attempt.
+     */
+    private function submitWizard(User $user, CompanyCategory $category, State $state): Testable
+    {
+        return Livewire::actingAs($user)
+            ->test('pages::dashboard.create-company')
+            ->set('name', 'Second Trading Co')
+            ->set('brief', $this->validBrief())
+            ->call('nextStep')
+            ->set('categoryIds', [$category->id])
+            ->call('nextStep')
+            ->set('addresses.0.state_id', $state->id)
+            ->set('addresses.0.address_line', '123 Example Street')
+            ->call('nextStep')
+            ->call('nextStep')
+            ->call('createCompany');
     }
 
     public function test_it_creates_a_company_and_auto_attaches_the_free_plan(): void
@@ -258,5 +280,57 @@ class CreateCompanyPageTest extends TestCase
             ->call('nextStep')
             ->assertSet('step', 2)
             ->assertSee($child->title);
+    }
+
+    public function test_creating_a_second_company_within_48_hours_is_rejected_even_when_the_first_was_soft_deleted(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        $first = Company::factory()->for($user)->create(['created_at' => now()->subHours(10)]);
+        $first->delete();
+
+        $this->submitWizard($user, $category, $state)->assertHasErrors(['cooldown']);
+
+        $this->assertSame(1, Company::withTrashed()->where('user_id', $user->id)->count());
+    }
+
+    public function test_creating_a_company_after_48_hours_succeeds(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $user = User::factory()->create();
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        Company::factory()->for($user)->create(['created_at' => now()->subHours(49)]);
+
+        $this->submitWizard($user, $category, $state)
+            ->assertHasNoErrors()
+            ->assertRedirect(route('my-companies'));
+
+        $this->assertSame(2, Company::where('user_id', $user->id)->count());
+    }
+
+    public function test_an_admin_user_is_exempt_from_the_creation_cooldown(): void
+    {
+        $this->seed(PlanSeeder::class);
+        $this->seed(RoleSeeder::class);
+
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $category = CompanyCategory::factory()->create();
+        $state = $this->makeState();
+
+        Company::factory()->for($user)->create(['created_at' => now()->subHour()]);
+
+        $this->submitWizard($user, $category, $state)
+            ->assertHasNoErrors()
+            ->assertRedirect(route('my-companies'));
+
+        $this->assertSame(2, Company::where('user_id', $user->id)->count());
     }
 }

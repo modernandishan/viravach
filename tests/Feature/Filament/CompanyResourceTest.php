@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Enums\CompanyContentStatus;
 use App\Enums\CompanyReviewStatus;
 use App\Filament\Resources\Companies\Pages\CreateCompany;
 use App\Filament\Resources\Companies\Pages\EditCompany;
@@ -11,15 +12,19 @@ use App\Filament\Resources\Companies\RelationManagers\BrandsRelationManager;
 use App\Models\Company;
 use App\Models\CompanyAddress;
 use App\Models\CompanyBrand;
+use App\Models\CompanyContent;
 use App\Models\CompanyPublication;
 use App\Models\Country;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\Ai\ContentGenerationService;
 use App\Services\CompanyPublicationService;
 use App\Services\CompanySubscriptionService;
+use App\Settings\ContentSettings;
 use Database\Seeders\PlanSeeder;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -274,6 +279,53 @@ class CompanyResourceTest extends TestCase
 
         Livewire::test(ListCompanies::class)
             ->assertActionHidden(TestAction::make('reset_content_quota')->table($company));
+    }
+
+    public function test_allow_content_regeneration_action_resets_generations_count_and_allows_generation_again(): void
+    {
+        $this->enableAiContentSettings();
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $content = CompanyContent::forceCreate([
+            'company_id' => $company->id,
+            'status' => CompanyContentStatus::Ready,
+            'generations_count' => 1,
+            'step' => 5,
+        ]);
+
+        Livewire::test(ListCompanies::class)
+            ->callAction(TestAction::make('allow_content_regeneration')->table($company));
+
+        $this->assertSame(0, $content->fresh()->generations_count);
+        $this->assertTrue(app(ContentGenerationService::class)->request($company->fresh()));
+    }
+
+    public function test_allow_content_regeneration_action_is_hidden_when_generations_count_is_zero(): void
+    {
+        $company = Company::factory()->create();
+        CompanyContent::forceCreate(['company_id' => $company->id, 'generations_count' => 0]);
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('allow_content_regeneration')->table($company));
+    }
+
+    public function test_allow_content_regeneration_action_is_hidden_without_the_approve_permission(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'ViewAny:Company', 'guard_name' => 'web']));
+        $this->actingAs($user);
+
+        $company = Company::factory()->create();
+        CompanyContent::forceCreate(['company_id' => $company->id, 'generations_count' => 1]);
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('allow_content_regeneration')->table($company));
+    }
+
+    private function enableAiContentSettings(): void
+    {
+        app(ContentSettings::class)->fill(['enabled' => true])->save();
     }
 
     public function test_republish_action_updates_the_published_snapshot(): void

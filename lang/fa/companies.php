@@ -112,7 +112,6 @@ return [
     'profile_social_links' => 'شبکه‌های اجتماعی',
     'profile_no_contact_info' => 'اطلاعات تماسی ثبت نشده است.',
 
-
     // AI-generated content sections
     'content_offerings' => 'آنچه ارائه می‌دهیم',
     'content_strengths' => 'نقاط قوت ما',
@@ -130,8 +129,6 @@ return [
     'content_generate_hint' => 'بر اساس شرح کوتاه شما، محتوای صفحه عمومی شرکت تولید می‌شود. این فرایند چند دقیقه طول می‌کشد.',
     'content_step_of' => 'گام :step از ۵ — :label',
     'content_processing_hint' => 'می‌توانید صفحه را ببندید؛ تولید محتوا ادامه دارد.',
-    'content_regenerate' => 'تولید مجدد',
-    'content_regenerate_warning' => 'تولید مجدد، ویرایش‌های دستی روی محتوای تولیدشده را جایگزین می‌کند.',
     'content_ready_at' => 'محتوا در تاریخ :date تولید شده است',
     'content_failed_title' => 'تولید قبلی ناموفق بود',
     'content_retry' => 'تلاش مجدد',
@@ -143,6 +140,29 @@ return [
     'content_already_running' => 'یک تولید محتوا هم‌اکنون در جریان است.',
     'content_unchanged' => 'محتوای ذخیره‌شده با آخرین ورودی‌ها یکسان است؛ نیازی به تولید مجدد نیست.',
     'content_locked' => 'تولید محتوا در جریان است؛ ویرایش موقتاً غیرفعال است.',
+    'ai_already_generated' => 'محتوای این کسب‌وکار یک بار تولید شده است. از این پس می‌توانید آن را ویرایش کنید.',
+    'ai_regeneration_not_allowed' => 'امکان تولید مجدد محتوا وجود ندارد.',
+
+    // Company creation cooldown (dashboard)
+    'company_creation_cooldown' => 'برای ثبت کسب‌وکار بعدی باید تا :time صبر کنید.',
+
+    // AI content editor (dashboard)
+    'content_editor_title' => 'ویرایش محتوای صفحه',
+    'content_editor_hint' => 'این متن‌ها روی صفحه عمومی کسب‌وکار شما نمایش داده می‌شوند. پس از ویرایش، تغییرات برای بازبینی ارسال می‌شود.',
+    'content_editor_saved' => 'تغییرات ذخیره شد و برای بازبینی ارسال شد.',
+    'content_editor_locked' => 'در حال تولید محتوا هستیم؛ لطفاً چند دقیقه دیگر تلاش کنید.',
+    'content_add_item' => 'افزودن',
+    'content_remove_item' => 'حذف',
+    'content_field_hero_headline' => 'تیتر اصلی',
+    'content_field_hero_subheadline' => 'زیرتیتر',
+    'content_field_hero_image_alt' => 'متن جایگزین تصویر',
+    'content_field_heading' => 'تیتر',
+    'content_field_body' => 'متن',
+    'content_field_title' => 'عنوان',
+    'content_field_label' => 'برچسب',
+    'content_field_value' => 'مقدار',
+    'content_field_question' => 'سؤال',
+    'content_field_answer' => 'پاسخ',
 
     // AI generation progress steps
     'ai_step_1' => 'تحلیل اطلاعات و تولید متن اصلی',

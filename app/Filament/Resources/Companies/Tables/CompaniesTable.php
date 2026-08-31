@@ -107,6 +107,7 @@ class CompaniesTable
                 static::republishAction(),
                 static::generateContentAction(),
                 static::resetContentQuotaAction(),
+                static::allowContentRegenerationAction(),
                 static::generateFeaturedImageAction(),
                 EditAction::make(),
             ])
@@ -219,9 +220,11 @@ class CompaniesTable
                     return;
                 }
 
-                $reason = $record->contentRecord?->status?->isProcessing()
-                    ? 'تولید محتوای این شرکت هم‌اکنون در جریان است.'
-                    : 'محتوای ذخیره‌شده با آخرین ورودی‌ها یکسان است؛ نیازی به تولید مجدد نیست.';
+                $reason = match (true) {
+                    $service->alreadyGenerated($record) => 'این شرکت پیش‌تر یک‌بار محتوا تولید کرده است. برای تولید مجدد، ابتدا از عملیات «اجازه تولید مجدد محتوا» استفاده کنید.',
+                    $record->contentRecord?->status?->isProcessing() => 'تولید محتوای این شرکت هم‌اکنون در جریان است.',
+                    default => 'محتوای ذخیره‌شده با آخرین ورودی‌ها یکسان است؛ نیازی به تولید مجدد نیست.',
+                };
 
                 Notification::make()
                     ->title('تولید محتوا انجام نشد')
@@ -265,6 +268,36 @@ class CompaniesTable
 
                 Notification::make()
                     ->title('سهمیه تولید محتوا بازگردانده شد')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Lifts the ONE-GENERATION-PER-COMPANY lock (see
+     * ContentGenerationService::request()) — separate from
+     * resetContentQuotaAction(), which only restores the monthly PLAN
+     * quota. An admin needs this one when a generation completed but
+     * produced poor output and the company must be allowed to generate
+     * once more. Authorization mirrors the other content actions (same
+     * Approve:Company permission) via a closure.
+     */
+    public static function allowContentRegenerationAction(): Action
+    {
+        return Action::make('allow_content_regeneration')
+            ->label('اجازه تولید مجدد محتوا')
+            ->icon(Heroicon::ArrowPathRoundedSquare)
+            ->color('warning')
+            ->visible(fn (Company $record): bool => ($record->contentRecord?->generations_count ?? 0) >= 1)
+            ->authorize(fn (Company $record): bool => auth()->user()?->can('Approve:Company') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('اجازه تولید مجدد محتوا')
+            ->modalDescription('این شرکت یک‌بار دیگر می‌تواند محتوای هوش مصنوعی تولید کند و محتوای فعلی با نتیجه تولید جدید جایگزین خواهد شد.')
+            ->action(function (Company $record) {
+                $record->contentRecord?->update(['generations_count' => 0]);
+
+                Notification::make()
+                    ->title('اجازه تولید مجدد محتوا داده شد')
                     ->success()
                     ->send();
             });

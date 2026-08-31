@@ -112,7 +112,6 @@ return [
     'profile_social_links' => 'Social networks',
     'profile_no_contact_info' => 'No contact information provided.',
 
-
     // AI-generated content sections
     'content_offerings' => 'What we offer',
     'content_strengths' => 'Our strengths',
@@ -130,8 +129,6 @@ return [
     'content_generate_hint' => 'Your brief will be used to generate your public page content. This takes several minutes.',
     'content_step_of' => 'Step :step of 5 — :label',
     'content_processing_hint' => 'You can leave this page; the pipeline keeps running.',
-    'content_regenerate' => 'Regenerate',
-    'content_regenerate_warning' => 'Regenerating replaces manual edits to the generated content.',
     'content_ready_at' => 'Content generated on :date',
     'content_failed_title' => 'The last generation failed',
     'content_retry' => 'Try again',
@@ -143,6 +140,29 @@ return [
     'content_already_running' => 'A generation is already in progress.',
     'content_unchanged' => 'The stored content already matches your current input.',
     'content_locked' => 'Content generation is in progress; editing is temporarily disabled.',
+    'ai_already_generated' => 'Content for this business has already been generated once. You can now edit it.',
+    'ai_regeneration_not_allowed' => 'Regenerating content is not allowed.',
+
+    // Company creation cooldown (dashboard)
+    'company_creation_cooldown' => 'You must wait until :time to register your next business.',
+
+    // AI content editor (dashboard)
+    'content_editor_title' => 'Edit page content',
+    'content_editor_hint' => 'This text appears on your public business page. Edits are sent for review.',
+    'content_editor_saved' => 'Changes saved and sent for review.',
+    'content_editor_locked' => 'Content is being generated; please try again in a few minutes.',
+    'content_add_item' => 'Add',
+    'content_remove_item' => 'Remove',
+    'content_field_hero_headline' => 'Headline',
+    'content_field_hero_subheadline' => 'Subheadline',
+    'content_field_hero_image_alt' => 'Image alt text',
+    'content_field_heading' => 'Heading',
+    'content_field_body' => 'Body',
+    'content_field_title' => 'Title',
+    'content_field_label' => 'Label',
+    'content_field_value' => 'Value',
+    'content_field_question' => 'Question',
+    'content_field_answer' => 'Answer',
 
     // AI generation progress steps
     'ai_step_1' => 'Analysing input & writing the main content',

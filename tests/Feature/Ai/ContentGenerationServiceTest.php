@@ -129,6 +129,50 @@ class ContentGenerationServiceTest extends TestCase
         $this->assertSame(0, $content->step);
     }
 
+    public function test_a_second_request_after_a_completed_generation_is_rejected_and_dispatches_nothing(): void
+    {
+        $this->enableSettings();
+        Queue::fake();
+
+        $company = Company::factory()->create();
+
+        CompanyContent::forceCreate([
+            'company_id' => $company->id,
+            'status' => CompanyContentStatus::Ready,
+            'generations_count' => 1,
+            'step' => 5,
+        ]);
+
+        $service = app(ContentGenerationService::class);
+
+        $this->assertTrue($service->alreadyGenerated($company));
+        $this->assertFalse($service->request($company));
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_a_failed_generation_does_not_consume_the_once_per_company_lock(): void
+    {
+        $this->enableSettings();
+        Queue::fake();
+
+        $company = Company::factory()->create();
+        $service = app(ContentGenerationService::class);
+
+        $this->assertTrue($service->request($company));
+
+        $content = CompanyContent::query()->where('company_id', $company->id)->firstOrFail();
+        $service->markFailed($content, 'gateway exploded');
+
+        $this->assertSame(0, $content->fresh()->generations_count);
+        $this->assertFalse($service->alreadyGenerated($company));
+
+        // The failure did not consume the once-per-company lock: a second
+        // attempt is still the company's first real generation.
+        $this->assertTrue($service->request($company));
+        Queue::assertPushed(GenerateSourceContent::class, 2);
+    }
+
     public function test_disabled_settings_dispatch_nothing(): void
     {
         // enabled defaults to false from the settings migration.
