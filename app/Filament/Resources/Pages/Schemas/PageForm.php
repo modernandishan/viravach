@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Pages\Schemas;
 
 use App\Filament\Schemas\Components\SeoMetaSection;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -52,6 +53,17 @@ class PageForm
                                         ->label('عنوان')
                                         ->required($code === config('app.fallback_locale'))
                                         ->maxLength(255),
+                                    TextInput::make("h1.{$code}")
+                                        ->label('تیتر اصلی صفحه (H1)')
+                                        ->maxLength(255),
+                                    TextInput::make("subheading.{$code}")
+                                        ->label('زیرتیتر')
+                                        ->maxLength(255),
+                                    Textarea::make("intro_body.{$code}")
+                                        ->label('متن معرفی')
+                                        ->rows(5)
+                                        ->columnSpanFull()
+                                        ->helperText('متن ساده — بدون ویرایشگر غنی'),
                                 ])
                         )->values()->all()
                     )

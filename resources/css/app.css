@@ -1,4 +1,25 @@
-@import 'tailwindcss';
+
+/*
+|--------------------------------------------------------------------------
+| Volt component styles (public site)
+|--------------------------------------------------------------------------
+| Styles for ⚡ Volt components on the public site. They live here — a real
+| stylesheet loaded through Vite — instead of inline per-render <style>
+| blocks: Livewire's SFC compiler statically extracts literal <style> tags
+| from .blade.php sources into an asset this app never serves, so per-
+| component injection is unreliable. Selectors are namespaced (.vv-*) and
+| values come from DESIGN.md; do not unscope them.
+|
+| NOTE: Tailwind's preflight (base reset) is deliberately NOT imported:
+| the landing layout loads this file after Metronic's style.bundle.css,
+| and the preflight element resets would override Metronic's base look.
+| Theme tokens and utilities are imported, so Tailwind utility classes
+| keep working wherever this file is loaded.
+*/
+
+@layer theme, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -8,4 +29,686 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+/* ===== company-elements/⚡company-card ===== */
+            .vv-card {
+                --vv-ink-900: #0F1720;
+                --vv-ink-700: #33414F;
+                --vv-ink-500: #64748B;
+                --vv-ink-300: #CBD5E1;
+                --vv-ink-100: #E9EEF3;
+                --vv-ink-050: #F6F8FA;
+                --vv-primary-700: #0F4C81;
+                --vv-success-700: #157F4E;
+                --vv-success-050: #E9F7F0; /* approximated -050 tint of success; DESIGN.md gives no exact value */
 
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                background: #FFFFFF;
+                border: 1px solid var(--vv-ink-100);
+                border-radius: 12px;
+                box-shadow: 0 1px 2px rgba(15, 23, 32, .06);
+                overflow: hidden;
+                color: var(--vv-ink-700);
+                text-decoration: none;
+                transition: box-shadow .2s ease-out;
+            }
+            .vv-card:hover {
+                box-shadow: 0 4px 12px rgba(15, 23, 32, .08);
+                text-decoration: none;
+                color: var(--vv-ink-700);
+            }
+
+            .vv-media {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                background: var(--vv-ink-100);
+            }
+            .vv-media img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                transition: transform .2s ease-out, filter .2s ease-out;
+            }
+            .vv-card:hover .vv-media img {
+                transform: scale(1.04);
+                filter: saturate(.85);
+            }
+            .vv-media-placeholder {
+                background: var(--vv-ink-050);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .vv-media-initial {
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--vv-ink-300);
+            }
+
+            .vv-logo-plate {
+                position: absolute;
+                inset-inline-start: 12px;
+                inset-block-end: 12px;
+                inline-size: 44px;
+                block-size: 44px;
+                background: #FFFFFF;
+                border: 1px solid var(--vv-ink-100);
+                border-radius: 8px;
+                padding: 4px;
+            }
+            .vv-logo-plate img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+            }
+
+            .vv-body {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                padding: 20px;
+            }
+
+            .vv-eyebrow {
+                font-size: 13px;
+                line-height: 1.5;
+                color: var(--vv-ink-500);
+                margin-bottom: 4px;
+                letter-spacing: .02em;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+            }
+            .vv-eyebrow-uppercase {
+                text-transform: uppercase;
+            }
+            .vv-title {
+                font-size: 19px;
+                font-weight: 600;
+                line-height: 1.4;
+                color: var(--vv-ink-900);
+                margin: 0 0 8px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .vv-excerpt {
+                font-size: 15px;
+                line-height: 1.65;
+                color: var(--vv-ink-700);
+                margin: 0;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .vv-spacer {
+                flex: 1 1 auto;
+            }
+            .vv-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 16px;
+                min-height: 20px;
+                margin-top: 12px;
+                font-size: 13px;
+                color: var(--vv-ink-500);
+            }
+            .vv-meta-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                color: inherit;
+            }
+            .vv-divider {
+                margin-top: 12px;
+                height: 1px;
+                background: var(--vv-ink-100);
+            }
+            /* The card's footer row — deliberately NOT .vv-footer, which is
+               the ⚡footer component's dark surface. The card footer has no
+               background of its own and inherits the card's white surface. */
+            .vv-card-footer {
+                margin-top: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+            .vv-badge-verified {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                background: var(--vv-success-050);
+                color: var(--vv-success-700);
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 4px 8px;
+                white-space: nowrap;
+            }
+            .vv-action {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                color: var(--vv-primary-700);
+                font-weight: 600;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            [dir="rtl"] .vv-chevron {
+                transform: scaleX(-1);
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .vv-media img {
+                    transition: none;
+                }
+                .vv-card:hover .vv-media img {
+                    transform: none;
+                    filter: none;
+                }
+            }
+
+/* ===== ⚡footer ===== */
+            .vv-footer {
+                --vv-ink-900: #0F1720;
+                --vv-ink-700: #33414F;
+                --vv-ink-500: #64748B;
+                --vv-ink-300: #CBD5E1;
+                --vv-primary-700: #0F4C81;
+
+                background: var(--vv-ink-900);
+                color: var(--vv-ink-300);
+                padding-block-start: 64px;
+                padding-block-end: 32px;
+                font-size: 15px;
+                line-height: 1.65;
+            }
+            :lang(fa) .vv-footer,
+            :lang(ar) .vv-footer {
+                /* DESIGN.md §3: Persian/Arabic read smaller at a given pixel
+                   size than Latin, so body text gets +1px. Headings are not
+                   scaled. */
+                font-size: 16px;
+            }
+            .vv-footer a {
+                color: inherit;
+                text-decoration: none;
+            }
+            .vv-footer-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 32px;
+            }
+            @media (max-width: 991.98px) {
+                .vv-footer-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media (max-width: 575.98px) {
+                .vv-footer-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .vv-footer-heading {
+                font-size: 19px;
+                font-weight: 600;
+                line-height: 1.4;
+                color: #FFFFFF;
+                margin: 0 0 16px;
+            }
+            .vv-footer-brand-logo {
+                display: block;
+                max-block-size: 32px;
+                margin-block-end: 16px;
+            }
+            .vv-footer-about {
+                margin: 0 0 16px;
+                color: var(--vv-ink-300);
+            }
+            .vv-footer-links {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .vv-footer-links a:hover {
+                color: #FFFFFF;
+            }
+            .vv-footer-link-count {
+                color: var(--vv-ink-500);
+                font-size: 13px;
+                margin-inline-start: 4px;
+            }
+            .vv-footer-social {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-block-start: 16px;
+            }
+            .vv-footer-social-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                inline-size: 36px;
+                block-size: 36px;
+                border-radius: 999px;
+                background: var(--vv-ink-700);
+                color: #FFFFFF;
+                transition: background-color .15s ease-out;
+            }
+            .vv-footer-social-btn:hover {
+                background: var(--vv-primary-700);
+                color: #FFFFFF;
+            }
+            .vv-footer-contact {
+                margin-block-start: 24px;
+            }
+            .vv-footer-contact-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                margin-block-end: 12px;
+                color: var(--vv-ink-300);
+            }
+            .vv-footer-contact-item i {
+                color: var(--vv-ink-500);
+                margin-block-start: 2px;
+            }
+            .vv-footer-divider {
+                height: 1px;
+                background: var(--vv-ink-700);
+                border: 0;
+                margin: 32px 0 24px;
+            }
+            .vv-footer-divider-bottom {
+                height: 1px;
+                background: var(--vv-ink-700);
+                border: 0;
+                margin: 24px 0;
+            }
+            .vv-footer-trust {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+            .vv-footer-trust-plate {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                inline-size: 110px;
+                block-size: 60px;
+                background: #FFFFFF;
+                border-radius: 12px;
+                padding: 8px;
+                overflow: hidden;
+            }
+            .vv-footer-trust-plate img {
+                max-inline-size: 100%;
+                max-block-size: 100%;
+                object-fit: contain;
+            }
+            .vv-footer-locales {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 16px;
+                margin-block-end: 24px;
+            }
+            .vv-footer-locale {
+                font-size: 13px;
+                color: var(--vv-ink-500);
+            }
+            .vv-footer-locale:hover {
+                color: #FFFFFF;
+            }
+            .vv-footer-locale.is-active {
+                color: #FFFFFF;
+                font-weight: 600;
+            }
+            .vv-footer-bottom {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+                font-size: 13px;
+                color: var(--vv-ink-500);
+            }
+            .vv-footer-bottom a:hover {
+                color: #FFFFFF;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .vv-footer-social-btn {
+                    transition: none;
+                }
+            }
+
+/* ===== home/⚡hero ===== */
+            .vv-hero {
+                padding-block: 48px 32px;
+                max-width: 720px;
+                margin-inline: auto;
+            }
+            .vv-hero h1 {
+                font-size: 44px;
+                line-height: 1.15;
+                font-weight: 700;
+                color: #0F1720; /* --vv-ink-900 */
+                margin: 0 0 16px;
+            }
+            .vv-hero-subheading {
+                font-size: 17px;
+                line-height: 1.7;
+                color: #33414F; /* --vv-ink-700 */
+                margin: 0 0 32px;
+            }
+            [dir="rtl"] .vv-hero-subheading,
+            [dir="rtl"] .vv-hero h1 {
+                text-align: start;
+            }
+            @media (max-width: 991.98px) {
+                .vv-hero {
+                    padding-block: 32px 24px;
+                }
+                .vv-hero h1 {
+                    font-size: 32px;
+                    line-height: 1.25;
+                }
+            }
+
+/* ===== home/⚡category-grid ===== */
+            .vv-section {
+                padding-block: 32px;
+            }
+            .vv-section h2 {
+                font-size: 24px;
+                line-height: 1.3;
+                font-weight: 700;
+                color: #0F1720; /* --vv-ink-900 */
+                margin: 0 0 4px;
+            }
+            .vv-section-sub {
+                font-size: 15px;
+                line-height: 1.65;
+                color: #64748B; /* --vv-ink-500 */
+                margin: 0 0 24px;
+            }
+            .vv-tile-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 24px;
+                width: 100%;
+            }
+            .vv-tile {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                padding: 24px;
+                background: #FFFFFF; /* --vv-white */
+                border: 1px solid #E9EEF3; /* --vv-ink-100 */
+                border-radius: 12px; /* --vv-radius-md */
+                box-shadow: 0 1px 2px rgba(15, 23, 32, .06); /* --vv-shadow-sm */
+                text-decoration: none;
+                transition: box-shadow .2s ease-out;
+            }
+            .vv-tile:hover {
+                box-shadow: 0 4px 12px rgba(15, 23, 32, .08); /* --vv-shadow-md */
+                text-decoration: none;
+            }
+            .vv-cat-icon {
+                block-size: 40px;
+                inline-size: 40px;
+                margin-block-end: 8px;
+                color: #64748B; /* --vv-ink-500 */
+                transition: color .2s ease-out;
+            }
+            .vv-tile:hover .vv-cat-icon {
+                color: #0F4C81; /* --vv-primary-700 */
+            }
+            .vv-cat-icon img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+            }
+            .vv-cat-icon-fallback {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 40px;
+            }
+            .vv-tile-title {
+                font-size: 19px;
+                line-height: 1.4;
+                font-weight: 600;
+                color: #0F1720; /* --vv-ink-900 */
+            }
+            .vv-tile-count {
+                font-size: 13px;
+                line-height: 1.5;
+                color: #64748B; /* --vv-ink-500 */
+            }
+            @media (max-width: 991.98px) {
+                .vv-section {
+                    padding-block: 24px;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .vv-tile,
+                .vv-cat-icon {
+                    transition: none;
+                }
+            }
+
+/* ===== home/⚡recent-companies ===== */
+            .vv-recent {
+                padding-block: 32px;
+            }
+            .vv-recent h2 {
+                font-size: 24px;
+                line-height: 1.3;
+                font-weight: 700;
+                color: #0F1720; /* --vv-ink-900 */
+                margin: 0 0 4px;
+            }
+            .vv-recent-sub {
+                font-size: 15px;
+                line-height: 1.65;
+                color: #64748B; /* --vv-ink-500 */
+                margin: 0 0 24px;
+            }
+            @media (max-width: 991.98px) {
+                .vv-recent {
+                    padding-block: 24px;
+                }
+            }
+
+/* ===== home/⚡state-grid ===== */
+            .vv-states {
+                padding-block: 32px;
+            }
+            .vv-states h2 {
+                font-size: 24px;
+                line-height: 1.3;
+                font-weight: 700;
+                color: #0F1720; /* --vv-ink-900 */
+                margin: 0 0 4px;
+            }
+            .vv-states-sub {
+                font-size: 15px;
+                line-height: 1.65;
+                color: #64748B; /* --vv-ink-500 */
+                margin: 0 0 24px;
+            }
+            .vv-states-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 12px;
+                width: 100%;
+            }
+            .vv-state-link {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 12px 16px;
+                background: #FFFFFF; /* --vv-white */
+                border: 1px solid #E9EEF3; /* --vv-ink-100 */
+                border-radius: 8px; /* --vv-radius-sm */
+                text-decoration: none;
+                font-size: 15px;
+                line-height: 1.65;
+                color: #0F4C81; /* --vv-primary-700 */
+                font-weight: 600;
+                transition: background-color .2s ease-out;
+            }
+            .vv-state-link:hover {
+                background: #F1F7FB; /* --vv-primary-050 */
+                color: #0F4C81;
+                text-decoration: none;
+            }
+            .vv-state-count {
+                font-size: 13px;
+                line-height: 1.5;
+                font-weight: 400;
+                color: #64748B; /* --vv-ink-500 */
+                white-space: nowrap;
+            }
+            @media (max-width: 991.98px) {
+                .vv-states {
+                    padding-block: 24px;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .vv-state-link {
+                    transition: none;
+                }
+            }
+
+/* ===== home/⚡key-numbers ===== */
+            .vv-numbers {
+                padding-block: 32px;
+            }
+            .vv-numbers h2 {
+                font-size: 24px;
+                line-height: 1.3;
+                font-weight: 700;
+                color: #0F1720; /* --vv-ink-900 */
+                margin: 0 0 24px;
+            }
+            .vv-numbers-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 24px;
+                width: 100%;
+            }
+            .vv-number {
+                background: #FFFFFF; /* --vv-white */
+                border: 1px solid #E9EEF3; /* --vv-ink-100 */
+                border-radius: 12px; /* --vv-radius-md */
+                box-shadow: 0 1px 2px rgba(15, 23, 32, .06); /* --vv-shadow-sm */
+                padding: 24px;
+            }
+            .vv-number-value {
+                display: block;
+                font-size: 32px;
+                line-height: 1.25;
+                font-weight: 700;
+                color: #0F4C81; /* --vv-primary-700 */
+            }
+            .vv-number-label {
+                display: block;
+                font-size: 13px;
+                line-height: 1.5;
+                color: #64748B; /* --vv-ink-500 */
+            }
+            @media (max-width: 767.98px) {
+                .vv-numbers {
+                    padding-block: 24px;
+                }
+                .vv-numbers-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+/* ===== Dark mode =====
+| Metronic drives dark mode with a data-bs-theme attribute on <html> and
+| ships its own token sets for each theme. These overrides reuse those
+| tokens (--bs-*) so the ⚡ components follow the exact same surfaces the
+| rest of the Metronic UI switches to — no new palette values are defined
+| here. The .vv-card and .vv-footer rules define their colours as local
+| --vv-* custom properties, so dark mode only needs to remap those; the
+| remaining components use literal tokens and get explicit overrides. */
+
+[data-bs-theme=dark] .vv-card {
+    --vv-ink-900: var(--bs-emphasis-color);
+    --vv-ink-700: var(--bs-body-color);
+    --vv-ink-500: var(--bs-secondary-color);
+    --vv-ink-300: var(--bs-border-color);
+    --vv-ink-100: var(--bs-border-color);
+    --vv-ink-050: var(--bs-secondary-bg);
+    --vv-primary-700: var(--bs-primary-text-emphasis);
+    --vv-success-700: var(--bs-success-text-emphasis);
+    --vv-success-050: var(--bs-success-bg-subtle);
+
+    background: var(--bs-body-bg);
+}
+[data-bs-theme=dark] .vv-card:hover {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme=dark] .vv-hero h1,
+[data-bs-theme=dark] .vv-section h2,
+[data-bs-theme=dark] .vv-recent h2,
+[data-bs-theme=dark] .vv-states h2,
+[data-bs-theme=dark] .vv-numbers h2 {
+    color: var(--bs-emphasis-color);
+}
+[data-bs-theme=dark] .vv-hero-subheading,
+[data-bs-theme=dark] .vv-section-sub,
+[data-bs-theme=dark] .vv-recent-sub,
+[data-bs-theme=dark] .vv-states-sub {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-tile,
+[data-bs-theme=dark] .vv-number {
+    background: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+[data-bs-theme=dark] .vv-tile-title {
+    color: var(--bs-emphasis-color);
+}
+[data-bs-theme=dark] .vv-tile-count,
+[data-bs-theme=dark] .vv-state-count,
+[data-bs-theme=dark] .vv-number-label {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-cat-icon {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-tile:hover .vv-cat-icon {
+    color: var(--bs-primary-text-emphasis);
+}
+[data-bs-theme=dark] .vv-state-link {
+    background: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-primary-text-emphasis);
+}
+[data-bs-theme=dark] .vv-state-link:hover {
+    background: var(--bs-secondary-bg);
+    color: var(--bs-primary-text-emphasis);
+}
+[data-bs-theme=dark] .vv-number-value {
+    color: var(--bs-primary-text-emphasis);
+}

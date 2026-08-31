@@ -44,11 +44,13 @@ There is **no `routes/web.php`**. Routes are split per hostname in `bootstrap/ap
 
 The public site never renders `Company` records directly. Users edit a `Company` (the **draft**); admins review it in Filament (`CompanyReviewStatus`). Approving calls `CompanyPublicationService::publish()`, which upserts a `CompanyPublication` **snapshot** (translatable fields, addresses, SEO, fresh media copies) in a transaction. Public pages query `CompanyPublication` only, so draft edits stay invisible until re-approved. Rejection only flags the draft — the published snapshot stays live.
 
-## AI content pipeline (in progress, Aug 2026)
+## AI content pipeline (shipped, Aug 2026)
 
-`companies.description` (translatable Tiptap HTML) was **repurposed away**: it's replaced by `companies.brief` + `brief_locale` — the user's own single-language plain-text brief. The old HTML is backfilled into `brief` by migration `2026_08_29_000001`, then the `description` column is dropped. `CompanyPublication` keeps its own `description` (now nullable) so public pages are unaffected, and both `companies` and `company_publications` gain a `content` jsonb column for the future AI-rendered payload.
+`companies.description` (translatable Tiptap HTML) was **repurposed away**: it's replaced by `companies.brief` + `brief_locale` — the user's own single-language plain-text brief. The old HTML was backfilled into `brief` by migration `2026_08_29_000001`; `description` is now dropped from **both** `companies` and `company_publications` (`2026_08_31_000001`). Both tables instead carry a `content` jsonb column holding the AI-rendered payload (per-locale map).
 
-Pipeline state lives in `CompanyContent` (one row per company: `CompanyContentStatus` draft/queued/generating/ready/failed, `ai_payload`, `input_hash`, `step`, `failure_reason`, `locked_at`); the rendered payload itself goes on `companies.content`. Structured-output schemas for the AI calls are in `app/Ai/Schemas/` (`CompanyContentSchema`, `CompanySeoSchema`). `SeoKeywordReservation` enforces that a (locale, keyword) SEO pair is claimed by only one owner via a `seoable` morph. Renderer + AI generation steps are not shipped yet.
+Pipeline state lives in `CompanyContent` (one row per company: `CompanyContentStatus` draft/queued/generating/ready/failed, `ai_payload`, `input_hash`, `step`, `failure_reason`, `locked_at`). Generation runs as queued jobs in `app/Jobs/Ai/` (`GenerateSourceContent`, `LocalizeContent`/`LocalizeContentLocale`, `ReserveKeyword`, `GenerateSeoBlock`, `GenerateFeaturedImage`, `FinalizeContent` — all extending `AbstractAiContentJob`), with structured-output schemas in `app/Ai/Schemas/` (`CompanyContentSchema`, `CompanySeoSchema`), prompts in `app/Ai/Prompts/`, and tunables in `app/Settings/ContentSettings.php` (Filament page `ManageContentSettings`). `SeoKeywordReservation` enforces that a (locale, keyword) SEO pair is claimed by only one owner via a `seoable` morph.
+
+Rendering: the public company page draws the payload via `resources/views/components/company-content/*` (hero/about/offerings/markets/strengths/faq/specs/cta) plus FAQPage & specs JSON-LD; `CompanyPublication::contentFor($locale)` picks the locale with fallback. Entry points: the dashboard AI card (quota = plan feature `ai-content-generations`, 6h rate limiter, 409-style lock while generating) and Filament's content editor (`CompanyContentSection`) + republish/generate actions.
 
 ## Subscriptions
 
@@ -63,14 +65,19 @@ Pipeline state lives in `CompanyContent` (one row per company: `CompanyContentSt
 - **PHPUnit only — Pest is not installed.** All tests are PHPUnit classes extending `Tests\TestCase`. If asked for "Pest tests", write PHPUnit.
 - Tests run on **in-memory sqlite** (`phpunit.xml`); production is **Postgres**. Postgres-specific failures (e.g. `DISTINCT` over translatable `json` columns in Filament `->relationship()` multi-selects) won't be caught by the suite — verify such queries against Postgres manually.
 - `phpunit.xml` raises `memory_limit` to 512M because 5-locale translatable Filament forms exceed the default when several schemas build in one process.
+- Reach pages in feature tests via `route()` (gives the correct host + locale prefix), not raw paths. `tests/TestCase.php` also offers `publicUrl()` / `appUrl()` / `adminUrl()` helpers.
 
 ## Homepage depends on a `pages` row with `slug = '/'`
 
 `pages::home` does `Page::where('slug', '/')->firstOrFail()` in `mount()`. `HomePageSeeder` (registered in `DatabaseSeeder`) creates that row, so a freshly seeded DB is fine — but any database missing it (e.g. seeded before the seeder existed) makes the homepage 404. It's a real 404, not a routing failure; other pages like `/fa/sign-in` work fine.
 
+## SEO: exactly one `<h1>` per public page
+
+The shared ⚡heading1 block (`resources/views/components/header-elements/`) renders `<h1>` everywhere **except** the routes listed in its `SELF_HEADING_ROUTES` constant, where it demotes to a lower heading so the page's own hero can be the single h1. When adding a public page with its own hero heading, add its route there instead of hardcoding another `<h1>`.
+
 ## Skills
 
-Workspace skills live in `.agents/skills/` (mirrored in `.claude/skills/`). Activate the relevant one:
+Workspace skills live in `.agents/skills/` (mirrored in `.claude/skills/` and partially in `.zcode/skills/`). Activate the relevant one:
 - `viravach-project` — infra topology, localization routing, Livewire page structure, known gaps (only in `.claude/skills/`)
 - `medialibrary-development` — required for any media/`HasMedia` work
 - `translatable-development` — for `spatie/laravel-translatable` work
@@ -79,7 +86,7 @@ Workspace skills live in `.agents/skills/` (mirrored in `.claude/skills/`). Acti
 - `ai-sdk-development` — `laravel/ai` (ViraBot)
 - `laravel-best-practices`, `tailwindcss-development` — general conventions
 
-Filament v5 guidance comes from Boost's `filament/filament` package guidelines, not a workspace skill.
+Filament v5 guidance comes from Boost's `filament/filament` package guidelines, not a workspace skill. `docs/viravach-media-queue-setup.md` documents the media-conversion queue setup.
 
 ## Commands quick reference
 

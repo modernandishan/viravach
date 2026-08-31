@@ -22,6 +22,11 @@ return [
         'reset' => 'Reset filters',
     ],
 
+    // Key numbers
+    'key_numbers_title' => 'The directory at a glance',
+
+    // Stats
+    'stats_export_countries' => 'Export destination countries',
     // Stats
     'stats_companies' => 'Registered companies',
     'stats_categories' => 'Active categories',

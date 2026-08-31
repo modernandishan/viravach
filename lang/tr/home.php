@@ -22,6 +22,11 @@ return [
         'reset' => 'Filtreleri sıfırla',
     ],
 
+    // Önemli rakamlar
+    'key_numbers_title' => 'Dizin bir bakışta',
+
+    // İstatistikler
+    'stats_export_countries' => 'İhracat hedef ülke',
     // İstatistikler
     'stats_companies' => 'Kayıtlı şirket',
     'stats_categories' => 'Aktif kategori',

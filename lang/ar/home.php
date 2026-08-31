@@ -22,6 +22,11 @@ return [
         'reset' => 'إعادة تعيين الفلاتر',
     ],
 
+    // الأرقام الرئيسية
+    'key_numbers_title' => 'الدليل في لمحة',
+
+    // الإحصائيات
+    'stats_export_countries' => 'دول وجهة التصدير',
     // الإحصائيات
     'stats_companies' => 'شركة مسجلة',
     'stats_categories' => 'فئة نشطة',

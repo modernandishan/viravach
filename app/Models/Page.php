@@ -15,6 +15,9 @@ use Spatie\Translatable\HasTranslations;
 #[Fillable([
     'slug',
     'title',
+    'h1',
+    'subheading',
+    'intro_body',
     // 'content',
     'is_active',
     'published_at',
@@ -23,6 +26,9 @@ use Spatie\Translatable\HasTranslations;
 ])]
 #[Translatable([
     'title',
+    'h1',
+    'subheading',
+    'intro_body',
     // 'content',
 ])]
 class Page extends Model implements Viewable

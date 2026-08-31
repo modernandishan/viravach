@@ -76,7 +76,10 @@
     </style>
     <!--end::Sticky header stacking fix-->
 
-    @vite(['resources/js/app.js'])
+    {{-- app.css carries the ⚡ component styles (vv-card, footer, home
+         sections). Tailwind's preflight is not imported there, so loading
+         it after Metronic's bundles is safe. --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @livewireStyles
 

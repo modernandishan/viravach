@@ -22,6 +22,11 @@ return [
         'reset' => 'حذف فیلترها',
     ],
 
+    // اعداد کلیدی
+    'key_numbers_title' => 'دایرکتوری در یک نگاه',
+
+    // آمار
+    'stats_export_countries' => 'کشورهای مقصد صادرات',
     // آمار
     'stats_companies' => 'شرکت ثبت‌شده',
     'stats_categories' => 'دسته‌بندی فعال',
