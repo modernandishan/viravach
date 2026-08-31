@@ -76,9 +76,6 @@ class CompanyPublicationServiceTest extends TestCase
         $this->assertSame('Acme Co', $publication->getTranslation('name', 'en'));
         $this->assertSame('شرکت آکمی', $publication->getTranslation('name', 'fa'));
         $this->assertSame(['en' => ['v' => 1], 'fa' => ['v' => 1]], $publication->content);
-        // The translatable description is gone from the draft; publish()
-        // no longer copies it, so the snapshot's own column stays null.
-        $this->assertNull($publication->description);
         $this->assertSame('https://acme.test', $publication->website);
         $this->assertSame(['02100000000'], $publication->phones);
         $this->assertSame($state->id, $publication->state_id);

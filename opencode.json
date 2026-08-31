@@ -5,10 +5,6 @@
             "type": "local",
             "enabled": true,
             "command": [
-                "docker",
-                "exec",
-                "-i",
-                "viravach_app",
                 "php",
                 "artisan",
                 "boost:mcp"

@@ -19,6 +19,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -79,7 +80,10 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
         // STUB — overridden by the concrete jobs.
     }
 
-    final public function failed(Throwable $exception): void
+    // Not final: LocalizeContentLocale overrides this to record its own
+    // locale's failure instead of failing the whole row — one locale
+    // failing must not abort its siblings.
+    public function failed(Throwable $exception): void
     {
         $content = CompanyContent::query()
             ->where('company_id', $this->companyId)
@@ -107,6 +111,22 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
+     * Every supported locale except the source one — the fixed list step 4
+     * fans out over and step 5 (FinalizeContent) checks for completeness
+     * before it writes. Single source of truth so both steps can never
+     * disagree on what "every locale" means.
+     *
+     * @return list<string>
+     */
+    protected static function targetLocales(): array
+    {
+        return array_values(array_filter(
+            array_keys((array) config('laravellocalization.supportedLocales')),
+            fn (string $locale): bool => $locale !== CompanyContentPrompt::SOURCE_LOCALE,
+        ));
+    }
+
+    /**
      * Advance the step pointer and flip the row into the generating state.
      */
     protected function advanceStep(CompanyContent $content): void
@@ -122,23 +142,74 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * ai_payload is read-modify-written per step; the unique job lock and
-     * the single-chain design mean no two writers race on one row.
+     * ai_payload is read-modify-written per step. Steps 1-3 have exactly one
+     * writer so the lock below is a no-op in practice, but step 4 fans out
+     * to four concurrent LocalizeContentLocale jobs writing the same row —
+     * every writer goes through the same lock-safe path rather than a
+     * second mechanism reserved for the concurrent case.
      */
     protected function mergePayload(CompanyContent $content, string $locale, array $payload): void
     {
-        $aiPayload = $content->ai_payload ?? [];
-        $aiPayload[$locale] = $payload;
+        $this->lockedPayloadUpdate($content->id, function (array $aiPayload) use ($locale, $payload): array {
+            $aiPayload[$locale] = $payload;
 
-        $content->forceFill(['ai_payload' => $aiPayload])->save();
+            return $aiPayload;
+        });
     }
 
     protected function mergeSeoPayload(CompanyContent $content, string $locale, array $block): void
     {
-        $aiPayload = $content->ai_payload ?? [];
-        $aiPayload['seo'][$locale] = $block;
+        $this->lockedPayloadUpdate($content->id, function (array $aiPayload) use ($locale, $block): array {
+            $aiPayload['seo'][$locale] = $block;
 
-        $content->forceFill(['ai_payload' => $aiPayload])->save();
+            return $aiPayload;
+        });
+    }
+
+    /**
+     * Read-modify-write ai_payload under a row lock. Without it, two
+     * concurrent LocalizeContentLocale jobs (one per locale) could each
+     * read the same base payload, add their own locale key in memory, and
+     * the second save() would overwrite the first job's key entirely —
+     * silently dropping that locale's content. Wrapping the read in
+     * lockForUpdate() inside a transaction makes Postgres block the second
+     * writer's SELECT until the first transaction commits, so every writer
+     * always merges on top of the latest committed payload instead of a
+     * copy captured before its own work began.
+     *
+     * @param  callable(array<string, mixed>): array<string, mixed>  $mutate
+     */
+    protected function lockedPayloadUpdate(int $contentId, callable $mutate): void
+    {
+        DB::transaction(function () use ($contentId, $mutate): void {
+            $content = CompanyContent::query()->whereKey($contentId)->lockForUpdate()->firstOrFail();
+
+            $content->forceFill(['ai_payload' => $mutate($content->ai_payload ?? [])])->save();
+        });
+    }
+
+    /**
+     * Append one locale's failure note onto failure_reason under the same
+     * row lock as lockedPayloadUpdate(), so two locales failing at the same
+     * time cannot overwrite each other's note — losing one would hide a
+     * missing language from the admin instead of merely losing a race that
+     * a later regeneration could paper over.
+     */
+    protected function recordLocaleFailure(int $contentId, string $locale, string $reason): void
+    {
+        DB::transaction(function () use ($contentId, $locale, $reason): void {
+            $content = CompanyContent::query()->whereKey($contentId)->lockForUpdate()->firstOrFail();
+
+            $prefix = 'Partial localization — failed locale(s): ';
+            $note = "{$locale}: {$reason}";
+            $existing = (string) $content->failure_reason;
+
+            $content->forceFill([
+                'failure_reason' => Str::startsWith($existing, $prefix)
+                    ? $existing.' | '.$note
+                    : $prefix.$note,
+            ])->save();
+        });
     }
 
     /**

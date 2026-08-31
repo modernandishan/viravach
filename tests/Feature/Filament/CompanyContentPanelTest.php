@@ -9,7 +9,9 @@ use App\Filament\Resources\Companies\Pages\ListCompanies;
 use App\Jobs\Ai\GenerateSourceContent;
 use App\Models\Company;
 use App\Models\CompanyContent;
+use App\Models\Plan;
 use App\Models\User;
+use App\Services\CompanySubscriptionService;
 use App\Settings\ContentSettings;
 use Database\Seeders\PlanSeeder;
 use Filament\Actions\Testing\TestAction;
@@ -180,6 +182,27 @@ class CompanyContentPanelTest extends TestCase
             $company->content['en']['hero']['headline'],
         );
         $this->assertSame(CompanyReviewStatus::Approved, $company->review_status);
+    }
+
+    public function test_the_pipeline_section_shows_the_quota_usage_for_the_active_plan(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $company = Company::factory()->create();
+        $subscription = $company->activeSubscription();
+        $subscription->recordFeatureUsage($subscription->plan->slug.'-ai-content-generations');
+
+        // Free plan: 1 monthly generation allowed, 1 used.
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->assertSee('1 از 1 بار در این ماه');
+
+        $proPlan = Plan::where('slug', 'pro-3-months')->firstOrFail();
+        app(CompanySubscriptionService::class)->switchToPlan($company, $proPlan);
+
+        // Switching plans changes the invoice period, which clears usage —
+        // the new plan's own limit (3) must show with zero used.
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->assertSee('0 از 3 بار در این ماه');
     }
 
     public function test_the_generate_action_queues_the_chain(): void

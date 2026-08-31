@@ -57,4 +57,24 @@ class CompanySubscription extends BaseSubscription
 
         return $usage;
     }
+
+    /**
+     * Give back a feature's usage for this billing period — e.g. an admin
+     * compensating a company whose generation was queued (burning the
+     * quota) but then failed for a technical reason. Deletes the usage row
+     * outright rather than zeroing `used` in place, so a getFeatureUsage()/
+     * canUseFeature() check right after sees a fresh feature exactly as if
+     * it had never been used this period. `usage()` is already scoped to
+     * this subscription via the FK, same as recordFeatureUsage() above.
+     */
+    public function resetFeatureUsage(string $featureSlug): void
+    {
+        $feature = $this->plan->features()->where('slug', $featureSlug)->first();
+
+        if ($feature === null) {
+            return;
+        }
+
+        $this->usage()->where('feature_id', $feature->getKey())->delete();
+    }
 }

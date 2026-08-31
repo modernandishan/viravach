@@ -33,6 +33,16 @@ class ContentSettings extends Settings
     /** Low values suit factual copy that must not invent anything. */
     public float $temperature;
 
+    /**
+     * Independent of `enabled` — text content generation can run while
+     * image generation stays off.
+     */
+    public bool $image_enabled;
+
+    public string $image_model;
+
+    public string $image_size;
+
     public static function group(): string
     {
         return 'content';

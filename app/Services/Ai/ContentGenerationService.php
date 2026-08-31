@@ -5,7 +5,6 @@ namespace App\Services\Ai;
 use App\Ai\Input\CompanyInputCollector;
 use App\Enums\CompanyContentStatus;
 use App\Events\Ai\ContentGenerationProgressed;
-use App\Jobs\Ai\FinalizeContent;
 use App\Jobs\Ai\GenerateSeoBlock;
 use App\Jobs\Ai\GenerateSourceContent;
 use App\Jobs\Ai\LocalizeContent;
@@ -83,12 +82,16 @@ class ContentGenerationService
         // UPDATE), so the broadcast goes out immediately.
         $this->broadcastProgress($this->rowFor($company));
 
+        // FinalizeContent is deliberately NOT chained here: LocalizeContent
+        // (step 4) fans its work out to a Bus::batch of LocalizeContentLocale
+        // jobs and dispatches FinalizeContent itself once that batch
+        // completes — see LocalizeContent for why it cannot be a plain
+        // chain member any more.
         Bus::chain([
             new GenerateSourceContent($company->id),
             new GenerateSeoBlock($company->id),
             new ReserveKeyword($company->id),
             new LocalizeContent($company->id),
-            new FinalizeContent($company->id),
         ])
             ->onQueue('ai-content')
             ->dispatch();

@@ -108,6 +108,33 @@ class CompanyCategoryPageTest extends TestCase
         $this->assertCount(1, $component->instance()->companies);
     }
 
+    public function test_it_shows_the_hero_subheadline_as_the_listing_card_excerpt(): void
+    {
+        $category = CompanyCategory::factory()->create(['slug' => 'excerpt-cat']);
+        $publication = $this->makeActivePublication($category);
+        $publication->update([
+            'content' => [
+                'en' => ['hero' => ['subheadline' => 'Trusted supplier of industrial parts since 1998.']],
+            ],
+        ]);
+
+        $response = $this->get(route('companies.category', ['slug' => $category->slug]));
+
+        $response->assertOk();
+        $response->assertSee('Trusted supplier of industrial parts since 1998.');
+    }
+
+    public function test_it_renders_no_excerpt_when_content_and_summary_are_both_missing(): void
+    {
+        $category = CompanyCategory::factory()->create(['slug' => 'no-excerpt-cat']);
+        $this->makeActivePublication($category);
+
+        $response = $this->get(route('companies.category', ['slug' => $category->slug]));
+
+        $response->assertOk();
+        $response->assertDontSee('text-gray-500 fw-semibold fs-6 mb-3', false);
+    }
+
     public function test_it_records_a_page_view(): void
     {
         $category = CompanyCategory::factory()->create(['slug' => 'viewed-cat']);

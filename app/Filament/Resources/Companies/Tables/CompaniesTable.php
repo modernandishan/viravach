@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Companies\Tables;
 
 use App\Enums\CompanyContentStatus;
 use App\Enums\CompanyReviewStatus;
+use App\Jobs\Ai\GenerateFeaturedImage;
 use App\Models\Company;
 use App\Services\Ai\ContentGenerationService;
 use App\Services\CompanyPublicationService;
@@ -23,6 +24,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Laravelcm\Subscriptions\Models\Subscription;
 
 class CompaniesTable
 {
@@ -104,6 +106,8 @@ class CompaniesTable
                 static::rejectAction(),
                 static::republishAction(),
                 static::generateContentAction(),
+                static::resetContentQuotaAction(),
+                static::generateFeaturedImageAction(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -225,6 +229,86 @@ class CompaniesTable
                     ->warning()
                     ->send();
             });
+    }
+
+    /**
+     * Gives a company back its monthly AI-content-generation quota — e.g.
+     * when a queued run later failed for a technical reason (bad model
+     * response, network drop) and the company is otherwise stuck until next
+     * month's reset. Authorization mirrors generateContentAction's (same
+     * Approve:Company permission) via a closure, so it does not depend on
+     * shield-generated policy stubs.
+     */
+    public static function resetContentQuotaAction(): Action
+    {
+        return Action::make('reset_content_quota')
+            ->label('بازگرداندن سهمیه تولید محتوا')
+            ->icon(Heroicon::ArrowUturnLeft)
+            ->color('gray')
+            ->visible(function (Company $record): bool {
+                $subscription = $record->activeSubscription();
+                $featureSlug = static::contentQuotaFeatureSlug($subscription);
+
+                return $featureSlug !== null && $subscription->getFeatureUsage($featureSlug) > 0;
+            })
+            ->authorize(fn (Company $record): bool => auth()->user()?->can('Approve:Company') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('بازگرداندن سهمیه تولید محتوا')
+            ->modalDescription('با این کار، سهمیه تولید محتوای هوش مصنوعی این شرکت برای این ماه بازگردانده می‌شود و شرکت می‌تواند دوباره محتوا تولید کند.')
+            ->action(function (Company $record) {
+                $subscription = $record->activeSubscription();
+                $featureSlug = static::contentQuotaFeatureSlug($subscription);
+
+                if ($featureSlug !== null) {
+                    $subscription->resetFeatureUsage($featureSlug);
+                }
+
+                Notification::make()
+                    ->title('سهمیه تولید محتوا بازگردانده شد')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * On-demand trigger for GenerateFeaturedImage — e.g. re-running it after
+     * a failed attempt, or generating an image for content that predates the
+     * feature. Authorization mirrors generateContentAction's (same
+     * Approve:Company permission) via a closure. The job itself still skips
+     * when there is already a featured image or no English payload; this
+     * action only gates on the feature being enabled at all.
+     */
+    public static function generateFeaturedImageAction(): Action
+    {
+        return Action::make('generate_featured_image')
+            ->label('تولید تصویر شاخص')
+            ->icon(Heroicon::Photo)
+            ->color('info')
+            ->visible(fn (): bool => app(ContentSettings::class)->image_enabled)
+            ->authorize(fn (Company $record): bool => auth()->user()?->can('Approve:Company') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('تولید تصویر شاخص')
+            ->modalDescription('درخواست تولید تصویر شاخص با هوش مصنوعی برای این شرکت ارسال می‌شود.')
+            ->action(function (Company $record) {
+                GenerateFeaturedImage::dispatch($record->id)->onQueue('ai-content');
+
+                Notification::make()
+                    ->title('تولید تصویر شاخص آغاز شد')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Feature slugs are prefixed with their plan slug in the seeder (see
+     * PlanSeeder::seedFeatures), so lookups must be too — same convention
+     * as the dashboard's contentFeatureSlug().
+     */
+    private static function contentQuotaFeatureSlug(?Subscription $subscription): ?string
+    {
+        $plan = $subscription?->plan;
+
+        return $plan !== null ? $plan->slug.'-ai-content-generations' : null;
     }
 
     /**

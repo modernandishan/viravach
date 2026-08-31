@@ -62,6 +62,9 @@ class CompanyContentSection extends Section
                 Placeholder::make('content_generations_count')
                     ->label('تعداد تولید')
                     ->content(fn ($record): string => (string) ($record?->contentRecord?->generations_count ?? '—')),
+                Placeholder::make('content_quota_usage')
+                    ->label('سهمیه این ماه')
+                    ->content(fn ($record): string => self::quotaUsageLabel($record)),
                 Placeholder::make('content_locked_at')
                     ->label('زمان قفل')
                     ->content(fn ($record): string => LocalizedDate::format($record?->contentRecord?->locked_at, LocalizedDate::FORMAT_DATETIME) ?? '—'),
@@ -72,6 +75,33 @@ class CompanyContentSection extends Section
                         ? new HtmlString('<span class="text-warning-700 fw-bold">'.e($record->contentRecord->failure_reason).'</span>')
                         : '—'),
             ]);
+    }
+
+    /**
+     * Feature slugs are prefixed with their plan slug in the seeder (see
+     * PlanSeeder::seedFeatures), so lookups must be too. The limit is read
+     * from the plan's feature value rather than hardcoded, so it always
+     * tracks whatever PlanSeeder currently configures per plan.
+     */
+    private static function quotaUsageLabel($record): string
+    {
+        $subscription = $record?->activeSubscription();
+        $plan = $subscription?->plan;
+
+        if ($subscription === null || $plan === null) {
+            return '—';
+        }
+
+        $featureSlug = $plan->slug.'-ai-content-generations';
+        $limit = $subscription->getFeatureValue($featureSlug);
+
+        if ($limit === null) {
+            return '—';
+        }
+
+        $used = $subscription->getFeatureUsage($featureSlug);
+
+        return "{$used} از {$limit} بار در این ماه";
     }
 
     /**

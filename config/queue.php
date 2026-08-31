@@ -35,12 +35,25 @@ return [
             'driver' => 'sync',
         ],
 
+        // retry_after must stay comfortably above the longest-running job
+        // that shares this connection or a queue driver's own visibility
+        // timeout will silently re-deliver a job that is still being
+        // processed to a second worker. With $tries = 1 (the whole AI
+        // content pipeline — see AbstractAiContentJob), that second
+        // delivery increments `attempts` past 1 and the worker instantly
+        // fails it with "has been attempted too many times", WITHOUT ever
+        // running handle() — and because Illuminate\Bus\Batch counts a
+        // failed attempt against the same job UUID that is still legitimately
+        // in flight elsewhere, a parallel Bus::batch (LocalizeContent's
+        // per-locale fan-out) can appear "complete" and fire finally() while
+        // other locales are still generating. GenerateSourceContent's 600s
+        // timeout is the longest job on this connection; 900 leaves margin.
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 900),
             'after_commit' => false,
         ],
 
@@ -64,11 +77,14 @@ return [
             'after_commit' => false,
         ],
 
+        // Same retry_after constraint as the 'database' connection above —
+        // not currently the default driver, but kept in sync in case it
+        // ever hosts the same jobs.
         'redis' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 900),
             'block_for' => null,
             'after_commit' => false,
         ],

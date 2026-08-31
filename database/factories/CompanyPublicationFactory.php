@@ -27,7 +27,6 @@ class CompanyPublicationFactory extends Factory
             'registration_number' => null,
             'national_id' => null,
             'established_at' => null,
-            'description' => ['en' => fake()->paragraphs(3, true), 'fa' => fake()->paragraphs(3, true)],
             'summary' => null,
             'website' => null,
             'email' => fake()->companyEmail(),

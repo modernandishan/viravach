@@ -82,10 +82,6 @@ class CompanyResourceTest extends TestCase
                     'en' => 'Acme Co',
                     'fa' => 'شرکت آکمی',
                 ],
-                'description' => [
-                    'en' => 'About us',
-                    'fa' => 'درباره ما',
-                ],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -126,7 +122,6 @@ class CompanyResourceTest extends TestCase
                 'slug' => 'acme-co',
                 'review_status' => CompanyReviewStatus::PendingReview->value,
                 'name' => ['en' => 'Acme Co', 'fa' => 'شرکت آکمی'],
-                'description' => ['en' => 'About us', 'fa' => 'درباره ما'],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -150,7 +145,6 @@ class CompanyResourceTest extends TestCase
                 'slug' => 'acme-co',
                 'review_status' => CompanyReviewStatus::PendingReview->value,
                 'name' => ['en' => 'Acme Co', 'fa' => 'شرکت آکمی'],
-                'description' => ['en' => 'About us', 'fa' => 'درباره ما'],
                 'plan_id' => $proPlan->id,
             ])
             ->call('create')
@@ -232,6 +226,54 @@ class CompanyResourceTest extends TestCase
 
         Livewire::test(ListCompanies::class)
             ->assertActionHidden(TestAction::make('approve')->table($company));
+    }
+
+    public function test_reset_content_quota_action_clears_usage_and_the_company_can_generate_again(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $company = Company::factory()->create();
+        $subscription = $company->activeSubscription();
+        $featureSlug = $subscription->plan->slug.'-ai-content-generations';
+
+        $subscription->recordFeatureUsage($featureSlug);
+
+        $this->assertSame(1, $subscription->getFeatureUsage($featureSlug));
+        $this->assertFalse($subscription->canUseFeature($featureSlug));
+
+        Livewire::test(ListCompanies::class)
+            ->callAction(TestAction::make('reset_content_quota')->table($company));
+
+        $subscription->refresh();
+
+        $this->assertSame(0, $subscription->getFeatureUsage($featureSlug));
+        $this->assertTrue($subscription->canUseFeature($featureSlug));
+    }
+
+    public function test_reset_content_quota_action_is_hidden_when_no_usage_has_been_recorded(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $company = Company::factory()->create();
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('reset_content_quota')->table($company));
+    }
+
+    public function test_reset_content_quota_action_is_hidden_without_the_approve_permission(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'ViewAny:Company', 'guard_name' => 'web']));
+        $this->actingAs($user);
+
+        $company = Company::factory()->create();
+        $subscription = $company->activeSubscription();
+        $subscription->recordFeatureUsage($subscription->plan->slug.'-ai-content-generations');
+
+        Livewire::test(ListCompanies::class)
+            ->assertActionHidden(TestAction::make('reset_content_quota')->table($company));
     }
 
     public function test_republish_action_updates_the_published_snapshot(): void

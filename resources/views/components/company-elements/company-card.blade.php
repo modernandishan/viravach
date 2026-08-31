@@ -3,10 +3,7 @@
 @php
     $category = $company->categories->first();
     $state = $company->state;
-    $excerpt = \Illuminate\Support\Str::limit(
-        strip_tags($company->description ?: $company->summary ?: ''),
-        120
-    );
+    $excerpt = $company->excerpt();
 @endphp
 
 <a href="{{ route('companies.show', ['slug' => $company->slug]) }}" class="card border-hover-primary h-100 d-flex flex-column">

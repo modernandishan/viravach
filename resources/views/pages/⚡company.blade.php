@@ -148,7 +148,18 @@ class extends Component {
             <div class="flex-lg-row-fluid me-lg-7 me-xl-10">
 
                 @if (($content = $publication->contentFor(app()->getLocale())) !== null)
-                    <x-company-content.hero :data="$content['hero'] ?? []" />
+                    @php
+                        $featuredImage = $publication->getFirstMedia('featured_image');
+                        $featuredImageAlt = $featuredImage?->getCustomProperty('alt', [])[app()->getLocale()]
+                            ?? $featuredImage?->getCustomProperty('alt', [])[config('app.fallback_locale')]
+                            ?? $content['hero']['image_alt']
+                            ?? $publication->name;
+                    @endphp
+                    <x-company-content.hero
+                        :data="$content['hero'] ?? []"
+                        :image-url="$featuredImage?->getUrl('webp')"
+                        :image-alt="$featuredImageAlt"
+                    />
                     <x-company-content.about :data="$content['about'] ?? []" />
                     <x-company-content.offerings :data="$content['offerings'] ?? []" />
                     <x-company-content.strengths :data="$content['strengths'] ?? []" />

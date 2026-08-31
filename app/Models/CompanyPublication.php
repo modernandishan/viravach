@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -33,7 +34,6 @@ use Spatie\Translatable\HasTranslations;
     'registration_number',
     'national_id',
     'established_at',
-    'description',
     'summary',
     'content',
     'website',
@@ -49,7 +49,6 @@ use Spatie\Translatable\HasTranslations;
 #[Translatable([
     'name',
     'legal_name',
-    'description',
     'summary',
 ])]
 class CompanyPublication extends Model implements HasMedia, Viewable
@@ -90,6 +89,41 @@ class CompanyPublication extends Model implements HasMedia, Viewable
         }
 
         return $content[$locale] ?? $content[config('app.fallback_locale')] ?? null;
+    }
+
+    /**
+     * Short excerpt for listing cards: the AI-generated hero subheadline,
+     * falling back to the first sentence of the about section, then to the
+     * legacy summary field. Returns null when none of those are available,
+     * so callers can omit the excerpt element entirely.
+     */
+    public function excerpt(?string $locale = null): ?string
+    {
+        $locale ??= app()->getLocale();
+        $content = $this->contentFor($locale);
+
+        $subheadline = trim(strip_tags((string) ($content['hero']['subheadline'] ?? '')));
+
+        if ($subheadline !== '') {
+            return $subheadline;
+        }
+
+        $body = trim(strip_tags((string) ($content['about']['body'] ?? '')));
+
+        if ($body !== '') {
+            return Str::limit(self::firstSentence($body), 160);
+        }
+
+        $summary = trim(strip_tags((string) $this->getTranslation('summary', $locale, false)));
+
+        return $summary !== '' ? $summary : null;
+    }
+
+    private static function firstSentence(string $text): string
+    {
+        $sentences = preg_split('/(?<=[.!?؟])\s+/u', $text, 2) ?: [$text];
+
+        return trim((string) ($sentences[0] ?? ''));
     }
 
     public function registerMediaCollections(): void

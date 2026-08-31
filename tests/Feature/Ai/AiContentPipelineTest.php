@@ -8,6 +8,7 @@ use App\Jobs\Ai\FinalizeContent;
 use App\Jobs\Ai\GenerateSeoBlock;
 use App\Jobs\Ai\GenerateSourceContent;
 use App\Jobs\Ai\LocalizeContent;
+use App\Jobs\Ai\LocalizeContentLocale;
 use App\Jobs\Ai\ReserveKeyword;
 use App\Models\Company;
 use App\Models\CompanyCategory;
@@ -17,7 +18,9 @@ use App\Models\Country;
 use App\Models\SeoKeywordReservation;
 use App\Models\User;
 use App\Settings\ContentSettings;
+use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -290,6 +293,203 @@ class AiContentPipelineTest extends TestCase
         // …and a partial-result marker left on the row for the admin.
         $this->assertStringContainsString('Partial localization', (string) $content->failure_reason);
         $this->assertStringContainsString('ar:', (string) $content->failure_reason);
+    }
+
+    public function test_localize_content_fans_out_to_one_job_per_target_locale_via_a_batch(): void
+    {
+        Bus::fake();
+
+        $company = $this->makeCompany();
+        CompanyContent::where('company_id', $company->id)->update([
+            'ai_payload' => ['en' => $this->contentPayload()],
+            'step' => 3,
+        ]);
+
+        (new LocalizeContent($company->id))->handle();
+
+        Bus::assertBatched(function (PendingBatch $batch) use ($company): bool {
+            $locales = $batch->jobs
+                ->map(fn (LocalizeContentLocale $job): string => $job->locale)
+                ->sort()
+                ->values()
+                ->all();
+
+            return $batch->jobs->count() === 4
+                && $batch->jobs->every(fn ($job): bool => $job instanceof LocalizeContentLocale
+                    && $job->companyId === $company->id)
+                && $locales === ['ar', 'fa', 'ru', 'tr'];
+        });
+    }
+
+    public function test_two_locales_merging_concurrently_do_not_lose_each_others_payload(): void
+    {
+        Http::fake([
+            'https://ai.example/v1/chat/completions*' => Http::sequence([
+                $this->chatResponse($this->contentPayload(['hero' => [
+                    'headline' => 'Persian Locale Headline',
+                    'subheadline' => str_repeat('Reliable export quality for global buyers. ', 3),
+                    'image_alt' => str_repeat('Factory production line view ', 3),
+                ]])),
+                $this->chatResponse($this->seoPayload()),
+                $this->chatResponse($this->contentPayload(['hero' => [
+                    'headline' => 'Arabic Locale Headline',
+                    'subheadline' => str_repeat('Reliable export quality for global buyers. ', 3),
+                    'image_alt' => str_repeat('Factory production line view ', 3),
+                ]])),
+                $this->chatResponse($this->seoPayload()),
+            ]),
+        ]);
+
+        $company = $this->makeCompany();
+        CompanyContent::where('company_id', $company->id)->update([
+            'ai_payload' => ['en' => $this->contentPayload()],
+        ]);
+
+        // Same row, two locale jobs run one after the other — each re-reads
+        // the row under lock (AbstractAiContentJob::lockedPayloadUpdate)
+        // rather than mutating a copy captured before either job started,
+        // so the second job's merge cannot clobber the first job's write.
+        (new LocalizeContentLocale($company->id, 'fa'))->handle();
+        (new LocalizeContentLocale($company->id, 'ar'))->handle();
+
+        $content = CompanyContent::firstOrFail();
+
+        $this->assertSame('Persian Locale Headline', $content->ai_payload['fa']['hero']['headline']);
+        $this->assertSame('Arabic Locale Headline', $content->ai_payload['ar']['hero']['headline']);
+        $this->assertArrayHasKey('fa', $content->ai_payload['seo']);
+        $this->assertArrayHasKey('ar', $content->ai_payload['seo']);
+    }
+
+    public function test_no_locale_job_shares_a_uniqueness_lock_with_another(): void
+    {
+        Bus::fake();
+
+        $company = $this->makeCompany();
+        CompanyContent::where('company_id', $company->id)->update([
+            'ai_payload' => ['en' => $this->contentPayload()],
+            'step' => 3,
+        ]);
+
+        (new LocalizeContent($company->id))->handle();
+
+        // Distinct uniqueId() per locale is what stops ShouldBeUnique from
+        // treating the four sibling jobs as duplicates of one another and
+        // silently dropping three of them at dispatch time.
+        Bus::assertBatched(function (PendingBatch $batch): bool {
+            $uniqueIds = $batch->jobs
+                ->map(fn (LocalizeContentLocale $job): string => $job->uniqueId())
+                ->all();
+
+            return $batch->jobs->count() === 4 && count(array_unique($uniqueIds)) === 4;
+        });
+    }
+
+    public function test_finalize_runs_exactly_once_after_every_locale_job_completes(): void
+    {
+        Http::fake([
+            'https://ai.example/v1/chat/completions*' => Http::sequence($this->chainSequence()),
+        ]);
+
+        $company = $this->makeCompany();
+        $this->runChain($company);
+
+        $content = CompanyContent::firstOrFail();
+
+        // generations_count only increments inside FinalizeContent's own
+        // step-guarded body — more than 1 would mean that body ran more
+        // than once, i.e. finalize fired more than once for this run.
+        $this->assertSame(1, $content->generations_count);
+
+        // recordMissingLocales() (FinalizeContent) would have left this
+        // note had finalize run before every locale job actually merged
+        // its payload — its absence proves finalize ran strictly after.
+        $this->assertStringNotContainsString('Missing locale(s) at finalize', (string) $content->failure_reason);
+
+        foreach (['tr', 'ru', 'ar', 'fa'] as $locale) {
+            $this->assertArrayHasKey($locale, $content->ai_payload);
+        }
+    }
+
+    public function test_a_slow_locale_finishing_last_still_lands_in_company_content(): void
+    {
+        $targets = array_values(array_filter(
+            array_keys((array) config('laravellocalization.supportedLocales')),
+            fn (string $locale): bool => $locale !== 'en',
+        ));
+        $lastLocale = end($targets);
+
+        $sequence = [
+            $this->chatResponse($this->contentPayload()),
+            $this->chatResponse($this->seoPayload()),
+        ];
+
+        foreach ($targets as $locale) {
+            $sequence[] = $locale === $lastLocale
+                ? $this->chatResponse($this->contentPayload(['hero' => [
+                    'headline' => 'Distinctive Last Locale Headline',
+                    'subheadline' => str_repeat('Reliable export quality for global buyers. ', 3),
+                    'image_alt' => str_repeat('Factory production line view ', 3),
+                ]]))
+                : $this->chatResponse($this->contentPayload());
+            $sequence[] = $this->chatResponse($this->seoPayload());
+        }
+
+        Http::fake(['https://ai.example/v1/chat/completions*' => Http::sequence($sequence)]);
+
+        $company = $this->makeCompany();
+        $this->runChain($company);
+
+        // Batch jobs process strictly in dispatch order under the `sync`
+        // queue, so the LAST target locale is also the last one to merge
+        // its payload — proving a premature finalize (the production bug:
+        // FinalizeContent racing ahead of the batch) cannot silently drop
+        // whichever locale happens to finish last.
+        $this->assertSame(
+            'Distinctive Last Locale Headline',
+            $company->fresh()->content[$lastLocale]['hero']['headline'],
+        );
+    }
+
+    public function test_finalize_records_missing_locales_in_failure_reason_and_logs_a_warning(): void
+    {
+        Log::spy();
+
+        $targets = array_values(array_filter(
+            array_keys((array) config('laravellocalization.supportedLocales')),
+            fn (string $locale): bool => $locale !== 'en',
+        ));
+        $missingLocale = $targets[0];
+        $presentLocale = $targets[1];
+
+        $company = $this->makeCompany();
+        $content = CompanyContent::where('company_id', $company->id)->firstOrFail();
+
+        // Simulates a locale that genuinely failed (or, equally, one that
+        // was still in flight when finalize ran) — either way it never
+        // made it into ai_payload.
+        $content->forceFill(['ai_payload' => [
+            'en' => $this->contentPayload(),
+            $presentLocale => $this->contentPayload(),
+            'seo' => [
+                'en' => $this->seoPayload(),
+                $presentLocale => $this->seoPayload(),
+            ],
+        ]])->save();
+
+        (new FinalizeContent($company->id))->handle();
+
+        $content->refresh();
+
+        $this->assertStringContainsString("Missing locale(s) at finalize: {$missingLocale}", (string) $content->failure_reason);
+        $this->assertArrayHasKey($presentLocale, $company->fresh()->content);
+        $this->assertArrayNotHasKey($missingLocale, $company->fresh()->content);
+
+        Log::assertLogged(
+            'warning',
+            fn (string $message, array $context): bool => $message === 'Finalizing content generation with locale(s) missing from ai_payload.'
+                && $context['company_id'] === $company->id
+                && in_array($missingLocale, $context['missing_locales'], true),
+        );
     }
 
     public function test_markets_countries_come_from_export_countries_not_from_the_model(): void

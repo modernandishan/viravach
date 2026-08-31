@@ -5,6 +5,7 @@ namespace App\Jobs\Ai;
 use App\Ai\Prompts\CompanyContentPrompt;
 use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
+use App\Models\CompanyContent;
 use App\Services\Ai\ContentGenerationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -36,6 +37,8 @@ class FinalizeContent extends AbstractAiContentJob
         $company = $this->company();
         $aiPayload = $content->ai_payload ?? [];
 
+        $this->recordMissingLocales($content, $aiPayload);
+
         // Locale-keyed content only — the seo sub-array is NOT company content.
         $company->forceFill([
             'content' => collect($aiPayload)->except('seo')->all(),
@@ -51,6 +54,13 @@ class FinalizeContent extends AbstractAiContentJob
         ])->save();
 
         app(ContentGenerationService::class)->markReady($content);
+
+        // Deliberately NOT part of this job's own work and NOT chained:
+        // GenerateFeaturedImage is dispatched as its own independent job so
+        // its failure can never affect the ready status set just above, or
+        // the content just written. See GenerateFeaturedImage for the
+        // enabled/existing-image/no-payload skip conditions.
+        GenerateFeaturedImage::dispatch($company->id)->onQueue('ai-content');
     }
 
     /**
@@ -172,6 +182,41 @@ class FinalizeContent extends AbstractAiContentJob
         }
 
         return implode(' ', $words);
+    }
+
+    /**
+     * Defensive check before writing: a locale can be absent from ai_payload
+     * for a genuine reason (its LocalizeContentLocale job failed and was
+     * already recorded via recordLocaleFailure), or — if step 4's batch
+     * completion was ever miscounted — because this step ran before every
+     * locale job had actually finished. Either way, finalize must never
+     * silently ship a company with a language quietly missing. Missing
+     * locales are logged and folded into failure_reason; the row is still
+     * finalized with whatever content IS present, per the existing "partial
+     * results are surfaced but never block the chain" rule (LocalizeContent).
+     *
+     * @param  array<string, mixed>  $aiPayload
+     */
+    protected function recordMissingLocales(CompanyContent $content, array $aiPayload): void
+    {
+        $missing = array_diff(static::targetLocales(), array_keys($aiPayload));
+
+        if ($missing === []) {
+            return;
+        }
+
+        Log::warning('Finalizing content generation with locale(s) missing from ai_payload.', [
+            'company_id' => $this->companyId,
+            'missing_locales' => $missing,
+        ]);
+
+        $note = 'Missing locale(s) at finalize: '.implode(', ', $missing);
+
+        $content->forceFill([
+            'failure_reason' => filled($content->failure_reason)
+                ? $content->failure_reason.' | '.$note
+                : $note,
+        ])->save();
     }
 
     /**

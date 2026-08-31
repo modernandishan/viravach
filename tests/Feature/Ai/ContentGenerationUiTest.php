@@ -130,6 +130,20 @@ class ContentGenerationUiTest extends TestCase
             ->assertDontSee(__('companies.content_generate'));
     }
 
+    public function test_the_content_card_shows_step_four_while_the_locale_batch_runs(): void
+    {
+        $company = Company::factory()->create();
+
+        CompanyContent::firstOrCreate(['company_id' => $company->id])->forceFill([
+            'status' => CompanyContentStatus::Generating,
+            'step' => 4,
+        ])->save();
+
+        $this->pageFor($company)
+            ->assertSee(__('companies.content_step_of', ['step' => 4, 'label' => __('companies.ai_step_4')]))
+            ->assertDontSee(__('companies.content_generate'));
+    }
+
     public function test_the_event_is_dispatched_on_claim_with_queued_and_step_zero(): void
     {
         $this->enableSettings();
