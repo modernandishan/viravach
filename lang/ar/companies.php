@@ -170,4 +170,7 @@ return [
     'ai_step_3' => 'حجز الكلمة المفتاحية',
     'ai_step_4' => 'التوطين للغات أخرى',
     'ai_step_5' => 'اللمسات الأخيرة',
+
+    // company listing card
+    'view_profile' => 'عرض الملف',
 ];

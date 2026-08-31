@@ -6,6 +6,7 @@ use App\Models\GeneralSetting;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\CanUseDatabaseTransactions;
@@ -121,6 +122,76 @@ class ManageGeneralSettings extends Page
                             ->imageEditor(),
                     ])
                     ->columns(2),
+
+                Tabs::make('footer_about')->tabs(
+                    collect($locales)->map(
+                        fn ($data, string $code) => Tab::make("footer_about_{$code}")
+                            ->label($data['native'])
+                            ->schema([
+                                Textarea::make("footer_about.{$code}")
+                                    ->label('متن معرفی فوتر')
+                                    ->rows(3)
+                                    ->maxLength(500),
+                            ])
+                    )->values()->all()
+                ),
+
+                Section::make('شبکه‌های اجتماعی')
+                    ->schema([
+                        TextInput::make('social_facebook')
+                            ->label('فیس‌بوک')
+                            ->url()
+                            ->maxLength(255),
+                        TextInput::make('social_instagram')
+                            ->label('اینستاگرام')
+                            ->url()
+                            ->maxLength(255),
+                        TextInput::make('social_twitter')
+                            ->label('ایکس (توییتر)')
+                            ->url()
+                            ->maxLength(255),
+                        TextInput::make('social_linkedin')
+                            ->label('لینکدین')
+                            ->url()
+                            ->maxLength(255),
+                        TextInput::make('social_telegram')
+                            ->label('تلگرام')
+                            ->url()
+                            ->maxLength(255),
+                        TextInput::make('social_whatsapp')
+                            ->label('واتساپ')
+                            ->url()
+                            ->maxLength(255),
+                    ])
+                    ->columns(3),
+
+                Section::make('اطلاعات تماس فوتر')
+                    ->schema([
+                        Textarea::make('contact_address')
+                            ->label('آدرس')
+                            ->rows(2)
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+                        TextInput::make('contact_phone')
+                            ->label('تلفن')
+                            ->tel()
+                            ->maxLength(50),
+                        TextInput::make('contact_email')
+                            ->label('ایمیل')
+                            ->email()
+                            ->maxLength(255),
+                    ])
+                    ->columns(2),
+
+                Section::make('نماد اعتماد الکترونیک (اینماد)')
+                    ->description('کد HTML اینماد را اینجا جای‌گذاری کنید. هنگام نمایش، فقط تگ‌های <a> و <img> و ویژگی‌های href/src/alt/id/class/style/referrerpolicy از آن نگه‌داشته می‌شود و بقیه (از جمله اسکریپت) حذف می‌شود.')
+                    ->schema([
+                        Textarea::make('enamad_html')
+                            ->label('کد اینماد')
+                            ->rows(6)
+                            ->maxLength(5000)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 

@@ -107,10 +107,10 @@ class extends Component {
                 <!--end::Category header card-->
 
                 <!--begin::Companies grid-->
-                <div class="row g-6 g-xl-9">
+                <div class="row g-4">
                     @forelse ($this->companies as $company)
-                        <div class="col-md-6 col-xl-4" wire:key="company-{{ $company->id }}">
-                            <x-company-elements.company-card :company="$company" :views="$this->companyViewCounts[$company->id] ?? 0" />
+                        <div class="col-12 col-sm-6 col-lg-4" wire:key="company-{{ $company->id }}">
+                            <livewire:company-elements.company-card :company="$company" />
                         </div>
                     @empty
                         <div class="col-12">

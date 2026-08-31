@@ -170,4 +170,7 @@ return [
     'ai_step_3' => 'Anahtar kelime rezervi',
     'ai_step_4' => 'Diğer diller için yerelleştirme',
     'ai_step_5' => 'Sonlandırma',
+
+    // company listing card
+    'view_profile' => 'Profili görüntüle',
 ];

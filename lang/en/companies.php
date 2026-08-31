@@ -170,4 +170,7 @@ return [
     'ai_step_3' => 'Reserving the keyword',
     'ai_step_4' => 'Localizing other languages',
     'ai_step_5' => 'Finalizing',
+
+    // company listing card
+    'view_profile' => 'View profile',
 ];

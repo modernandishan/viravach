@@ -145,9 +145,7 @@ class CompanyContentPanelTest extends TestCase
 
         Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
             ->fillForm(['content' => ['en' => ['hero' => ['headline' => 'Edited Headline For Company']]]])
-            ->tap(fn ($component) => fwrite(STDERR, 'DBG-AFTER-FILL: '.json_encode(data_get($component->instance()->data, 'content.en.hero.headline', 'MISSING'))."\n"))
             ->call('save')
-            ->tap(fn ($component) => fwrite(STDERR, 'DBG-BEFORE-ASSERT: '.json_encode(data_get($component->instance()->data, 'content.en.hero.headline', 'MISSING'))."\n"))
             ->assertHasNoErrors();
 
         $company->refresh();

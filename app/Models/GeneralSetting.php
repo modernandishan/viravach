@@ -15,10 +15,22 @@ use Spatie\Translatable\HasTranslations;
     'logo_square_dark',
     'logo_wide_light',
     'logo_wide_dark',
+    'footer_about',
+    'social_facebook',
+    'social_instagram',
+    'social_twitter',
+    'social_linkedin',
+    'social_telegram',
+    'social_whatsapp',
+    'contact_address',
+    'contact_phone',
+    'contact_email',
+    'enamad_html',
 ])]
 #[Translatable([
     'site_name',
     'site_tagline',
+    'footer_about',
 ])]
 class GeneralSetting extends Model
 {
