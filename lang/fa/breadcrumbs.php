@@ -2,6 +2,7 @@
 
 return [
     'home' => 'خانه',
+    'countries' => 'کشورها',
     'terms_and_conditions' => 'قوانین و مقررات',
     'sign_in' => 'ورود',
     'secure_login' => 'ورود امن',

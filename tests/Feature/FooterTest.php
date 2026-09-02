@@ -67,7 +67,7 @@ class FooterTest extends TestCase
 
         // Column 3 — provinces.
         $this->assertStringContainsString(__('footer.states_heading'), $html);
-        $this->assertStringContainsString(route('companies.state', ['slug' => $state->slug]), $html);
+        $this->assertStringContainsString(route('companies.state', ['country' => $state->country->slug, 'state' => $state->slug]), $html);
         $this->assertStringContainsString('Tehran', $html);
 
         // Column 4 — company & contact.

@@ -22,6 +22,9 @@ return [
         'reset' => 'Reset filters',
     ],
 
+    'globe_title' => 'Where our suppliers are',
+    'globe_subtitle' => 'Explore the directory on the globe — highlighted countries have listed companies.',
+
     // Key numbers
     'key_numbers_title' => 'The directory at a glance',
 

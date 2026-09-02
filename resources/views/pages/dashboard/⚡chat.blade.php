@@ -465,6 +465,19 @@ class extends Component
 
 <div class="d-flex flex-column-fluid align-items-start container-xxl">
     <div class="content flex-row-fluid" id="kt_content">
+        {{-- Same infobar + tab bar every other dashboard page renders, so Chat
+             is reachable from — and can navigate back to — the rest of the
+             dashboard. The Chat tab activates itself: the infobar marks the
+             active tab with request()->routeIs('chat').
+
+             Safe to prepend: this page's scroll containers use fixed pixel
+             max-heights (the contact list and the message pane below), not
+             viewport units, and the composer is an ordinary card-footer in
+             normal flow — not fixed or sticky. So the page simply grows taller
+             and the document scrolls, exactly as on ⚡profile and
+             ⚡my-companies. Nothing here needed a height adjustment. --}}
+        <livewire:dashboard-elements.infobar/>
+
         <div class="d-flex flex-column flex-lg-row">
             <!--begin::Sidebar-->
             <div class="flex-column flex-lg-row-auto w-100 w-lg-300px w-xl-400px mb-10 mb-lg-0">

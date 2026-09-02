@@ -131,10 +131,11 @@ return [
     'content_processing_hint' => 'می‌توانید صفحه را ببندید؛ تولید محتوا ادامه دارد.',
     'content_ready_at' => 'محتوا در تاریخ :date تولید شده است',
     'content_failed_title' => 'تولید قبلی ناموفق بود',
+    'content_failed_body' => 'تولید محتوا به دلیل یک خطای فنی کامل نشد. سهمیه‌ی شما مصرف نشده است؛ لطفاً دوباره تلاش کنید. اگر باز هم تکرار شد، با پشتیبانی تماس بگیرید.',
     'content_retry' => 'تلاش مجدد',
     'content_quota_exhausted' => 'سهمیه تولید محتوای هوشمند این ماه شما به پایان رسیده است.',
     'content_upgrade_plans' => 'مشاهده پلن‌ها',
-    'content_rate_limited' => 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.',
+    'content_rate_limited' => 'به‌تازگی یک درخواست تولید محتوا برای این شرکت ثبت شده است. لطفاً :minutes دقیقه دیگر دوباره تلاش کنید.',
     'content_generation_queued' => 'درخواست شما به صف تولید محتوا اضافه شد.',
     'content_disabled' => 'تولید محتوای هوشمند در حال حاضر غیرفعال است.',
     'content_already_running' => 'یک تولید محتوا هم‌اکنون در جریان است.',
@@ -173,4 +174,20 @@ return [
 
     // company listing card
     'view_profile' => 'مشاهده پروفایل',
+
+    // ⚡company-list (country / state listing)
+    'listing' => [
+        'filter_category' => 'دسته‌بندی',
+        'filter_state' => 'استان',
+        'filter_all' => 'همه',
+        'filter_verified' => 'احراز هویت',
+        'filter_verified_hint' => 'فقط شرکت‌های تأییدشده',
+        'sort_label' => 'مرتب‌سازی',
+        'sort_newest' => 'جدیدترین',
+        'sort_most_viewed' => 'پربازدیدترین',
+        'clear_filters' => 'حذف فیلترها',
+        'results_count' => ':count شرکت',
+        'empty' => 'هنوز شرکتی در اینجا منتشر نشده است.',
+        'empty_filtered' => 'هیچ شرکتی با این فیلترها پیدا نشد.',
+    ],
 ];

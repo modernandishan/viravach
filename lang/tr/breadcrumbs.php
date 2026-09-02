@@ -2,6 +2,7 @@
 
 return [
     'home' => 'Ana Sayfa',
+    'countries' => 'Ülkeler',
     'terms_and_conditions' => 'Şartlar ve Koşullar',
     'sign_in' => 'Giriş Yap',
     'secure_login' => 'Güvenli Giriş',

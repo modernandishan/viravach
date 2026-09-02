@@ -33,11 +33,19 @@ trait HasSeo
             SEOTools::metatags()->setDescription($description);
         }
 
-        $canonical = $this->seo?->canonical_url ?: url()->current();
+        $canonical = $this->seo?->canonical_url ?: $this->currentCanonicalUrl();
 
         SEOTools::setCanonical($canonical);
 
         if (! $seo = $this->seo) {
+            // No SeoMeta row means no administrator has made an explicit
+            // robots choice for this record — that is also the only case
+            // isThinPage() is allowed to act in, so a real SeoMeta row's
+            // robots_index/robots_follow (below) always wins over it.
+            if ($this->isThinPage()) {
+                SEOTools::metatags()->setRobots('noindex, follow');
+            }
+
             return;
         }
 
@@ -123,6 +131,27 @@ trait HasSeo
         }
     }
 
+    /**
+     * url()->current() drops the query string entirely, which would make
+     * every paginated page canonicalise back to page 1 — telling search
+     * engines pages 2+ are duplicates and dropping every company listed on
+     * them out of the index.
+     *
+     * `page` is the one parameter that genuinely changes what the page
+     * contains, so it alone is preserved. Filter parameters (category,
+     * state, verified, sort) are deliberately NOT included: a filtered view
+     * is a slice of the same collection and should consolidate onto the
+     * clean URL rather than compete with it.
+     */
+    protected function currentCanonicalUrl(): string
+    {
+        $page = (int) request()->query('page', 1);
+
+        return $page > 1
+            ? url()->current().'?page='.$page
+            : url()->current();
+    }
+
     public function seoTitle(?string $locale = null): ?string
     {
         $locale ??= app()->getLocale();
@@ -153,5 +182,19 @@ trait HasSeo
     protected function getSeoFallbackDescription(string $locale): ?string
     {
         return null;
+    }
+
+    /**
+     * Whether this record's public page is currently "thin" (no real
+     * content behind it — e.g. a taxonomy node with zero published
+     * companies) and should therefore be forced to noindex,follow when no
+     * SeoMeta row exists to override it. Stable taxonomy URLs (country/
+     * state/category) stay live and linkable — they must not 404 — but
+     * must not be indexed while empty. Default false: page types that
+     * don't have a "thin" concept (Page, Company, Plan) are unaffected.
+     */
+    protected function isThinPage(): bool
+    {
+        return false;
     }
 }

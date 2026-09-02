@@ -51,7 +51,7 @@ class CompanyStatePageTest extends TestCase
     {
         $state = $this->makeState();
 
-        $response = $this->get(route('companies.state', ['slug' => $state->slug]));
+        $response = $this->get(route('companies.state', ['country' => $state->country->slug, 'state' => $state->slug]));
 
         $response->assertOk();
         $response->assertSee('Test Province');
@@ -59,11 +59,11 @@ class CompanyStatePageTest extends TestCase
 
     public function test_it_404s_for_unknown_or_inactive_state(): void
     {
-        $this->get(route('companies.state', ['slug' => 'does-not-exist']))->assertNotFound();
+        $this->get(route('companies.state', ['country' => 'no-such-country', 'state' => 'does-not-exist']))->assertNotFound();
 
         $inactive = $this->makeState(overrides: ['is_active' => false]);
 
-        $this->get(route('companies.state', ['slug' => $inactive->slug]))->assertNotFound();
+        $this->get(route('companies.state', ['country' => $inactive->country->slug, 'state' => $inactive->slug]))->assertNotFound();
     }
 
     public function test_it_lists_only_companies_with_an_address_in_the_state(): void
@@ -74,7 +74,7 @@ class CompanyStatePageTest extends TestCase
         $inA = $this->makeActivePublicationInState($stateA);
         $inB = $this->makeActivePublicationInState($stateB);
 
-        Livewire::test('pages::company-state', ['slug' => $stateA->slug])
+        Livewire::test('pages::company-state', ['country' => $stateA->country->slug, 'state' => $stateA->slug])
             ->assertSeeText($inA->name)
             ->assertDontSeeText($inB->name);
     }
@@ -87,7 +87,7 @@ class CompanyStatePageTest extends TestCase
             $this->makeActivePublicationInState($state);
         }
 
-        $component = Livewire::test('pages::company-state', ['slug' => $state->slug]);
+        $component = Livewire::test('pages::company-state', ['country' => $state->country->slug, 'state' => $state->slug]);
 
         $this->assertCount(12, $component->instance()->companies);
 
@@ -100,7 +100,7 @@ class CompanyStatePageTest extends TestCase
     {
         $state = $this->makeState();
 
-        $this->get(route('companies.state', ['slug' => $state->slug]));
+        $this->get(route('companies.state', ['country' => $state->country->slug, 'state' => $state->slug]));
 
         $this->assertDatabaseHas('views', [
             'viewable_type' => State::class,

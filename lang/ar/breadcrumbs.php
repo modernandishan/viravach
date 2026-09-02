@@ -2,6 +2,7 @@
 
 return [
     'home' => 'الصفحة الرئيسية',
+    'countries' => 'الدول',
     'terms_and_conditions' => 'الشروط والأحكام',
     'sign_in' => 'تسجيل الدخول',
     'secure_login' => 'تسجيل دخول آمن',

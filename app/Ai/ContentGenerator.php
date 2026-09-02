@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Minimal OpenAI-compatible chat-completions client for the content
@@ -67,8 +68,17 @@ class ContentGenerator
     {
         $attempts = max(1, $settings->max_retries + 1);
         $lastFailure = 'no response';
+        $lastBody = null;
+        $lastStatus = null;
+        // The loop breaks early on a 4xx (see below), so the maximum is not
+        // the number actually tried — reporting the max made a single-attempt
+        // 400 read as "failed after 3 attempts", which sent debugging down
+        // the wrong path entirely.
+        $attemptsMade = 0;
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            $attemptsMade = $attempt;
+
             if ($attempt > 1) {
                 usleep(self::BACKOFF_MICROSECONDS * 2 ** ($attempt - 2));
             }
@@ -99,27 +109,66 @@ class ContentGenerator
                 return $response;
             }
 
-            $lastFailure = 'HTTP '.$response->status();
+            $lastStatus = $response->status();
+            $lastBody = $response->body();
 
-            if (! $response->serverError() && $response->status() !== 429) {
+            // An OpenAI-compatible gateway explains WHY it rejected a request
+            // in the body (unknown model, unsupported response_format,
+            // context_length_exceeded, bad temperature). Logging only the
+            // status threw that away and left "HTTP 400" with no cause.
+            $lastFailure = 'HTTP '.$lastStatus.': '.Str::limit($this->summariseError($lastBody), 300);
+
+            if (! $response->serverError() && $lastStatus !== 429) {
                 break;
             }
         }
 
         Log::warning('Content generation: request failed.', [
             'model' => $model,
+            'status' => $lastStatus,
             'failure' => $lastFailure,
-            'attempts' => $attempts,
+            'attempts_made' => $attemptsMade,
+            'attempts_allowed' => $attempts,
+            // Truncated, and never the api_key — only the gateway's own reply.
+            'response_body' => $lastBody === null ? null : Str::limit($lastBody, 1000),
+            'system_prompt_chars' => mb_strlen($systemPrompt),
+            'user_prompt_chars' => mb_strlen($userPrompt),
         ]);
 
         throw new ContentGenerationException(
-            "The AI gateway request failed after {$attempts} attempt(s): {$lastFailure}.",
+            "The AI gateway request failed after {$attemptsMade} attempt(s): {$lastFailure}.",
         );
     }
 
     protected function endpoint(ContentSettings $settings): string
     {
         return rtrim($settings->base_url, '/').'/chat/completions';
+    }
+
+    /**
+     * Pulls the human-readable reason out of an OpenAI-compatible error body
+     * ({"error": {"message": "...", "code": "..."}}), falling back to the raw
+     * body when the gateway returns something else (an HTML error page from a
+     * proxy, for instance).
+     */
+    protected function summariseError(?string $body): string
+    {
+        if ($body === null || trim($body) === '') {
+            return 'empty response body';
+        }
+
+        $decoded = json_decode($body, true);
+
+        if (is_array($decoded)) {
+            $message = data_get($decoded, 'error.message') ?? data_get($decoded, 'message');
+            $code = data_get($decoded, 'error.code') ?? data_get($decoded, 'error.type');
+
+            if (is_string($message) && $message !== '') {
+                return $code ? $message.' (code: '.$code.')' : $message;
+            }
+        }
+
+        return trim($body);
     }
 
     /**

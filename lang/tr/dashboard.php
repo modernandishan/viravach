@@ -27,4 +27,19 @@ return [
 
     'companies_quick_list_title' => 'Şirketleriniz',
     'view_all_companies' => 'Tümünü gör',
+
+    // ⚡widget-* dashboard widgets
+    'empty_no_invoices' => 'Henüz fatura yok.',
+    'company_is_live' => 'Yayında',
+
+    // ⚡infobar header metrics
+    'stats' => [
+        'published_companies' => 'Yayınlanan şirketler',
+        'no_companies_yet' => 'Henüz şirketiniz yok',
+        'total_views' => 'Toplam görüntülenme',
+        'views_no_pages' => 'Henüz yayınlanmış sayfanız yok',
+        'views_trend_window' => 'Önceki 30 günle karşılaştırıldığında',
+        'no_active_plan' => 'Aktif plan yok',
+        'plan_days_remaining' => ':count gün kaldı',
+    ],
 ];

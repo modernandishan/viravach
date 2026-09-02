@@ -17,7 +17,7 @@ new class extends Component
     <div class="vv-states-grid">
         @foreach ($states as $state)
             <a
-                href="{{ route('companies.state', ['slug' => $state['slug']]) }}"
+                href="{{ route('companies.state', ['country' => $state['country'], 'state' => $state['slug']]) }}"
                 class="vv-state-link"
                 wire:key="home-state-{{ $state['slug'] }}"
             >

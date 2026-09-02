@@ -131,10 +131,11 @@ return [
     'content_processing_hint' => 'Можно закрыть страницу — процесс продолжается.',
     'content_ready_at' => 'Контент сгенерирован :date',
     'content_failed_title' => 'Прошлая генерация не удалась',
+    'content_failed_body' => 'Не удалось завершить генерацию контента из-за технической ошибки. Ваша квота не израсходована — попробуйте ещё раз. Если ошибка повторяется, обратитесь в поддержку.',
     'content_retry' => 'Повторить попытку',
     'content_quota_exhausted' => 'Лимит генерации контента на этот месяц исчерпан.',
     'content_upgrade_plans' => 'Посмотреть тарифы',
-    'content_rate_limited' => 'Слишком много запросов; попробуйте позже.',
+    'content_rate_limited' => 'Запрос на генерацию контента для этой компании уже был отправлен недавно. Повторите попытку через :minutes мин.',
     'content_generation_queued' => 'Ваш запрос добавлен в очередь генерации.',
     'content_disabled' => 'Генерация контента сейчас отключена.',
     'content_already_running' => 'Генерация уже выполняется.',
@@ -173,4 +174,20 @@ return [
 
     // company listing card
     'view_profile' => 'Смотреть профиль',
+
+    // ⚡company-list (country / state listing)
+    'listing' => [
+        'filter_category' => 'Категория',
+        'filter_state' => 'Провинция',
+        'filter_all' => 'Все',
+        'filter_verified' => 'Верификация',
+        'filter_verified_hint' => 'Только проверенные компании',
+        'sort_label' => 'Сортировка',
+        'sort_newest' => 'Сначала новые',
+        'sort_most_viewed' => 'Самые просматриваемые',
+        'clear_filters' => 'Сбросить фильтры',
+        'results_count' => 'компаний: :count',
+        'empty' => 'Здесь пока не опубликовано ни одной компании.',
+        'empty_filtered' => 'Нет компаний, соответствующих этим фильтрам.',
+    ],
 ];

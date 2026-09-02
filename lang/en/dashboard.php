@@ -27,4 +27,19 @@ return [
 
     'companies_quick_list_title' => 'Your companies',
     'view_all_companies' => 'View all',
+
+    // ⚡widget-* dashboard widgets
+    'empty_no_invoices' => 'No invoices yet.',
+    'company_is_live' => 'Live',
+
+    // ⚡infobar header metrics
+    'stats' => [
+        'published_companies' => 'Published companies',
+        'no_companies_yet' => 'No companies yet',
+        'total_views' => 'Total views',
+        'views_no_pages' => 'No published pages yet',
+        'views_trend_window' => 'Compared with the previous 30 days',
+        'no_active_plan' => 'No active plan',
+        'plan_days_remaining' => ':count days remaining',
+    ],
 ];

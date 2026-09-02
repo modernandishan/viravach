@@ -533,6 +533,15 @@ class extends Component
 
 <div class="d-flex flex-column-fluid align-items-start container-xxl">
     <div class="content flex-row-fluid">
+        {{-- Same infobar + tab bar as the rest of the dashboard. This inbox has
+             no tab of its own (it is role-gated — support agents and company
+             owners only — so a permanently visible tab would be wrong for most
+             users), which means no tab shows as active here. The navigation
+             back to the other dashboard pages is still worth having, and the
+             scroll panes below are fixed-height (mh-500px / mh-400px), so the
+             infobar changes nothing structurally. --}}
+        <livewire:dashboard-elements.infobar/>
+
         <div class="card card-flush">
             <div class="card-header align-items-center py-5">
                 <div class="card-title">

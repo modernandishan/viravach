@@ -63,15 +63,16 @@ new class extends Component
 
     /**
      * The 10 states with the most published companies, cached forever per
-     * locale, same treatment as {@see topCategories()}.
+     * locale, same treatment as {@see topCategories()}. v2: carries the
+     * parent country slug for the /countries/{country}/{state} URLs.
      *
-     * @return array<int, array{slug: string, label: string, count: int}>
+     * @return array<int, array{slug: string, country: string, label: string, count: int}>
      */
     public function topStates(): array
     {
         $locale = app()->getLocale();
 
-        return Cache::rememberForever("footer.top_states.v1.{$locale}", function () use ($locale): array {
+        return Cache::rememberForever("footer.top_states.v2.{$locale}", function () use ($locale): array {
             $counts = CompanyPublication::query()
                 ->active()
                 ->whereNotNull('state_id')
@@ -81,13 +82,15 @@ new class extends Component
 
             return State::query()
                 ->active()
+                ->with('country:id,slug')
                 ->get()
                 ->map(fn (State $state): array => [
                     'slug' => $state->slug,
+                    'country' => $state->country?->slug,
                     'label' => $state->getTranslation('name', $locale),
                     'count' => (int) ($counts[$state->id] ?? 0),
                 ])
-                ->filter(fn (array $state): bool => $state['count'] > 0)
+                ->filter(fn (array $state): bool => $state['count'] > 0 && $state['country'] !== null)
                 ->sortByDesc('count')
                 ->take(10)
                 ->values()
@@ -269,7 +272,7 @@ new class extends Component
                     <ul class="vv-footer-links">
                         @foreach ($states as $state)
                             <li>
-                                <a href="{{ route('companies.state', ['slug' => $state['slug']]) }}">
+                                <a href="{{ route('companies.state', ['country' => $state['country'], 'state' => $state['slug']]) }}">
                                     {{ $state['label'] }}
                                     <span class="vv-footer-link-count">({{ number_format($state['count']) }})</span>
                                 </a>

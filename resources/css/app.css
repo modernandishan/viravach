@@ -21,8 +21,33 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+/*
+| @source feeds Tailwind's utility generator: it emits a utility only when
+| it finds that class name in a scanned file. Scan ONLY templates that
+| genuinely use Tailwind classes — currently just Laravel's default
+| (Tailwind) paginator, which the dashboard reaches via bare ->links()
+| calls in ⚡my-companies and ⚡payments.
+|
+| Do NOT scan storage/framework/views here. Those compiled templates are
+| Metronic/Bootstrap markup, and scanning them makes Tailwind emit a
+| utility for every Bootstrap class name that collides with one of its
+| own: .collapse, .table, .fixed, .sticky, .visible, .hidden, .container,
+| .border, .block, .inline, .grid, .flex, .static, .absolute, .relative.
+|
+| `.collapse` is the destructive one. Bootstrap means "collapsible
+| region" and keeps it visible when paired with .show
+| (`.collapse:not(.show){display:none}`); Tailwind means
+| `visibility: collapse`, which renders like visibility:hidden on a
+| non-table element. The two set DIFFERENT properties, so there is no
+| cascade contest for layer order or specificity to win — Metronic never
+| declares `visibility` on .collapse, so Tailwind's rule simply applies
+| and hides the contents of every Bootstrap collapse body on the page,
+| with the markup still fully present in the DOM and no error anywhere.
+| That is what silently blanked the /profile card bodies
+| (pages/dashboard/⚡profile.blade.php wraps each card body in
+| `<div class="collapse show">`).
+*/
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
@@ -343,21 +368,30 @@
                 flex-wrap: wrap;
                 gap: 16px;
             }
+            /* The plate sizes itself to the badge, it does not size the badge.
+               It used to be a hard 110x60 box with 8px padding, leaving 94x44
+               for the image — and an eNamad seal is portrait (roughly 130x160),
+               so object-fit:contain scaled it down to about 36x44 and it read
+               as a sliver. min-* keeps the plate from collapsing while the
+               external image loads without ever capping the image itself.
+               Stays white in both themes on purpose: a dark seal has to remain
+               legible on the dark footer surface. */
             .vv-footer-trust-plate {
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                inline-size: 110px;
-                block-size: 60px;
+                min-inline-size: 96px;
+                min-block-size: 96px;
                 background: #FFFFFF;
                 border-radius: 12px;
-                padding: 8px;
-                overflow: hidden;
+                padding: 12px;
             }
             .vv-footer-trust-plate img {
+                inline-size: auto;
+                block-size: auto;
+                /* Natural size, never distorted; the only constraint is that it
+                   cannot overflow its column on a narrow viewport. */
                 max-inline-size: 100%;
-                max-block-size: 100%;
-                object-fit: contain;
             }
             .vv-footer-locales {
                 display: flex;
@@ -711,4 +745,258 @@
 }
 [data-bs-theme=dark] .vv-number-value {
     color: var(--bs-primary-text-emphasis);
+}
+
+/* ===== maps/⚡world-globe ===== */
+.vv-globe-section {
+    padding-block: 32px;
+}
+.vv-globe-section h2 {
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #0F1720; /* --vv-ink-900 */
+    margin: 0 0 4px;
+}
+.vv-globe-sub {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #64748B; /* --vv-ink-500 */
+    margin: 0 0 24px;
+}
+/* List first in DOM order (SEO surface + fallback); the globe is the
+   supporting visual and never dominates the layout. */
+.vv-globe-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 24px;
+    align-items: stretch;
+}
+/* Collapsed when the chart could not be initialized: no dead empty box. */
+.vv-globe-canvas-wrapper-empty {
+    display: none;
+}
+.vv-globe-canvas-wrapper {
+    background: #FFFFFF; /* --vv-white */
+    border: 1px solid #E9EEF3; /* --vv-ink-100 */
+    border-radius: 16px; /* --vv-radius-lg (media block) */
+    box-shadow: 0 1px 2px rgba(15, 23, 32, .06); /* --vv-shadow-sm */
+    padding: 24px;
+    overflow: hidden;
+}
+/* Fixed aspect ratio, no fixed pixel width: the canvas scales with its column. */
+.vv-globe-canvas {
+    inline-size: 100%;
+    aspect-ratio: 1 / 1;
+    min-block-size: 320px;
+}
+.vv-globe-list-wrapper {
+    min-inline-size: 0;
+}
+.vv-globe-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-block-size: 560px;
+    overflow-y: auto;
+}
+.vv-globe-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #FFFFFF; /* --vv-white */
+    border: 1px solid #E9EEF3; /* --vv-ink-100 */
+    border-radius: 8px; /* --vv-radius-sm */
+    text-decoration: none;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #33414F; /* --vv-ink-700 */
+    transition: background-color .2s ease-out;
+}
+.vv-globe-link:hover {
+    background: #F1F7FB; /* --vv-primary-050 */
+    color: #0F4C81; /* --vv-primary-700 */
+    text-decoration: none;
+}
+.vv-globe-link-name {
+    font-weight: 600;
+    color: inherit;
+}
+.vv-globe-link-count {
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 400;
+    color: #64748B; /* --vv-ink-500 */
+    white-space: nowrap;
+}
+@media (max-width: 991.98px) {
+    .vv-globe-section {
+        padding-block: 24px;
+    }
+    .vv-globe-layout {
+        grid-template-columns: 1fr;
+    }
+    .vv-globe-list {
+        max-block-size: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .vv-globe-link {
+        transition: none;
+    }
+}
+
+/* ===== company-elements/⚡company-list ===== */
+.vv-list-toolbar-label {
+    display: block;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #64748B; /* --vv-ink-500 */
+    margin-block-end: 8px;
+}
+.vv-list-count {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #64748B; /* --vv-ink-500 */
+}
+.vv-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding-block: 64px;
+    text-align: center;
+}
+.vv-list-empty-icon {
+    font-size: 40px;
+    color: #CBD5E1; /* --vv-ink-300 */
+}
+.vv-list-empty-text {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #64748B; /* --vv-ink-500 */
+}
+/* Loading state. The results block is never removed from the flow while a
+   filter change is in flight — it only fades — so the grid keeps its exact
+   height and the page below it (footer included) never jumps. Only opacity
+   animates, at 150ms (DESIGN.md §9). */
+.vv-list-results {
+    transition: opacity .15s ease-out;
+}
+.vv-list-results-loading {
+    opacity: .45;
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .vv-list-results {
+        transition: none;
+    }
+}
+
+/* ===== dashboard-elements/⚡widget-* ===== */
+/* Every selector here is namespaced .vv-dash-* and used only by the dashboard
+   widget components. Nothing global, nothing that can reach another page. */
+.vv-dash-chart {
+    inline-size: 100%;
+    block-size: 320px;
+}
+/* Set by the chart's own script when amCharts is unavailable: collapse
+   rather than leave a dead 320px frame. */
+.vv-dash-chart-empty {
+    display: none;
+}
+.vv-dash-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+.vv-dash-empty-icon {
+    font-size: 48px;
+    color: #CBD5E1; /* --vv-ink-300 */
+}
+.vv-dash-empty-title {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #0F1720; /* --vv-ink-900 */
+}
+.vv-dash-empty-body {
+    margin: 0;
+    max-inline-size: 480px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #64748B; /* --vv-ink-500 */
+}
+.vv-dash-widget-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding-block: 32px;
+    text-align: center;
+}
+.vv-dash-widget-empty-icon {
+    font-size: 32px;
+    color: #CBD5E1; /* --vv-ink-300 */
+}
+.vv-dash-widget-empty-text {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #64748B; /* --vv-ink-500 */
+}
+
+/* ===== Dark mode (dashboard-elements/⚡widget-*) ===== */
+[data-bs-theme=dark] .vv-dash-empty-title {
+    color: var(--bs-emphasis-color);
+}
+[data-bs-theme=dark] .vv-dash-empty-body,
+[data-bs-theme=dark] .vv-dash-widget-empty-text {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-dash-empty-icon,
+[data-bs-theme=dark] .vv-dash-widget-empty-icon {
+    color: var(--bs-border-color);
+}
+
+/* ===== Dark mode (company-elements/⚡company-list) ===== */
+[data-bs-theme=dark] .vv-list-toolbar-label,
+[data-bs-theme=dark] .vv-list-count,
+[data-bs-theme=dark] .vv-list-empty-text {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-list-empty-icon {
+    color: var(--bs-border-color);
+}
+
+/* ===== Dark mode (maps/⚡world-globe) ===== */
+[data-bs-theme=dark] .vv-globe-section h2 {
+    color: var(--bs-emphasis-color);
+}
+[data-bs-theme=dark] .vv-globe-sub {
+    color: var(--bs-secondary-color);
+}
+[data-bs-theme=dark] .vv-globe-canvas-wrapper,
+[data-bs-theme=dark] .vv-globe-link {
+    background: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+[data-bs-theme=dark] .vv-globe-link {
+    color: var(--bs-body-color);
+}
+[data-bs-theme=dark] .vv-globe-link:hover {
+    background: var(--bs-secondary-bg);
+    color: var(--bs-primary-text-emphasis);
+}
+[data-bs-theme=dark] .vv-globe-link-count {
+    color: var(--bs-secondary-color);
 }

@@ -27,4 +27,19 @@ return [
 
     'companies_quick_list_title' => 'شركاتك',
     'view_all_companies' => 'عرض الكل',
+
+    // ⚡widget-* dashboard widgets
+    'empty_no_invoices' => 'لا توجد فواتير بعد.',
+    'company_is_live' => 'منشورة',
+
+    // ⚡infobar header metrics
+    'stats' => [
+        'published_companies' => 'الشركات المنشورة',
+        'no_companies_yet' => 'لم تسجّل أي شركة بعد',
+        'total_views' => 'إجمالي المشاهدات',
+        'views_no_pages' => 'لا توجد صفحات منشورة بعد',
+        'views_trend_window' => 'مقارنةً بالثلاثين يومًا السابقة',
+        'no_active_plan' => 'لا توجد خطة نشطة',
+        'plan_days_remaining' => 'يتبقى :count يوم',
+    ],
 ];

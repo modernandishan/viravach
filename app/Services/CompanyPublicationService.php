@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\CompanyPublication;
 use App\Models\SeoMeta;
+use App\Support\DashboardWidgetCache;
 use Illuminate\Support\Facades\DB;
 
 class CompanyPublicationService
@@ -16,9 +17,17 @@ class CompanyPublicationService
      */
     public function publish(Company $company): CompanyPublication
     {
-        $company->loadMissing(['categories', 'primaryAddress', 'seo', 'media']);
+        $company->loadMissing(['categories', 'primaryAddress', 'exportCountries', 'seo', 'media']);
 
         return DB::transaction(function () use ($company): CompanyPublication {
+            // Resolved inside the closure, not outside it: a variable declared
+            // in the enclosing scope is NOT visible here unless it is named in
+            // `use`, and omitting it made every approve/republish throw
+            // "Undefined variable $address". The relation is already loaded by
+            // the loadMissing() above, so this costs nothing. A company with
+            // no primary address is normal — every field below stays null.
+            $address = $company->primaryAddress;
+
             $publication = CompanyPublication::updateOrCreate(
                 ['company_id' => $company->id],
                 [
@@ -41,15 +50,34 @@ class CompanyPublicationService
                     'is_verified' => $company->is_verified,
                     'is_featured' => $company->is_featured,
                     'employee_range' => $company->employee_range,
-                    'state_id' => $company->primaryAddress?->state_id,
+                    // Primary-address snapshot. Copied rather than read
+                    // through at render time, so an unapproved address edit
+                    // cannot reach the public page or ViraBot's context.
+                    'state_id' => $address?->state_id,
+                    'country_id' => $address?->country_id,
+                    'city_id' => $address?->city_id,
+                    'address_line' => $address?->getTranslations('address_line') ?: null,
+                    'postal_code' => $address?->postal_code,
+                    'latitude' => $address?->latitude,
+                    'longitude' => $address?->longitude,
                     'published_at' => now(),
                 ],
             );
 
             $publication->categories()->sync($company->categories->pluck('id'));
 
+            // Same reason as the address: previously read through to the live
+            // draft on both the public page and in ViraBot's context.
+            $publication->exportCountries()->sync($company->exportCountries->pluck('id'));
+
             $this->copySeoMeta($company, $publication);
             $this->copyMedia($company, $publication);
+
+            // Publishing changes what the owner's dashboard widgets show
+            // (view-derived widgets gain a page, the subscriptions widget can
+            // gain a company). Clear their cached payloads so the dashboard is
+            // never stale immediately after an approval.
+            DashboardWidgetCache::forgetForUser($company->user_id);
 
             return $publication;
         });

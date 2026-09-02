@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\DetectLocaleFromIp;
+use App\Models\State;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 
@@ -103,8 +104,36 @@ Route::group(
         Route::livewire('/category/{slug}', 'pages::company-category')
             ->name('companies.category');
 
-        Route::livewire('/country/state/{slug}', 'pages::company-state')
+        // Geographic directory hierarchy: countries index, country directory,
+        // state directory. Slugs stay English and non-translatable; only the
+        // URL prefix is localized.
+        Route::livewire('/countries', 'pages::countries')
+            ->name('companies.countries');
+
+        Route::livewire('/countries/{country}', 'pages::country')
+            ->name('companies.country');
+
+        Route::livewire('/countries/{country}/{state}', 'pages::company-state')
             ->name('companies.state');
+
+        // Legacy geographic path (pre-hierarchy). Permanent 301 to the new
+        // three-level URL for the same locale, query string preserved. It
+        // resolves the target itself, renders nothing, and never had a
+        // sitemap entry (no sitemap generator emits this path).
+        Route::get('/country/state/{slug}', function (string $slug) {
+            $state = State::query()
+                ->where('slug', $slug)
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            $country = $state->country;
+
+            abort_unless($country && $country->is_active, 404);
+
+            return redirect()
+                ->to(route('companies.state', ['country' => $country->slug, 'state' => $state->slug]), 301)
+                ->withQueryString();
+        })->name('companies.state.legacy');
 
         Route::livewire('/companies/{slug}', 'pages::company')
             ->name('companies.show');

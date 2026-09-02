@@ -57,8 +57,17 @@ new class extends Component {
             <!--end::Menu separator-->
             <!--begin::Menu item-->
             @hasanyrole(['super_admin', 'shareholder'])
+            {{-- The panel's own named route, never a hardcoded path. It is
+                 registered with ->domain(config('domains.admin')) and
+                 ->path('') in AdminPanelProvider, so route() resolves to the
+                 admin host's root and follows any future host or path change
+                 on its own. The previous href="/admin" was wrong twice over:
+                 it stayed on whatever host rendered the menu (app.viravach.com
+                 has no /admin route at all), and the panel has no /admin path
+                 prefix to begin with. Matches how ⚡sign-in and ⚡secure-login
+                 already redirect admins after login. --}}
             <div class="menu-item px-5">
-                <a href="/admin" class="menu-link px-5">
+                <a href="{{ route('filament.admin.pages.dashboard') }}" class="menu-link px-5">
                     {{ __('menu.admin_dashboard') }}
                 </a>
             </div>
@@ -77,6 +86,20 @@ new class extends Component {
                 </a>
             </div>
             <!--end::Menu item-->
+            {{-- DISABLED: the "more options" (گزینه‌های بیشتر) nested dropdown.
+                 Leftover Metronic demo markup. Its links point at
+                 account/referrals.html, account/billing.html and
+                 account/statements.html — none of which exist under public/,
+                 and none of which match any route — so every entry was a dead
+                 link, with hardcoded Persian labels bypassing __(). The
+                 notifications switch inside it is disabled along with the rest:
+                 it is a bare checkbox with no wire:model and no enclosing form,
+                 so it never persisted anything either.
+
+                 Commented out with a Blade comment, not an HTML one, so none of
+                 it reaches the browser. Kept in place rather than deleted so it
+                 can be rebuilt as real functionality later. --}}
+            {{--
             <!--begin::Menu item-->
             <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                  data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'left-start' : 'right-start' }}"
@@ -136,6 +159,8 @@ new class extends Component {
                 <!--end::Menu sub-->
             </div>
             <!--end::Menu item-->
+            --}}
+
             <!--begin::Menu separator-->
             <div class="separator my-2"></div>
             <!--end::Menu separator-->

@@ -131,10 +131,11 @@ return [
     'content_processing_hint' => 'يمكنك إغلاق الصفحة؛ تستمر العملية في الخلفية.',
     'content_ready_at' => 'تم توليد المحتوى في :date',
     'content_failed_title' => 'فشلت عملية التوليد السابقة',
+    'content_failed_body' => 'تعذّر إكمال توليد المحتوى بسبب مشكلة تقنية. لم تُستهلك حصتك — يرجى المحاولة مرة أخرى. وإذا تكرّر الأمر، تواصل مع الدعم.',
     'content_retry' => 'المحاولة مجددًا',
     'content_quota_exhausted' => 'انتهت حصة توليد المحتوى لهذا الشهر.',
     'content_upgrade_plans' => 'عرض الباقات',
-    'content_rate_limited' => 'طلبات كثيرة جدًا؛ حاول لاحقًا.',
+    'content_rate_limited' => 'تم بالفعل إرسال طلب توليد محتوى لهذه الشركة مؤخرًا. يرجى المحاولة مرة أخرى بعد :minutes دقيقة.',
     'content_generation_queued' => 'تمت إضافة طلبك إلى قائمة التوليد.',
     'content_disabled' => 'توليد المحتوى معطّل حاليًا.',
     'content_already_running' => 'عملية توليد قيد التنفيذ حاليًا.',
@@ -173,4 +174,20 @@ return [
 
     // company listing card
     'view_profile' => 'عرض الملف',
+
+    // ⚡company-list (country / state listing)
+    'listing' => [
+        'filter_category' => 'الفئة',
+        'filter_state' => 'المحافظة',
+        'filter_all' => 'الكل',
+        'filter_verified' => 'التوثيق',
+        'filter_verified_hint' => 'الشركات الموثّقة فقط',
+        'sort_label' => 'ترتيب حسب',
+        'sort_newest' => 'الأحدث أولاً',
+        'sort_most_viewed' => 'الأكثر مشاهدة',
+        'clear_filters' => 'مسح عوامل التصفية',
+        'results_count' => ':count شركة',
+        'empty' => 'لم يتم نشر أي شركة هنا بعد.',
+        'empty_filtered' => 'لا توجد شركات تطابق عوامل التصفية هذه.',
+    ],
 ];

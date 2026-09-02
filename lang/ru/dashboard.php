@@ -27,4 +27,19 @@ return [
 
     'companies_quick_list_title' => 'Ваши компании',
     'view_all_companies' => 'Смотреть все',
+
+    // ⚡widget-* dashboard widgets
+    'empty_no_invoices' => 'Счетов пока нет.',
+    'company_is_live' => 'Опубликовано',
+
+    // ⚡infobar header metrics
+    'stats' => [
+        'published_companies' => 'Опубликованные компании',
+        'no_companies_yet' => 'Компаний пока нет',
+        'total_views' => 'Всего просмотров',
+        'views_no_pages' => 'Опубликованных страниц пока нет',
+        'views_trend_window' => 'По сравнению с предыдущими 30 днями',
+        'no_active_plan' => 'Нет активного тарифа',
+        'plan_days_remaining' => 'осталось дней: :count',
+    ],
 ];

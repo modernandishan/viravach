@@ -275,7 +275,10 @@ class extends Component {
                     </div>
                 @endif
 
-                @if ($publication->company?->exportCountries->isNotEmpty())
+                {{-- Read from the publication snapshot, not $publication->company:
+                     the previous read-through exposed unapproved draft edits on
+                     a public page. --}}
+                @if ($publication->exportCountries->isNotEmpty())
                     <div class="card mb-6 mb-xl-9">
                         <div class="card-header border-0 pt-6">
                             <div class="card-title">
@@ -283,7 +286,7 @@ class extends Component {
                             </div>
                         </div>
                         <div class="card-body pt-0 d-flex flex-wrap gap-2">
-                            @foreach ($publication->company->exportCountries as $country)
+                            @foreach ($publication->exportCountries as $country)
                                 <span class="badge badge-light-primary fw-bold">{{ $country->name }}</span>
                             @endforeach
                         </div>
@@ -337,6 +340,34 @@ class extends Component {
                             </div>
                         @endif
 
+                        {{-- Business address from the snapshot, rendered only when
+                             a street line was actually published. This is the
+                             company's public business address — never the owner's
+                             personal profile address, which lives on `profiles`
+                             and is never published. --}}
+                        @php
+                            $addressLine = trim((string) $publication->address_line);
+                            $addressParts = array_filter([
+                                $publication->city?->name,
+                                $publication->state?->name,
+                                $publication->country?->name,
+                            ]);
+                        @endphp
+                        @if ($addressLine !== '')
+                            <div class="mb-5">
+                                <div class="fw-bold text-gray-800">{{ __('companies.field_address_line') }}</div>
+                                <div class="text-gray-600">{{ $addressLine }}</div>
+                                @if ($addressParts !== [])
+                                    <div class="text-gray-500 fs-7">{{ implode(', ', $addressParts) }}</div>
+                                @endif
+                                @if ($publication->postal_code)
+                                    <div class="text-gray-500 fs-7" dir="ltr">
+                                        {{ __('companies.field_postal_code') }}: {{ $publication->postal_code }}
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+
                         @if ($publication->social_links)
                             <div class="mb-0">
                                 <div class="fw-bold text-gray-800 mb-2">{{ __('companies.profile_social_links') }}</div>
@@ -350,7 +381,11 @@ class extends Component {
                             </div>
                         @endif
 
-                        @if (! $publication->website && ! $publication->email && ! $publication->phones && ! $publication->social_links)
+                        {{-- $addressLine is part of this block now, so it counts
+                             towards "has contact info" — otherwise a company with
+                             only an address would show the address and the
+                             "nothing provided" notice at the same time. --}}
+                        @if (! $publication->website && ! $publication->email && ! $publication->phones && ! $publication->social_links && $addressLine === '')
                             <div class="text-muted">{{ __('companies.profile_no_contact_info') }}</div>
                         @endif
                     </div>

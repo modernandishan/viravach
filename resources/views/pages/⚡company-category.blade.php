@@ -1,9 +1,7 @@
 <?php
 
-use App\Livewire\Concerns\ListsCompanies;
+use App\Livewire\Concerns\RecordsPageView;
 use App\Models\CompanyCategory;
-use Artesaos\SEOTools\Facades\SEOTools;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -12,7 +10,11 @@ use Livewire\Component;
 new
 #[Layout('layouts::landing')]
 class extends Component {
-    use ListsCompanies;
+    // ListsCompanies is gone: the listing (with its filters, sorting and
+    // crawlable pagination) now lives in ⚡company-list, and the category
+    // subtree is expressed as that component's category scope.
+    // RecordsPageView was reached through that trait, so it is used directly.
+    use RecordsPageView;
 
     public CompanyCategory $category;
 
@@ -25,23 +27,15 @@ class extends Component {
 
         $this->recordPageView($this->category);
 
-        SEOTools::setTitle($this->category->seoTitle());
-
-        if ($description = $this->category->seoDescription()) {
-            SEOTools::setDescription($description);
-        }
-
-        SEOTools::setCanonical(url()->current());
-    }
-
-    protected function filterCompanies(Builder $query): Builder
-    {
-        $categoryIds = $this->category->descendantsAndSelf()->pluck('id');
-
-        return $query->whereHas(
-            'categories',
-            fn (Builder $q) => $q->whereIn('company_categories.id', $categoryIds),
-        );
+        // Pushes the category's SeoMeta (title/description/canonical, OG,
+        // Twitter, JSON-LD) into SEOTools, falling back to the translated
+        // title/company-count description when no SeoMeta row exists (see
+        // CompanyCategory::getSeoFallbackDescription()). Same call as
+        // ⚡country.blade.php and ⚡company-state.blade.php — do not replace
+        // with direct SEOTools::set*() calls, see HasSeo::applySeoTags()'s
+        // own comment on why those shortcuts leak into OG/Twitter/JSON-LD
+        // even without a SeoMeta row.
+        $this->category->applySeoTags();
     }
 
     #[Computed]
@@ -106,23 +100,12 @@ class extends Component {
                 </div>
                 <!--end::Category header card-->
 
-                <!--begin::Companies grid-->
-                <div class="row g-4">
-                    @forelse ($this->companies as $company)
-                        <div class="col-12 col-sm-6 col-lg-4" wire:key="company-{{ $company->id }}">
-                            <livewire:company-elements.company-card :company="$company" />
-                        </div>
-                    @empty
-                        <div class="col-12">
-                            <div class="text-center text-muted py-20">{{ __('companies.no_companies_found') }}</div>
-                        </div>
-                    @endforelse
-                </div>
-                <!--end::Companies grid-->
-
-                <div class="d-flex flex-stack flex-wrap pt-10">
-                    {{ $this->companies->links('livewire::bootstrap') }}
-                </div>
+                {{-- Company listing, scoped to this category and its
+                     descendants — the same subtree
+                     CompanyCategory::publishedCompaniesCount() counts for the
+                     SEO fallback description, so the two never disagree. The
+                     category filter hides itself under a category scope. --}}
+                <livewire:company-elements.company-list :category-id="$category->id" />
 
             </div>
             <!--end::Main-->

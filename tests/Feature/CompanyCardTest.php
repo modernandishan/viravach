@@ -141,7 +141,7 @@ class CompanyCardTest extends TestCase
         $p1->forceFill(['state_id' => $state->id])->save();
         $p2->forceFill(['state_id' => $state->id])->save();
 
-        $stateResponse = $this->get(route('companies.state', ['slug' => $state->slug]));
+        $stateResponse = $this->get(route('companies.state', ['country' => $country->slug, 'state' => $state->slug]));
 
         $stateResponse->assertOk();
         $stateResponse->assertSee('vv-card', false);
@@ -274,7 +274,7 @@ class CompanyCardTest extends TestCase
         ]);
         $publication->forceFill(['state_id' => $state->id])->save();
 
-        $stateResponse = $this->get(route('companies.state', ['slug' => $state->slug]));
+        $stateResponse = $this->get(route('companies.state', ['country' => $country->slug, 'state' => $state->slug]));
         $stateResponse->assertOk();
         $stateResponse->assertSee('row g-4', false);
         $stateResponse->assertSee('col-12 col-sm-6 col-lg-4', false);

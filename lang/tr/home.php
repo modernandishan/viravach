@@ -23,6 +23,10 @@ return [
     ],
 
     // Önemli rakamlar
+    // Küre
+    'globe_title' => 'Tedarikçilerimiz nerede',
+    'globe_subtitle' => 'Dizini kürede keşfedin — vurgulanan ülkelerde kayıtlı şirket var.',
+
     'key_numbers_title' => 'Dizin bir bakışta',
 
     // İstatistikler

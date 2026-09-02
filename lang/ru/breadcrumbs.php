@@ -2,6 +2,7 @@
 
 return [
     'home' => 'Главная',
+    'countries' => 'Страны',
     'terms_and_conditions' => 'Условия использования',
     'sign_in' => 'Войти',
     'secure_login' => 'Безопасный вход',

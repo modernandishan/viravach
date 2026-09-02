@@ -60,4 +60,59 @@ class State extends Model implements Viewable
     {
         return $query->where('is_active', true);
     }
+
+    protected function getSeoFallbackTitle(string $locale): ?string
+    {
+        return $this->getTranslation('name', $locale, false);
+    }
+
+    /**
+     * No SeoMeta row exists for most states today (StateForm only just
+     * gained a SeoMetaSection), so this is the description that actually
+     * ships on /countries/{country}/{state} pages. Built from the
+     * translated state name, its parent country's translated name, and the
+     * published-company count — mirrors Country::getSeoFallbackDescription()
+     * — so the Persian (and other non-English) site never falls back to an
+     * empty or English-only meta description.
+     */
+    protected function getSeoFallbackDescription(string $locale): ?string
+    {
+        $count = $this->publishedCompaniesCount();
+
+        if ($count === 0) {
+            return null;
+        }
+
+        $countryName = $this->country?->getTranslation('name', $locale, false);
+
+        if ($countryName === null) {
+            return null;
+        }
+
+        return __('states.seo_fallback_description', [
+            'count' => number_format($count),
+            'state' => $this->getTranslation('name', $locale, false),
+            'country' => $countryName,
+        ], $locale);
+    }
+
+    /**
+     * A state with no published companies is a thin page: it must stay
+     * live, but should not be indexed until it has real content behind it.
+     */
+    protected function isThinPage(): bool
+    {
+        return $this->publishedCompaniesCount() === 0;
+    }
+
+    /**
+     * Published companies located directly in this state.
+     */
+    protected function publishedCompaniesCount(): int
+    {
+        return CompanyPublication::query()
+            ->active()
+            ->where('state_id', $this->id)
+            ->count();
+    }
 }

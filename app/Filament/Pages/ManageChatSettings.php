@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Settings\ChatSettings;
 use BackedEnum;
+use Closure;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -123,6 +124,25 @@ class ManageChatSettings extends SettingsPage
                                                 ->required(fn (Get $get): bool => (bool) $get('ai_enabled'))
                                                 ->rows(14)
                                                 ->helperText('عبارت {context} را در متن نگه دارید — در زمان اجرا با اطلاعات صفحه/شرکت مربوطه جایگزین می‌شود.')
+                                                /*
+                                                 * Enforced, not merely advised. ViraBotAgent::instructions()
+                                                 * substitutes {context} with str_replace(); a prompt saved
+                                                 * without the placeholder silently drops the entire company
+                                                 * facts block, and the bot answers from nothing with no error
+                                                 * anywhere. Only validated when a prompt is actually present,
+                                                 * so clearing a locale to fall back to config still works.
+                                                 */
+                                                ->rules([
+                                                    fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                                                        if (blank($value)) {
+                                                            return;
+                                                        }
+
+                                                        if (! str_contains((string) $value, '{context}')) {
+                                                            $fail('پرامپت باید شامل عبارت {context} باشد. بدون آن، اطلاعات شرکت و صفحه به هوش مصنوعی ارسال نمی‌شود و ویرابات بدون هیچ خطایی «بی‌اطلاع» پاسخ می‌دهد.');
+                                                        }
+                                                    },
+                                                ])
                                                 ->columnSpanFull(),
                                         ])
                                 )->values()->all()

@@ -81,6 +81,33 @@
          it after Metronic's bundles is safe. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    <!--begin::Bootstrap/Tailwind class-name collision guard-->
+    <!-- app.css imports Tailwind's utility layer. Tailwind and Bootstrap share
+         several class NAMES with different meanings, and where the two set
+         DIFFERENT css properties there is no cascade contest for Metronic to
+         win — Tailwind's declaration simply applies on top.
+
+         .collapse is the destructive one: Bootstrap means "collapsible region"
+         and keeps it visible when paired with .show
+         (.collapse:not(.show){display:none}), while Tailwind means
+         visibility:collapse, which renders like visibility:hidden. That hid the
+         body of every Bootstrap collapse on the site — most visibly the three
+         card bodies on /profile, whose markup was fully present in the DOM with
+         no PHP or JS error.
+
+         The root fix is in resources/css/app.css (it no longer scans compiled
+         Metronic views for utility class names), but that only takes effect
+         after a Vite rebuild. This rule restores Bootstrap's meaning
+         unconditionally, so the collision cannot come back through a stale or
+         future build. Deliberately NOT in app.css: it must not depend on the
+         asset pipeline it is protecting against. -->
+    <style>
+        .collapse {
+            visibility: visible;
+        }
+    </style>
+    <!--end::Bootstrap/Tailwind class-name collision guard-->
+
     @livewireStyles
 
 </head>

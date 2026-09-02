@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Countries\Schemas;
 
+use App\Filament\Schemas\Components\SeoMetaSection;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -138,6 +139,8 @@ class CountryForm
                         )->values()->all()
                     )
                     ->columnSpanFull(),
+
+                SeoMetaSection::make(),
             ]);
     }
 }

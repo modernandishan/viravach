@@ -1,12 +1,163 @@
 <?php
 
+use App\Livewire\Concerns\AggregatesCompanyViews;
+use App\Models\Company;
+use App\Models\CompanyPublication;
+use App\Support\LocalizedDate;
+use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 new class extends Component
 {
-    //
+    use AggregatesCompanyViews;
+
+    /** Window the views trend compares against the one before it. */
+    private const TREND_WINDOW_DAYS = 30;
+
+    /**
+     * Short TTL rather than rememberForever. This renders on every single
+     * dashboard page, so it must not re-run ~6 queries per request — but a
+     * stat that lags behind a publication or a plan change is worse than a
+     * stat that costs a query, and there are no cache-busting hooks in this
+     * codebase. A 10-minute TTL self-heals without wiring Cache::forget()
+     * into CompanyPublicationService::publish() and
+     * CompanySubscriptionService (see the report for that alternative).
+     */
+    private const CACHE_TTL_MINUTES = 10;
+
+    /**
+     * The three header metrics. Locale is part of the key because the plan
+     * name and the formatted expiry date are localized, matching the
+     * per-locale caching convention used by ⚡footer and ⚡world-globe.
+     *
+     * @return array{
+     *     company_count: int,
+     *     published_count: int,
+     *     has_publications: bool,
+     *     total_views: int,
+     *     views_trend_percent: ?int,
+     *     plan_name: ?string,
+     *     plan_days_remaining: ?int,
+     *     plan_expires_at: ?string,
+     *     plan_never_expires: bool,
+     * }
+     */
+    #[Computed]
+    public function stats(): array
+    {
+        $userId = (int) auth()->id();
+        $locale = app()->getLocale();
+
+        return Cache::remember(
+            "dashboard.infobar.stats.v1.{$locale}.{$userId}",
+            now()->addMinutes(self::CACHE_TTL_MINUTES),
+            fn (): array => $this->computeStats($userId),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeStats(int $userId): array
+    {
+        $companyIds = Company::query()
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->pluck('id');
+
+        // "Published" means an approved snapshot whose published_at has
+        // actually arrived — scopeActive(), the same rule the public site
+        // uses, so this count can never claim more than a visitor can see.
+        $publishedIds = $companyIds->isEmpty()
+            ? collect()
+            : CompanyPublication::query()
+                ->active()
+                ->whereIn('company_id', $companyIds)
+                ->pluck('id');
+
+        return [
+            'company_count' => $companyIds->count(),
+            'published_count' => $publishedIds->count(),
+            'has_publications' => $publishedIds->isNotEmpty(),
+            ...$this->viewStats($publishedIds),
+            ...$this->planStats($companyIds->first()),
+        ];
+    }
+
+    /**
+     * Total views plus a genuine 30-days-versus-previous-30-days trend. The
+     * previous window is derived as (last 60 days − last 30 days) so both
+     * numbers come from AggregatesCompanyViews as it already stands; no new
+     * query helper is introduced.
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $publishedIds
+     * @return array<string, mixed>
+     */
+    private function viewStats($publishedIds): array
+    {
+        if ($publishedIds->isEmpty()) {
+            return ['total_views' => 0, 'views_trend_percent' => null];
+        }
+
+        $recent = $this->viewsSinceForPublications($publishedIds, now()->subDays(self::TREND_WINDOW_DAYS));
+        $previous = $this->viewsSinceForPublications($publishedIds, now()->subDays(self::TREND_WINDOW_DAYS * 2)) - $recent;
+
+        return [
+            'total_views' => $this->totalViewsForPublications($publishedIds),
+            // A percentage against zero is undefined, not "infinite growth",
+            // so the indicator is simply omitted for a first active window.
+            'views_trend_percent' => $previous > 0
+                ? (int) round((($recent - $previous) / $previous) * 100)
+                : null,
+        ];
+    }
+
+    /**
+     * Plans are attached to a Company, not to a User, so a user with several
+     * companies has several plans. This shows the first company's — the same
+     * default ⚡subscriptions.blade.php falls back to — and the box links
+     * through to that page where every company's plan is listed.
+     *
+     * @return array<string, mixed>
+     */
+    private function planStats(?int $primaryCompanyId): array
+    {
+        $subscription = $primaryCompanyId === null
+            ? null
+            : Company::query()->find($primaryCompanyId)?->activeSubscription();
+
+        if ($subscription === null) {
+            // Every key is present in both branches so the template can read
+            // them without guarding for a missing index.
+            return [
+                'plan_name' => null,
+                'plan_days_remaining' => null,
+                'plan_expires_at' => null,
+                'plan_never_expires' => false,
+            ];
+        }
+
+        return [
+            'plan_name' => (string) $subscription->plan?->name,
+            // LocalizedDate formats dates, not durations, so the day count is
+            // a plain number through the project's number_format convention;
+            // the expiry date itself goes through LocalizedDate in the title.
+            'plan_days_remaining' => $subscription->ends_at
+                ? max(0, (int) now()->diffInDays($subscription->ends_at, false))
+                : null,
+            'plan_expires_at' => $subscription->ends_at
+                ? LocalizedDate::format($subscription->ends_at)
+                : null,
+            'plan_never_expires' => $subscription->ends_at === null,
+        ];
+    }
 };
 ?>
+
+@php
+    $stats = $this->stats;
+@endphp
 
 <div class="card mb-5 mb-xl-10">
     <div class="card-body pt-9 pb-0">
@@ -82,54 +233,75 @@ new class extends Component
                     <div class="d-flex flex-column flex-grow-1 pe-8">
                         <!--begin::Stats-->
                         <div class="d-flex flex-wrap">
-                            <!--begin::Stat-->
+                            <!--begin::Published companies-->
+                            {{-- No trend indicator: there is no stored previous
+                                 value to compare a company count against, and a
+                                 fabricated one would be worse than none. --}}
                             <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                <!--begin::شماره کارت-->
                                 <div class="d-flex align-items-center">
-                                    <i class="ki-duotone ki-arrow-up fs-3 text-success me-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    <div class="fs-2 fw-bold counted" data-kt-countup="true" data-kt-countup-value="4500" data-kt-countup-prefix="$" data-kt-initialized="1">$4,500</div>
+                                    <div class="fs-2 fw-bold">
+                                        {{ $stats['company_count'] === 0 ? '—' : number_format($stats['published_count']) }}
+                                    </div>
                                 </div>
-                                <!--end::شماره کارت-->
-                                <!--begin::Tags-->
-                                <div class="fw-semibold fs-6 text-gray-500">درآمد</div>
-                                <!--end::Tags-->
+                                <div class="fw-semibold fs-6 text-gray-500">
+                                    {{ $stats['company_count'] === 0
+                                        ? __('dashboard.stats.no_companies_yet')
+                                        : __('dashboard.stats.published_companies') }}
+                                </div>
                             </div>
-                            <!--end::Stat-->
-                            <!--begin::Stat-->
+                            <!--end::Published companies-->
+                            <!--begin::Total views-->
                             <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                <!--begin::شماره کارت-->
                                 <div class="d-flex align-items-center">
-                                    <i class="ki-duotone ki-arrow-down fs-3 text-danger me-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    <div class="fs-2 fw-bold counted" data-kt-countup="true" data-kt-countup-value="80" data-kt-initialized="1">80</div>
+                                    @if ($stats['views_trend_percent'] !== null)
+                                        {{-- Real 30d-vs-previous-30d comparison from the
+                                             views table; only rendered when the previous
+                                             window actually had views to compare with. --}}
+                                        <i class="ki-duotone {{ $stats['views_trend_percent'] >= 0 ? 'ki-arrow-up fs-3 text-success' : 'ki-arrow-down fs-3 text-danger' }} me-2"
+                                           title="{{ __('dashboard.stats.views_trend_window') }}">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    @endif
+                                    <div class="fs-2 fw-bold">
+                                        {{ $stats['has_publications'] ? number_format($stats['total_views']) : '—' }}
+                                    </div>
+                                    @if ($stats['views_trend_percent'] !== null)
+                                        <span class="fs-7 fw-semibold {{ $stats['views_trend_percent'] >= 0 ? 'text-success' : 'text-danger' }} ms-2">
+                                            {{ number_format(abs($stats['views_trend_percent'])) }}%
+                                        </span>
+                                    @endif
                                 </div>
-                                <!--end::شماره کارت-->
-                                <!--begin::Tags-->
-                                <div class="fw-semibold fs-6 text-gray-500">پروژه ها</div>
-                                <!--end::Tags-->
+                                <div class="fw-semibold fs-6 text-gray-500">
+                                    {{ $stats['has_publications']
+                                        ? __('dashboard.stats.total_views')
+                                        : __('dashboard.stats.views_no_pages') }}
+                                </div>
                             </div>
-                            <!--end::Stat-->
-                            <!--begin::Stat-->
-                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                <!--begin::شماره کارت-->
+                            <!--end::Total views-->
+                            <!--begin::Subscription-->
+                            {{-- Actionable: the whole box links to the plans page,
+                                 where every owned company's plan is listed. --}}
+                            <a href="{{ route('subscriptions') }}"
+                               class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3 text-hover-primary">
                                 <div class="d-flex align-items-center">
-                                    <i class="ki-duotone ki-arrow-up fs-3 text-success me-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    <div class="fs-2 fw-bold counted" data-kt-countup="true" data-kt-countup-value="60" data-kt-countup-prefix="%" data-kt-initialized="1">%60</div>
+                                    <div class="fs-2 fw-bold text-gray-900">
+                                        {{ $stats['plan_name'] ?? '—' }}
+                                    </div>
                                 </div>
-                                <!--end::شماره کارت-->
-                                <!--begin::Tags-->
-                                <div class="fw-semibold fs-6 text-gray-500">نرخ موفقیت</div>
-                                <!--end::Tags-->
-                            </div>
-                            <!--end::Stat-->
+                                <div class="fw-semibold fs-6 text-gray-500">
+                                    @if ($stats['plan_name'] === null)
+                                        {{ __('dashboard.stats.no_active_plan') }}
+                                    @elseif ($stats['plan_never_expires'])
+                                        {{ __('subscriptions.never_expires') }}
+                                    @else
+                                        <span title="{{ __('dashboard.subscription_expires_at', ['date' => $stats['plan_expires_at']]) }}">
+                                            {{ __('dashboard.stats.plan_days_remaining', ['count' => number_format($stats['plan_days_remaining'])]) }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </a>
+                            <!--end::Subscription-->
                         </div>
                         <!--end::Stats-->
                     </div>

@@ -27,4 +27,19 @@ return [
 
     'companies_quick_list_title' => 'شرکت‌های شما',
     'view_all_companies' => 'مشاهده همه',
+
+    // ⚡widget-* dashboard widgets
+    'empty_no_invoices' => 'هنوز فاکتوری ثبت نشده است.',
+    'company_is_live' => 'منتشرشده',
+
+    // ⚡infobar header metrics
+    'stats' => [
+        'published_companies' => 'شرکت‌های منتشرشده',
+        'no_companies_yet' => 'هنوز شرکتی ثبت نکرده‌اید',
+        'total_views' => 'مجموع بازدیدها',
+        'views_no_pages' => 'هنوز صفحه‌ی منتشرشده‌ای ندارید',
+        'views_trend_window' => 'در مقایسه با ۳۰ روز پیش از آن',
+        'no_active_plan' => 'بدون طرح فعال',
+        'plan_days_remaining' => ':count روز باقی‌مانده',
+    ],
 ];

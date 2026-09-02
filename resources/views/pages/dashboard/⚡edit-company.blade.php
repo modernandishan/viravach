@@ -360,7 +360,11 @@ class extends Component
         $rateLimitKey = 'ai-content:'.$this->record->id;
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
-            $this->notifyContent(__('companies.content_rate_limited'));
+            // The window is 6 hours, so the visitor has to be told how long —
+            // "try again later" with no number reads as a dead button.
+            $this->notifyContent(__('companies.content_rate_limited', [
+                'minutes' => (int) ceil(RateLimiter::availableIn($rateLimitKey) / 60),
+            ]));
 
             return;
         }
@@ -402,9 +406,23 @@ class extends Component
             : __('companies.content_disabled'));
     }
 
+    /**
+     * Feedback for the AI-content actions, rendered on THIS page.
+     *
+     * It used to be session()->flash('company-status'), which is invisible
+     * here: a wire:click re-renders inside the same request, so flashed data
+     * — written for the *next* request — never appears. Only
+     * ⚡my-companies reads that key, and only line 538's save reaches it,
+     * because a redirect follows there. Every rejection from
+     * requestContentGeneration() was therefore silent: the button looked
+     * dead, and the message later surfaced out of context on another page.
+     * A public property renders immediately in the same round-trip.
+     */
+    public ?string $contentMessage = null;
+
     private function notifyContent(string $message): void
     {
-        session()->flash('company-status', $message);
+        $this->contentMessage = $message;
     }
 
     /**
@@ -596,6 +614,18 @@ class extends Component
                 </div>
             </div>
             <div class="card-body border-top p-9">
+                {{-- Result of the last AI-content action. Rendered from the
+                     component property, not session()->flash(), so it is
+                     visible in the same Livewire round-trip as the click. --}}
+                @if ($contentMessage)
+                    <div class="alert alert-primary d-flex align-items-center mb-6">
+                        <i class="ki-duotone ki-information-5 fs-2 me-3">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                        </i>
+                        <span>{{ $contentMessage }}</span>
+                    </div>
+                @endif
+
                 @if ($contentStatus?->isProcessing())
                     <div class="d-flex flex-column gap-3">
                         <div class="fw-semibold text-gray-700">
@@ -618,7 +648,16 @@ class extends Component
                 @elseif ($contentStatus === \App\Enums\CompanyContentStatus::Failed)
                     <div class="d-flex flex-column gap-3">
                         <div class="text-danger fw-bold">{{ __('companies.content_failed_title') }}</div>
-                        <div class="text-gray-700">{{ $content->failure_reason }}</div>
+                        {{-- A translated, user-facing explanation — never
+                             $content->failure_reason, which holds the raw
+                             internal exception text ("The AI gateway request
+                             failed after 3 attempt(s): HTTP 400."). That is
+                             untranslated English, leaks infrastructure detail
+                             to business owners, and tells them nothing they can
+                             act on. The raw reason stays in the database and is
+                             shown to administrators in the Filament panel and
+                             the logs, where it is actually useful. --}}
+                        <div class="text-gray-700">{{ __('companies.content_failed_body') }}</div>
                         <div>
                             <button type="button" wire:click="requestContentGeneration" class="btn btn-light-primary">
                                 {{ __('companies.content_retry') }}

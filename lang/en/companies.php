@@ -131,10 +131,11 @@ return [
     'content_processing_hint' => 'You can leave this page; the pipeline keeps running.',
     'content_ready_at' => 'Content generated on :date',
     'content_failed_title' => 'The last generation failed',
+    'content_failed_body' => 'Content generation could not be completed because of a technical problem. Your quota was not used — please try again. If it keeps happening, contact support.',
     'content_retry' => 'Try again',
     'content_quota_exhausted' => 'Your AI content generation quota is used up for this month.',
     'content_upgrade_plans' => 'View plans',
-    'content_rate_limited' => 'Too many requests. Please try again later.',
+    'content_rate_limited' => 'A content generation request was already made for this company recently. Please try again in :minutes minutes.',
     'content_generation_queued' => 'Your content was queued for generation.',
     'content_disabled' => 'AI content generation is currently disabled.',
     'content_already_running' => 'A generation is already in progress.',
@@ -173,4 +174,20 @@ return [
 
     // company listing card
     'view_profile' => 'View profile',
+
+    // ⚡company-list (country / state listing)
+    'listing' => [
+        'filter_category' => 'Category',
+        'filter_state' => 'Province',
+        'filter_all' => 'All',
+        'filter_verified' => 'Verification',
+        'filter_verified_hint' => 'Verified companies only',
+        'sort_label' => 'Sort by',
+        'sort_newest' => 'Newest first',
+        'sort_most_viewed' => 'Most viewed',
+        'clear_filters' => 'Clear filters',
+        'results_count' => ':count companies',
+        'empty' => 'No companies have been published here yet.',
+        'empty_filtered' => 'No companies match these filters.',
+    ],
 ];

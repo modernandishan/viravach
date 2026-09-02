@@ -146,8 +146,9 @@ class extends Component {
         $locale = app()->getLocale();
 
         // Cache key must be flushed whenever active states or published
-        // companies change.
-        return Cache::rememberForever("home.sections.states.v1.{$locale}", function () use ($locale): array {
+        // companies change. v2: carries the parent country slug for the
+        // /countries/{country}/{state} URLs.
+        return Cache::rememberForever("home.sections.states.v2.{$locale}", function () use ($locale): array {
             $counts = CompanyPublication::query()
                 ->active()
                 ->whereNotNull('state_id')
@@ -157,13 +158,15 @@ class extends Component {
 
             return State::query()
                 ->active()
+                ->with('country:id,slug')
                 ->get()
                 ->map(fn (State $state): array => [
                     'slug' => $state->slug,
+                    'country' => $state->country?->slug,
                     'name' => $state->getTranslation('name', $locale),
                     'count' => (int) ($counts[$state->id] ?? 0),
                 ])
-                ->filter(fn (array $state): bool => $state['count'] > 0)
+                ->filter(fn (array $state): bool => $state['count'] > 0 && $state['country'] !== null)
                 ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
                 ->values()
                 ->all();
@@ -239,6 +242,10 @@ class extends Component {
         @if ($this->homeNumbers['companies'] > 0)
             <livewire:home.key-numbers :numbers="$this->homeNumbers"/>
         @endif
+
+        {{-- F. Global coverage — own section copy so the homepage never
+             repeats the /countries page heading semantics (h2 here). --}}
+        <livewire:maps.world-globe :heading="__('home.globe_title')" :lead="__('home.globe_subtitle')"/>
 
         {{-- PLACEHOLDER (part 2): the Page row's `intro_body` renders here,
              above the sections, once the intro section is designed. --}}

@@ -44,12 +44,24 @@ use Spatie\Translatable\HasTranslations;
     'is_featured',
     'employee_range',
     'state_id',
+    // Primary-address snapshot. The draft's CompanyAddress row is flattened
+    // onto the publication so the public page and ViraBot never have to read
+    // through to unapproved draft data. `type` and `is_primary` are
+    // deliberately not copied: both are meaningless once a single primary
+    // address is flattened onto the snapshot.
+    'country_id',
+    'city_id',
+    'address_line',
+    'postal_code',
+    'latitude',
+    'longitude',
     'published_at',
 ])]
 #[Translatable([
     'name',
     'legal_name',
     'summary',
+    'address_line',
 ])]
 class CompanyPublication extends Model implements HasMedia, Viewable
 {
@@ -70,6 +82,10 @@ class CompanyPublication extends Model implements HasMedia, Viewable
             'phones' => 'array',
             'social_links' => 'array',
             'content' => 'array',
+            'country_id' => 'integer',
+            'city_id' => 'integer',
+            'latitude' => 'decimal:6',
+            'longitude' => 'decimal:6',
         ];
     }
 
@@ -153,6 +169,30 @@ class CompanyPublication extends Model implements HasMedia, Viewable
     public function state(): BelongsTo
     {
         return $this->belongsTo(State::class);
+    }
+
+    /**
+     * Address country — distinct from exportCountries() below, which is where
+     * the company sells rather than where it is.
+     */
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    /**
+     * Snapshot of the draft's exportCountries. Explicit table name: the
+     * conventional one (company_publication_country) would be ambiguous now
+     * that the publication also has an address country_id.
+     */
+    public function exportCountries(): BelongsToMany
+    {
+        return $this->belongsToMany(Country::class, 'company_publication_export_countries');
     }
 
     /**

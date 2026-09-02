@@ -131,10 +131,11 @@ return [
     'content_processing_hint' => 'Sayfayı kapatabilirsiniz; süreç devam ediyor.',
     'content_ready_at' => 'İçerik :date tarihinde üretildi',
     'content_failed_title' => 'Son üretim başarısız oldu',
+    'content_failed_body' => 'İçerik üretimi teknik bir sorun nedeniyle tamamlanamadı. Kotanız kullanılmadı — lütfen tekrar deneyin. Sorun devam ederse destek ekibiyle iletişime geçin.',
     'content_retry' => 'Tekrar dene',
     'content_quota_exhausted' => 'Bu ayki yapay zekâ içerik üretim hakkınız bitti.',
     'content_upgrade_plans' => 'Planları görüntüle',
-    'content_rate_limited' => 'Çok fazla istek; lütfen sonra tekrar deneyin.',
+    'content_rate_limited' => 'Bu şirket için kısa süre önce zaten bir içerik üretim isteği gönderildi. Lütfen :minutes dakika sonra tekrar deneyin.',
     'content_generation_queued' => 'İsteğiniz üretim kuyruğuna eklendi.',
     'content_disabled' => 'Yapay zekâ içerik üretimi şu anda devre dışı.',
     'content_already_running' => 'Bir üretim şu anda devam ediyor.',
@@ -173,4 +174,20 @@ return [
 
     // company listing card
     'view_profile' => 'Profili görüntüle',
+
+    // ⚡company-list (country / state listing)
+    'listing' => [
+        'filter_category' => 'Kategori',
+        'filter_state' => 'İl',
+        'filter_all' => 'Tümü',
+        'filter_verified' => 'Doğrulama',
+        'filter_verified_hint' => 'Yalnızca doğrulanmış şirketler',
+        'sort_label' => 'Sıralama',
+        'sort_newest' => 'En yeniler',
+        'sort_most_viewed' => 'En çok görüntülenenler',
+        'clear_filters' => 'Filtreleri temizle',
+        'results_count' => ':count şirket',
+        'empty' => 'Burada henüz yayınlanmış şirket yok.',
+        'empty_filtered' => 'Bu filtrelere uyan şirket bulunamadı.',
+    ],
 ];

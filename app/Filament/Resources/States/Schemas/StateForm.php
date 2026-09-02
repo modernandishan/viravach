@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\States\Schemas;
 
+use App\Filament\Schemas\Components\SeoMetaSection;
 use App\Models\Country;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -68,6 +69,8 @@ class StateForm
                         )->values()->all()
                     )
                     ->columnSpanFull(),
+
+                SeoMetaSection::make(),
             ]);
     }
 }

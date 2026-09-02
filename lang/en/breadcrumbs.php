@@ -2,6 +2,7 @@
 
 return [
     'home' => 'Home',
+    'countries' => 'Countries',
     'terms_and_conditions' => 'Terms and Conditions',
     'sign_in' => 'Sign In',
     'secure_login' => 'Secure Login',

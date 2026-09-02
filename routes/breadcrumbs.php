@@ -5,6 +5,7 @@
 use App\Models\Company;
 use App\Models\CompanyCategory;
 use App\Models\CompanyPublication;
+use App\Models\Country;
 use App\Models\State;
 use Diglactic\Breadcrumbs\Breadcrumbs;
 use Diglactic\Breadcrumbs\Generator as Trail;
@@ -28,16 +29,36 @@ Breadcrumbs::for('companies.category', function (Trail $trail, string $slug) {
     }
 });
 
-// شرکت‌های استان
-Breadcrumbs::for('companies.state', function (Trail $trail, string $slug) {
+// کشورها (اینکس جغرافیایی)
+Breadcrumbs::for('companies.countries', function (Trail $trail) {
     $trail->parent('home');
 
-    $state = State::query()
+    $trail->push(__('breadcrumbs.countries'), route('companies.countries'));
+});
+
+// دایرکتوری کشور
+Breadcrumbs::for('companies.country', function (Trail $trail, string $slug) {
+    $trail->parent('companies.countries');
+
+    $country = Country::query()
         ->where('slug', $slug)
         ->where('is_active', true)
         ->firstOrFail();
 
-    $trail->push($state->name, route('companies.state', ['slug' => $state->slug]));
+    $trail->push($country->name, route('companies.country', ['country' => $country->slug]));
+});
+
+// استان‌های کشور
+Breadcrumbs::for('companies.state', function (Trail $trail, string $countrySlug, string $stateSlug) {
+    $trail->parent('companies.country', $countrySlug);
+
+    $state = State::query()
+        ->where('slug', $stateSlug)
+        ->where('is_active', true)
+        ->whereHas('country', fn ($query) => $query->where('slug', $countrySlug))
+        ->firstOrFail();
+
+    $trail->push($state->name, route('companies.state', ['country' => $countrySlug, 'state' => $state->slug]));
 });
 
 // پروفایل عمومی شرکت (از روی اسنپ‌شات منتشرشده)

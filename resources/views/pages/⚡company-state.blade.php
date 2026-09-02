@@ -1,45 +1,48 @@
 <?php
 
-use App\Livewire\Concerns\ListsCompanies;
+use App\Livewire\Concerns\RecordsPageView;
 use App\Models\State;
-use Artesaos\SEOTools\Facades\SEOTools;
-use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 new
 #[Layout('layouts::landing')]
 class extends Component {
-    use ListsCompanies;
+    // ListsCompanies is gone: the listing (with its filters, sorting and
+    // crawlable pagination) now lives in ⚡company-list. RecordsPageView was
+    // reached through that trait, so it is used directly here.
+    use RecordsPageView;
 
-    public State $state;
+    public State $stateModel;
 
-    public function mount(string $slug): void
+    public function mount(string $country, string $state): void
     {
-        $this->state = State::query()
-            ->where('slug', $slug)
+        // State slugs are globally unique, but the URL is country-scoped: a
+        // state slug resolving under a mismatching (or inactive) country
+        // segment must 404, never render under the wrong parent.
+        $this->stateModel = State::query()
+            ->where('slug', $state)
             ->where('is_active', true)
+            ->whereHas('country', fn ($query) => $query
+                ->where('slug', $country)
+                ->where('is_active', true))
             ->firstOrFail();
 
-        $this->recordPageView($this->state);
+        $this->recordPageView($this->stateModel);
 
-        SEOTools::setTitle($this->state->seoTitle());
-
-        if ($description = $this->state->seoDescription()) {
-            SEOTools::setDescription($description);
-        }
-
-        SEOTools::setCanonical(url()->current());
-    }
-
-    protected function filterCompanies(Builder $query): Builder
-    {
-        return $query->where('state_id', $this->state->id);
+        // Pushes the state's SeoMeta (title/description/canonical, OG,
+        // Twitter, JSON-LD) into SEOTools, falling back to the translated
+        // name/company-count description when no SeoMeta row exists (see
+        // State::getSeoFallbackDescription()). Same call as
+        // ⚡country.blade.php — do not replace with direct SEOTools::set*()
+        // calls, see HasSeo::applySeoTags()'s own comment on why those
+        // shortcuts leak into OG/Twitter/JSON-LD even without a SeoMeta row.
+        $this->stateModel->applySeoTags();
     }
 
     public function render()
     {
-        return $this->view()->title($this->state->name.' | '.__('globals.viravach'));
+        return $this->view()->title($this->stateModel->name.' | '.__('globals.viravach'));
     }
 };
 ?>
@@ -50,28 +53,14 @@ class extends Component {
         <!--begin::State header card-->
         <div class="card mb-6 mb-xl-9">
             <div class="card-body">
-                <h1 class="fs-2 fw-bold text-gray-900 mb-0">{{ $state->name }}</h1>
+                <h1 class="fs-2 fw-bold text-gray-900 mb-0">{{ $stateModel->name }}</h1>
             </div>
         </div>
         <!--end::State header card-->
 
-        <!--begin::Companies grid-->
-        <div class="row g-4">
-            @forelse ($this->companies as $company)
-                <div class="col-12 col-sm-6 col-lg-4" wire:key="company-{{ $company->id }}">
-                    <livewire:company-elements.company-card :company="$company" />
-                </div>
-            @empty
-                <div class="col-12">
-                    <div class="text-center text-muted py-20">{{ __('companies.no_companies_found') }}</div>
-                </div>
-            @endforelse
-        </div>
-        <!--end::Companies grid-->
-
-        <div class="d-flex flex-stack flex-wrap pt-10">
-            {{ $this->companies->links('livewire::bootstrap') }}
-        </div>
+        {{-- Company listing, scoped to this state. The state filter hides
+             itself under a state scope — the scope already pins it. --}}
+        <livewire:company-elements.company-list :state-id="$stateModel->id" />
 
     </div>
 </div>

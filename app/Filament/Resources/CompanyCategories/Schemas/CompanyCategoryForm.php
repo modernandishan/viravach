@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CompanyCategories\Schemas;
 
+use App\Filament\Schemas\Components\SeoMetaSection;
 use App\Models\CompanyCategory;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -96,6 +97,8 @@ class CompanyCategoryForm
                         )->values()->all()
                     )
                     ->columnSpanFull(),
+
+                SeoMetaSection::make(),
             ]);
     }
 }

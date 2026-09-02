@@ -138,7 +138,7 @@ class HomePageTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Test Province', false);
-        $response->assertSee('href="'.route('companies.state', ['slug' => 'test-province']).'"', false);
+        $response->assertSee('href="'.route('companies.state', ['country' => $state->country->slug, 'state' => 'test-province']).'"', false);
     }
 
     public function test_key_numbers_reflect_actual_published_data(): void

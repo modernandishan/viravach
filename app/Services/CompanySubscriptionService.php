@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\CompanySubscription;
 use App\Models\Plan;
+use App\Support\DashboardWidgetCache;
 use Illuminate\Support\Facades\DB;
 use Laravelcm\Subscriptions\Services\Period;
 
@@ -53,6 +54,8 @@ class CompanySubscriptionService
         // instead of switching the one just created. Drop the cache so the
         // next read is fresh.
         $company->unsetRelation('planSubscriptions');
+
+        DashboardWidgetCache::forgetForUser($company->user_id);
 
         return $subscription;
     }
@@ -119,6 +122,10 @@ class CompanySubscriptionService
             $company->unsetRelation('planSubscriptions');
 
             $user->forceFill(['trial_used_at' => now()])->save();
+
+            // Starting a trial changes the plan without going through
+            // switchToPlan(), so it clears the dashboard widgets itself.
+            DashboardWidgetCache::forgetForUser($company->user_id);
 
             return $subscription;
         });
