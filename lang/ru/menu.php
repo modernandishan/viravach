@@ -26,4 +26,9 @@ return [
     'create_new_company' => 'Создать новую компанию',
     'admin_dashboard' => 'Панель администратора',
 
+    'popular_categories' => 'Популярные категории',
+    'export_top_title' => 'Лидеры экспорта',
+    'export_top_subtitle' => 'Компании с наивысшим экспортным рейтингом',
+    'view' => 'Просмотреть',
+    'tickets' => 'Тикеты',
 ];

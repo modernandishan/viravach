@@ -217,11 +217,38 @@ new class extends Component
 };
 ?>
 
-{{-- Scoped rule so the advanced panel and dropdowns never flash open before
-     Alpine initializes. Kept local to this component; the landing layout has
-     no global [x-cloak] rule and does not load resources/css/app.css. --}}
+{{-- Livewire wraps a single-file component's <style> block in
+     `[wire:name="home.advance-search"] { ... }`, so every rule below is
+     already scoped to this component's subtree and must be written as a
+     descendant selector — no extra prefix, and nothing here leaks into the
+     rest of the site. The landing layout has no global [x-cloak] rule and
+     does not load resources/css/app.css, and the two theme defaults
+     corrected below must not be patched globally. --}}
 <style>
     [x-cloak] { display: none !important; }
+
+    /* The two dropdown triggers are <button> elements borrowing the
+       .form-select look. Bootstrap paints its own decorative caret on
+       .form-select as a background-image, which lands next to the manual
+       (and rotating) ki-down icon these triggers already render — two
+       chevrons, one of them static. Drop the painted one so the icon is the
+       only chevron. Real <select> elements elsewhere are untouched. */
+    button.form-select {
+        background-image: none;
+    }
+
+    /* Metronic styles button icons with `.btn > i { padding-right: 0.35rem }`,
+       which RTLCSS flips to `padding-left` in the RTL bundle. A ki-duotone
+       icon flows .path1 inside the content box but pins .path2 with
+       `position: absolute; left: 0` against the *padding* box, so an
+       inline-start padding drags one half of the glyph 0.35rem off the
+       other — harmless in LTR, visibly broken in RTL (the magnifier splits,
+       the cross escapes its circle). Zero the padding and let the margin
+       utility own the gap to the label. */
+    .btn > .ki-magnifier,
+    .btn > .ki-cross-circle {
+        padding: 0;
+    }
 </style>
 
 <form
@@ -253,7 +280,7 @@ new class extends Component
                 <!--begin::Actions-->
                 <div class="d-flex align-items-center gap-3 flex-shrink-0">
                     <button type="submit" class="btn btn-primary w-100 w-md-auto">
-                        <i class="ki-duotone ki-magnifier fs-2 me-1">
+                        <i class="ki-duotone ki-magnifier fs-2 me-2">
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>
@@ -435,7 +462,7 @@ new class extends Component
                 <!--begin::Panel footer-->
                 <div class="d-flex justify-content-end mt-6">
                     <button type="button" class="btn btn-sm btn-light-danger" wire:click="resetFilters">
-                        <i class="ki-duotone ki-cross-circle fs-2 me-1">
+                        <i class="ki-duotone ki-cross-circle fs-2 me-2">
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>

@@ -57,6 +57,30 @@ class CompanyStatePageTest extends TestCase
         $response->assertSee('Test Province');
     }
 
+    public function test_the_state_page_renders_exactly_one_h1(): void
+    {
+        $state = $this->makeState();
+
+        $response = $this->get(route('companies.state', ['country' => $state->country->slug, 'state' => $state->slug]));
+
+        $response->assertOk();
+        // The toolbar heading is demoted to a span on this route, so only
+        // the page card's own h1 remains.
+        $this->assertSame(1, substr_count($response->getContent(), '<h1'));
+    }
+
+    public function test_the_state_page_renders_exactly_one_h1_in_rtl(): void
+    {
+        $state = $this->makeState();
+
+        app()->setLocale('fa');
+
+        $response = $this->get(route('companies.state', ['country' => $state->country->slug, 'state' => $state->slug]));
+
+        $response->assertOk();
+        $this->assertSame(1, substr_count($response->getContent(), '<h1'));
+    }
+
     public function test_it_404s_for_unknown_or_inactive_state(): void
     {
         $this->get(route('companies.state', ['country' => 'no-such-country', 'state' => 'does-not-exist']))->assertNotFound();

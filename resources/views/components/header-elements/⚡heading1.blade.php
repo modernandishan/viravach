@@ -11,7 +11,7 @@ new class extends Component
      * emit a second one (two h1 elements on a page is an SEO fault). Other
      * pages rely on this toolbar heading as their only h1, so it stays.
      */
-    private const SELF_HEADING_ROUTES = ['companies.show', 'home'];
+    private const SELF_HEADING_ROUTES = ['companies.show', 'home', 'companies.countries', 'companies.country', 'companies.state'];
 
     public function with(): array
     {

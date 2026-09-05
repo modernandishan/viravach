@@ -63,12 +63,12 @@ new class extends Component
     <!--begin:صفحه فرود-->
     <div class="d-flex flex-stack flex-wrap flex-lg-nowrap gap-2 mx-5">
         <div class="d-flex flex-column me-5">
-            <div class="fs-6 fw-bold text-gray-800">برترین های صادرات</div>
+            <div class="fs-6 fw-bold text-gray-800">{{ __('menu.export_top_title') }}</div>
             <div class="fs-7 fw-semibold text-muted">
-                کسب و کار ها و شرکت ها با بیشترین امتیاز صادرات
+                {{ __('menu.export_top_subtitle') }}
             </div>
         </div>
-        <a href="{{route('pricing')}}" class="btn btn-sm btn-primary fw-bold">مشاهده</a>
+        <a href="{{route('pricing')}}" class="btn btn-sm btn-primary fw-bold">{{ __('menu.view') }}</a>
     </div>
     <!--end:صفحه فرود-->
 </div>

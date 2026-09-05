@@ -65,6 +65,12 @@ Route::middleware('auth')->group(function () {
     Route::livewire('/chat', 'pages::dashboard.chat')
         ->name('chat');
 
+    // Ticket support: the user's own ticket threads. Access control is the
+    // auth group itself — eligibility is the plan 'support' feature, which
+    // PlanSeeder sets 'true' on every plan (checked in the component).
+    Route::livewire('/tickets', 'pages::dashboard.tickets')
+        ->name('tickets');
+
     Route::livewire('/payments', 'pages::dashboard.payments')
         ->name('payments');
 

@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Media\Tables;
 
+use App\Models\MediaLibraryEntry;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -19,10 +21,56 @@ class MediaTable
 {
     protected static array $translatableProperties = ['title', 'alt', 'caption', 'description'];
 
-    public static function configure(Table $table): Table
+    /**
+     * Per-locale metadata tabs (title/alt/caption/description as Media
+     * custom properties) shared by the table's edit action and the Media
+     * resource's upload action, so the field definitions exist in one place.
+     */
+    public static function translatableTabs(): Tabs
     {
         $locales = config('laravellocalization.supportedLocales');
 
+        return Tabs::make('translations')
+            ->tabs(
+                collect($locales)->map(
+                    fn ($data, string $code) => Tab::make($code)
+                        ->label($data['native'])
+                        ->schema([
+                            TextInput::make("title.{$code}")
+                                ->label('عنوان')
+                                ->maxLength(255),
+                            TextInput::make("alt.{$code}")
+                                ->label('متن جایگزین (Alt)')
+                                ->maxLength(255),
+                            TextInput::make("caption.{$code}")
+                                ->label('توضیحات کوتاه (Caption)')
+                                ->columnSpanFull()
+                                ->maxLength(255),
+                            Textarea::make("description.{$code}")
+                                ->label('توضیحات')
+                                ->rows(5)
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2)
+                )->values()->all()
+            )
+            ->columnSpanFull();
+    }
+
+    /** The locale-keyed payload each translatable property expects. */
+    public static function customPropertiesFromData(array $data): array
+    {
+        $properties = [];
+
+        foreach (static::$translatableProperties as $property) {
+            $properties[$property] = $data[$property] ?? [];
+        }
+
+        return $properties;
+    }
+
+    public static function configure(Table $table): Table
+    {
         return $table
             ->columns([
                 ImageColumn::make('preview')
@@ -65,31 +113,7 @@ class MediaTable
                             fn (Media $record) => $record->getUrl(),
                             fn (Media $record) => $record->name,
                         )->imageHeight(200),
-                        Tabs::make('translations')
-                            ->tabs(
-                                collect($locales)->map(
-                                    fn ($data, string $code) => Tab::make($code)
-                                        ->label($data['native'])
-                                        ->schema([
-                                            TextInput::make("title.{$code}")
-                                                ->label('عنوان')
-                                                ->maxLength(255),
-                                            TextInput::make("alt.{$code}")
-                                                ->label('متن جایگزین (Alt)')
-                                                ->maxLength(255),
-                                            TextInput::make("caption.{$code}")
-                                                ->label('توضیحات کوتاه (Caption)')
-                                                ->columnSpanFull()
-                                                ->maxLength(255),
-                                            Textarea::make("description.{$code}")
-                                                ->label('توضیحات')
-                                                ->rows(5)
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->columns(2)
-                                )->values()->all()
-                            )
-                            ->columnSpanFull(),
+                        static::translatableTabs(),
                     ])
                     ->fillForm(function (Media $record) {
                         $data = [];
@@ -101,8 +125,8 @@ class MediaTable
                         return $data;
                     })
                     ->action(function (array $data, Media $record) {
-                        foreach (static::$translatableProperties as $property) {
-                            $record->setCustomProperty($property, $data[$property] ?? []);
+                        foreach (static::customPropertiesFromData($data) as $property => $value) {
+                            $record->setCustomProperty($property, $value);
                         }
 
                         $record->save();
@@ -112,6 +136,18 @@ class MediaTable
                             ->success()
                             ->send();
                     }),
+                // Deleting a Media row also removes its file and conversions —
+                // spatie's Media::delete() handles that; nothing custom here.
+                // Gated to manually-uploaded library files only: media attached
+                // to a real Company/Category/... owner must never be deletable
+                // from this list. Closure authorize per the CompaniesTable
+                // convention for non-Shield-policy gating. No bulk-delete
+                // counterpart on purpose: safely scoping a bulk selection the
+                // same way is not worth the risk of mass-deleting attached
+                // media.
+                DeleteAction::make()
+                    ->label('حذف')
+                    ->authorize(fn (Media $record): bool => MediaLibraryEntry::owns($record)),
             ])
             ->recordAction('edit');
     }

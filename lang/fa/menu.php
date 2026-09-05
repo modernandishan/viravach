@@ -26,4 +26,9 @@ return [
     'create_new_company' => 'ایجاد شرکت جدید',
     'admin_dashboard' => 'پیشخوان مدیریت',
 
+    'popular_categories' => 'دسته های پر بازدید',
+    'export_top_title' => 'برترین های صادرات',
+    'export_top_subtitle' => 'کسب و کار ها و شرکت ها با بیشترین امتیاز صادرات',
+    'view' => 'مشاهده',
+    'tickets' => 'تیکت‌ها',
 ];

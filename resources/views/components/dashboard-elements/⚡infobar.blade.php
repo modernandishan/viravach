@@ -366,6 +366,13 @@ new class extends Component
                 </a>
             </li>
             <!--end::Nav item-->
+            <!--begin::Nav item-->
+            <li class="nav-item mt-2">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('tickets') ? 'active' : '' }}" href="{{ route('tickets') }}">
+                    {{ __('menu.tickets') }}
+                </a>
+            </li>
+            <!--end::Nav item-->
         </ul>
         <!--begin::Navs-->
     </div>

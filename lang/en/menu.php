@@ -25,4 +25,9 @@ return [
     'edit_profile' => 'Edit profile',
     'create_new_company' => 'Create new company',
     'admin_dashboard' => 'Admin Dashboard',
+    'popular_categories' => 'Popular categories',
+    'export_top_title' => 'Export leaders',
+    'export_top_subtitle' => 'Businesses and companies with the highest export scores',
+    'view' => 'View',
+    'tickets' => 'Tickets',
 ];

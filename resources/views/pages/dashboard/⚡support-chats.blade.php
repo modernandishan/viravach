@@ -1,9 +1,12 @@
 <?php
 
+use App\Enums\TicketStatus;
 use App\Events\ChatConversationStarted;
+use App\Models\Ticket;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\Chat\Exceptions\TranslationException;
+use App\Services\Chat\TicketService;
 use App\Services\Chat\TranslationService;
 use App\Settings\ChatSettings;
 use Illuminate\Database\Eloquent\Model;
@@ -156,6 +159,12 @@ class extends Component
                     && $this->belongsToCompany($conversation, $companyId),
                 403,
             );
+        } elseif ($type === 'ticket') {
+            // Ticket threads are staff-visible by role, not participation —
+            // the shared queue means every support/admin/super_admin user can
+            // open any ticket conversation.
+            abort_unless(Ticket::isStaff(auth()->user())
+                && Ticket::query()->where('conversation_id', $conversation->id)->exists(), 403);
         } else {
             abort_unless($this->belongsToAgent($conversation, auth()->user()), 403);
         }
@@ -210,7 +219,16 @@ class extends Component
 
         $actingAs = $this->actingAs();
 
-        $message = Chat::message($body)->from($actingAs)->to($conversation)->send();
+        $ticket = $this->selectedTicket();
+
+        if ($ticket !== null) {
+            // Claiming the ticket: addStaffReply joins the staff member as an
+            // explicit participant (musonza read bookkeeping), sends the
+            // message and moves the ticket to answered.
+            $message = app(TicketService::class)->addStaffReply($ticket, $actingAs, $body);
+        } else {
+            $message = Chat::message($body)->from($actingAs)->to($conversation)->send();
+        }
 
         $this->messages[] = $this->presentMessage($message->load('participation.messageable'), $actingAs);
         $this->body = '';
@@ -319,6 +337,22 @@ class extends Component
             );
         }
 
+        // Ticket queue: every staff member (the same fallback roles
+        // SupportTransferService draws from) sees ALL open/answered tickets —
+        // they are Ticket rows, not participations, so no assignment is
+        // involved and any staff member can pick one up. Closed tickets leave
+        // the queue.
+        if (Ticket::isStaff($user)) {
+            $rows = $rows->merge(
+                Ticket::query()
+                    ->whereIn('status', [TicketStatus::Open, TicketStatus::Answered])
+                    ->with('user')
+                    ->orderByDesc('updated_at')
+                    ->get()
+                    ->map(fn (Ticket $ticket) => $this->presentTicketConversation($ticket))
+            );
+        }
+
         $companyIds = $user->companies()->pluck('id');
 
         if ($companyIds->isNotEmpty()) {
@@ -367,6 +401,33 @@ class extends Component
     }
 
     /**
+     * A ticket row rendered as an inbox entry: participantName carries the
+     * creator, companyName slot shows the reference number, and the type tag
+     * routes the thread through the ticket authorization path.
+     *
+     * @return array{id: int, type: 'ticket', companyId: null, companyName: ?string, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string, updatedAtSort: ?string, ticketStatus: ?string, ticketStatusLabel: ?string, ticketStatusColor: ?string, ticketId: int}
+     */
+    protected function presentTicketConversation(Ticket $ticket): array
+    {
+        $conversation = $ticket->conversation;
+
+        return [
+            'id' => $conversation->id,
+            'type' => 'ticket',
+            'companyId' => null,
+            'companyName' => $ticket->reference_number.' · '.__('tickets.status_'.$ticket->status->value),
+            'participantName' => $ticket->subject,
+            'lastMessage' => $conversation->last_message?->body,
+            'unreadCount' => 0,
+            'updatedAt' => $ticket->updated_at?->format('Y/m/d H:i'),
+            'updatedAtSort' => $ticket->updated_at?->toIso8601String(),
+            'ticketId' => $ticket->id,
+            'ticketStatusColor' => $ticket->status->getColor(),
+            'creatorName' => (string) ($ticket->user?->getParticipantDetails()['name'] ?? ''),
+        ];
+    }
+
+    /**
      * @return array{id: int, type: string, companyId: ?int, companyName: ?string, participantName: string, lastMessage: ?string, unreadCount: int, updatedAt: ?string, updatedAtSort: ?string}
      */
     protected function presentCompanyConversation(Conversation $conversation): array
@@ -408,6 +469,21 @@ class extends Component
         }
 
         return auth()->user();
+    }
+
+    /**
+     * The Ticket behind the currently selected conversation, when it is a
+     * ticket thread; null for support/company rows.
+     */
+    protected function selectedTicket(): ?Ticket
+    {
+        if ($this->selectedType !== 'ticket') {
+            return null;
+        }
+
+        return Ticket::query()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->first();
     }
 
     /**

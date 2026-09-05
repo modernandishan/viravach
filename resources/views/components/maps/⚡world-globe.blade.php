@@ -251,6 +251,13 @@ new class extends Component {
                     panX: 'rotateX',
                     panY: 'rotateY',
                     projection: am5map.geoOrthographic(),
+                    // Initial view centered on the Middle East (Tehran:
+                    // rotationX = -longitude, rotationY = -latitude, the same
+                    // convention as the rotateTo() helper below and as
+                    // maps/⚡iran-export). Auto-rotation then continues from
+                    // here.
+                    rotationX: -51.4215,
+                    rotationY: -35.6944,
                     paddingBottom: 8,
                     paddingTop: 8,
                     paddingLeft: 8,

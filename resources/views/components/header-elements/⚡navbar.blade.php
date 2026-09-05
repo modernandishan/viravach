@@ -70,22 +70,7 @@ new class extends Component {
                             <livewire:header-elements.menu-items.main-company-categories />
                             <!--end:Col-->
                             <!--begin:Col-->
-                            <div class="menu-more bg-light col-lg-4 py-3 px-3 py-lg-6 px-lg-6 rounded-end">
-                                <!--begin:Heading-->
-                                <h4 class="fs-6 fs-lg-4 text-gray-800 fw-bold mt-3 mb-3 ms-4">دسته های پر بازدید</h4>
-                                <!--end:Heading-->
-                                <!--begin:Menu item-->
-                                <div class="menu-item p-0 m-0">
-                                    <!--begin:Menu link-->
-                                    <a href="dashboards/logistics.html" class="menu-link py-2">
-                                        <span class="menu-title">
-
-                                        </span>
-                                    </a>
-                                    <!--end:Menu link-->
-                                </div>
-                                <!--end:Menu item-->
-                            </div>
+                            <livewire:header-elements.menu-items.popular-categories />
                             <!--end:Col-->
                         </div>
                         <!--end:Row-->

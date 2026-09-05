@@ -98,6 +98,11 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
         return $this->hasMany(Company::class);
     }
 
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

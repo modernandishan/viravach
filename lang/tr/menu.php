@@ -26,4 +26,9 @@ return [
     'create_new_company' => 'Yeni şirket oluştur',
     'admin_dashboard' => 'Yönetici Paneli',
 
+    'popular_categories' => 'Popüler kategoriler',
+    'export_top_title' => 'İhracat liderleri',
+    'export_top_subtitle' => 'En yüksek ihracat puanına sahip işletme ve şirketler',
+    'view' => 'Görüntüle',
+    'tickets' => 'Destek talepleri',
 ];

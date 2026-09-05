@@ -26,4 +26,9 @@ return [
     'create_new_company' => 'إنشاء شركة جديدة',
     'admin_dashboard' => 'لوحة تحكم المسؤول',
 
+    'popular_categories' => 'الفئات الأكثر مشاهدة',
+    'export_top_title' => 'رواد التصدير',
+    'export_top_subtitle' => 'الشركات والأعمال ذات أعلى تقييم تصدير',
+    'view' => 'عرض',
+    'tickets' => 'التذاكر',
 ];
