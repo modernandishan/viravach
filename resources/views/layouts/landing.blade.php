@@ -921,6 +921,7 @@
 <script src="{{asset('theme/1/plugins/custom/amcharts/Animated.js')}}"></script>
 <script src="{{asset('theme/1/plugins/custom/amcharts/map.js')}}"></script>
 <script src="{{asset('theme/1/plugins/custom/amcharts/worldLow.js')}}"></script>
+<script src="{{asset('theme/1/plugins/custom/amcharts/iranLow.js')}}"></script>
 <script src="{{asset('theme/1/plugins/custom/amcharts/continentsLow.js')}}"></script>
 <script src="{{asset('theme/1/plugins/custom/amcharts/usaLow.js')}}"></script>
 <script src="{{asset('theme/1/plugins/custom/amcharts/worldTimeZonesLow.js')}}"></script>

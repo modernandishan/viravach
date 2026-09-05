@@ -19,6 +19,7 @@ use Spatie\Translatable\HasTranslations;
     'name',
     'slug',
     'code',
+    'geo_id',
     'type',
     'latitude',
     'longitude',

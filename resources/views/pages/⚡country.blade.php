@@ -58,12 +58,13 @@ class extends Component {
             </div>
         </div>
 
-        {{-- PLACEHOLDER (phase 3): country map. --}}
-        <div class="card mb-6 mb-xl-9">
-            <div class="card-body">
-                <div class="text-center text-muted py-20"><!-- country map --></div>
-            </div>
-        </div>
+        {{-- Province map, only for countries whose geodata is wired up in
+             config/geo_maps.php. The component itself renders a hidden empty
+             section when this country has no provinces with published
+             companies. --}}
+        @if (config('geo_maps.countries.'.$countryModel->slug))
+            <livewire:maps.country-map :country-model="$countryModel" />
+        @endif
 
         {{-- Company listing, scoped to this country. The component owns its
              own filters, sorting and pagination and knows nothing about this

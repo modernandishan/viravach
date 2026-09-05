@@ -747,7 +747,13 @@
     color: var(--bs-primary-text-emphasis);
 }
 
-/* ===== maps/⚡world-globe ===== */
+/* ===== maps/⚡world-globe =====
+   The .vv-globe-* classes below are shared with maps/⚡country-map, which
+   renders the exact same section skeleton (list-first layout, canvas
+   wrapper, link rows) for a single-country province map. Everything the
+   country map needs — base styles AND the [data-bs-theme=dark] block at
+   the bottom of this file — is already covered by these selectors; there
+   is deliberately no separate .vv-country-map-* rule. */
 .vv-globe-section {
     padding-block: 32px;
 }
