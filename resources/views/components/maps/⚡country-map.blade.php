@@ -175,7 +175,7 @@ new class extends Component {
 
             element.dataset.vvCountryMapInitialized = '1';
 
-            var GEO_KEY = @json($geodataKey);
+            var GEO_KEY = @json($this->geodataKey());
 
             // Dataset built by PHP: { "IR-07": { name, count, url }, ... }
             // All display strings (names, counts) come from this dataset —

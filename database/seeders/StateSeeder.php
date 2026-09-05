@@ -63,6 +63,7 @@ class StateSeeder extends Seeder
                 [
                     'name' => $state['name'],
                     'slug' => $state['slug'],
+                    'geo_id' => $state['geo_id'],
                     'type' => $type,
                     'is_active' => true,
                 ]
