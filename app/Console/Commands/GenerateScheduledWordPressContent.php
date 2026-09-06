@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\WordPressPostStatus;
 use App\Models\Company;
 use App\Services\WordPress\WordPressContentGenerationService;
-use App\Settings\ContentSettings;
+use App\Settings\WordPressContentSettings;
 use App\Support\WordPressContentQuota;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,8 +28,8 @@ class GenerateScheduledWordPressContent extends Command
 
     public function handle(WordPressContentGenerationService $service): int
     {
-        if (! app(ContentSettings::class)->enabled) {
-            $this->info('WordPress content generation is globally disabled; nothing scheduled.');
+        if (! app(WordPressContentSettings::class)->enabled) {
+            $this->info('Automatic WordPress content generation is globally disabled; nothing scheduled.');
 
             return self::SUCCESS;
         }

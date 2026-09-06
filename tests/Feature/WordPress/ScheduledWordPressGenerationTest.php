@@ -15,6 +15,7 @@ use App\Services\WordPress\WordPressContentGenerationFailureReason;
 use App\Services\WordPress\WordPressContentGenerationResult;
 use App\Services\WordPress\WordPressContentGenerationService;
 use App\Settings\ContentSettings;
+use App\Settings\WordPressContentSettings;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -36,6 +37,7 @@ class ScheduledWordPressGenerationTest extends TestCase
 
         $this->seed(PlanSeeder::class);
         app(ContentSettings::class)->fill(['enabled' => true])->save();
+        app(WordPressContentSettings::class)->fill(['enabled' => true])->save();
     }
 
     /**
@@ -251,10 +253,14 @@ class ScheduledWordPressGenerationTest extends TestCase
         Bus::assertNothingDispatched();
     }
 
-    public function test_the_global_kill_switch_skips_everything(): void
+    public function test_the_wordpress_kill_switch_skips_everything(): void
     {
         Bus::fake();
-        app(ContentSettings::class)->fill(['enabled' => false])->save();
+
+        // The WordPress pipeline consults ONLY its own settings now: the
+        // profile pipeline's toggle stays on and must not matter either way.
+        app(ContentSettings::class)->fill(['enabled' => true])->save();
+        app(WordPressContentSettings::class)->fill(['enabled' => false])->save();
 
         $this->automaticCompany();
 

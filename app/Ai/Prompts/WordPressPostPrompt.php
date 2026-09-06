@@ -4,22 +4,104 @@ namespace App\Ai\Prompts;
 
 use App\Ai\Schemas\WordPressPostSchema;
 use App\Enums\ContentGenerationMode;
+use App\Settings\WordPressContentSettings;
 
 /**
- * Prompt construction for a single WordPress article. Pure string builders,
- * matching CompanyContentPrompt: the field contract lives only in
- * WordPressPostSchema::promptSpec() and is embedded verbatim.
+ * Prompt construction for a single WordPress article. The field contract
+ * lives only in WordPressPostSchema::promptSpec() and is embedded verbatim.
  *
- * Unlike the company-profile prompts there is no source locale — the owner
- * picks the language, and the article is written in it directly.
+ * Split of responsibilities: everything an admin edit could garble into a
+ * broken pipeline — the JSON output contract, the schema spec, the language
+ * rule, the trend-candidate list rendering and the mode branching — is
+ * built here in code. The admin-editable per-locale fields on
+ * WordPressContentSettings (see the defaults below, which the settings
+ * migration seeds) are guidance TEXT only, and every placeholder is
+ * substituted by code even if an edit removes it. A blank or missing
+ * locale entry falls back to the matching default constant.
+ *
+ * TREND MODE IS STANDALONE: the article is about the trending topic on its
+ * own merits. The prompt carries no company context at all and never asks
+ * the model to bridge the topic to the company's industry — an article
+ * about a phone launch must not become "…and its impact on the machinery
+ * industry". There is no fall back to specialised mode: the specialised
+ * fallback exists only when NO usable topic exists at all (a dead trends
+ * feed), which the generation service handles as its own failure reason.
+ *
+ * Unlike the company-profile prompts there is no source locale — the
+ * article is written directly in the company's chosen content language.
  */
 class WordPressPostPrompt
 {
+    /**
+     * Seeded into WordPressContentSettings.article_system_prompt by the
+     * settings migration; used at runtime when an admin blanks the field.
+     */
+    public const DEFAULT_SYSTEM_GUIDANCE = <<<'TXT'
+        You are a senior content writer producing a blog article for a company's
+        own website. The article must be genuinely useful to its readers, not an
+        advertisement.
+
+        SEO RULES:
+        - Choose ONE focus keyword a real reader would type into a search
+          engine, and use it in the title, in the first paragraph, and in one
+          <h2>. Everywhere else use synonyms and natural phrasing.
+        - Keyword density must stay under 2%.
+        - image_alt must contain the focus keyword and describe a real scene,
+          because it is published as the featured image's alt text.
+
+        BODY RULES:
+        - Open with the answer, not with a preamble about the topic's
+          importance.
+        - Use <h2> sections with <h3> subsections where it helps, short
+          paragraphs, and at least one <ul> list.
+        - Do not include a title heading in the body; the title field is
+          rendered separately by WordPress.
+
+        NO FABRICATION:
+        - Never invent certifications, awards, client names, capacities,
+          prices, dates or figures that are not in the input. Write around
+          missing information rather than fabricating it.
+        TXT;
+
+    /**
+     * Seeded into WordPressContentSettings.mode_brief_industry. Placeholders:
+     * {topic} (alias {fallback_topic}).
+     */
+    public const DEFAULT_INDUSTRY_BRIEF = <<<'TXT'
+        MODE: specialised to this company's field.
+        Write about "{topic}", staying inside the company's own industry and
+        product range as described below. The reader is a buyer evaluating
+        suppliers in this field.
+        TXT;
+
+    /**
+     * Seeded into WordPressContentSettings.mode_brief_trending. Placeholders:
+     * {topic} (alias {fallback_topic}) and {candidates} — the code renders
+     * the candidate shortlist there (or nothing when the feed gave none).
+     * Standalone by design: no company, no industry, no bridging.
+     */
+    public const DEFAULT_TRENDING_BRIEF = <<<'TXT'
+        MODE: trending topic.
+        "{topic}" is currently rising in search. Write a genuinely useful,
+        well-researched article about it on its own merits, for readers
+        interested in the topic itself. Do NOT connect the article to any
+        company, industry, product range or category, and do not mention any
+        company's business: the article must stand entirely on its own.
+        {candidates}
+        TXT;
+
     public static function system(string $locale): string
     {
-        return "You are a senior B2B content writer producing a blog article for\n"
-            ."a company's own website. The article must be genuinely useful to\n"
-            ."the company's buyers, not an advertisement.\n"
+        $settings = app(WordPressContentSettings::class);
+
+        $guidance = trim((string) ($settings->article_system_prompt[$locale] ?? ''));
+
+        if ($guidance === '') {
+            $guidance = self::DEFAULT_SYSTEM_GUIDANCE;
+        }
+
+        return "You are a content writer. The article must follow this\n"
+            ."output contract.\n"
             ."\n"
             ."OUTPUT CONTRACT — follow exactly:\n"
             ."- Return ONLY a single JSON object. No prose, no markdown, no\n"
@@ -34,91 +116,104 @@ class WordPressPostPrompt
             ."  naturally, as a native speaker would — not as a word-for-word\n"
             ."  conversion from another language.\n"
             ."\n"
-            ."SEO RULES:\n"
-            ."- Choose ONE focus keyword a real buyer would type into a search\n"
-            ."  engine, and use it in the title, in the first paragraph, and in\n"
-            ."  one <h2>. Everywhere else use synonyms and natural phrasing.\n"
-            ."- Keyword density must stay under 2%.\n"
-            ."- image_alt must contain the focus keyword and describe a real\n"
-            ."  scene, because it is published as the featured image's alt text.\n"
-            ."\n"
-            ."BODY RULES:\n"
-            ."- Open with the answer, not with a preamble about the topic's\n"
-            ."  importance.\n"
-            ."- Use <h2> sections with <h3> subsections where it helps, short\n"
-            ."  paragraphs, and at least one <ul> list.\n"
-            ."- Do not include a title heading in the body; the title field is\n"
-            ."  rendered separately by WordPress.\n"
-            ."\n"
-            ."NO FABRICATION:\n"
-            ."- Never invent certifications, awards, client names, capacities,\n"
-            ."  prices, dates or figures that are not in the input. Write around\n"
-            ."  missing information rather than fabricating it.\n"
-            ."- Do not claim the company sells something the input does not say\n"
-            .'  it sells.';
+            .$guidance;
     }
 
     /**
      * @param  array<string, mixed>  $input  CompanyInputCollector output.
-     * @param  list<string>  $trendCandidates  Trend mode only: a handful of
-     *                                         currently-trending queries in the target market, title only. The
-     *                                         feed behind these is country-wide and has no industry filter, so
-     *                                         the model — not the trend picker — decides which one (if any)
-     *                                         has a genuine connection to this company.
+     *                                       Empty for trend mode: a standalone trending article carries no
+     *                                       company context at all, so the model cannot bridge to it.
+     * @param  list<string>  $trendCandidates  Trend mode only: currently-trending
+     *                                         queries in the target market, title only. The model picks the one
+     *                                         that makes the best standalone article — relevance to any company
+     *                                         plays no part.
      */
     public static function user(
         array $input,
         string $topic,
         ContentGenerationMode $mode,
+        string $locale,
         array $trendCandidates = [],
     ): string {
-        $company = json_encode($input, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $settings = app(WordPressContentSettings::class);
 
         $brief = match ($mode) {
-            // Specialized: the company's own field is the subject.
-            ContentGenerationMode::Industry => "MODE: specialised to this company's field.\n"
-                ."Write about \"{$topic}\", staying inside the company's own\n"
-                ."industry and product range as described below. The reader is a\n"
-                .'buyer evaluating suppliers in this field.',
+            ContentGenerationMode::Industry => self::fill(
+                (string) ($settings->mode_brief_industry[$locale] ?? self::DEFAULT_INDUSTRY_BRIEF),
+                ['topic' => $topic],
+            ),
 
-            // Trend: a shortlist of currently-rising queries is offered, not
-            // a single pre-chosen one — the feed behind it has no industry
-            // filter, so relevance has to be judged here, by the model that
-            // can actually read the company's field and the topics together.
-            ContentGenerationMode::Trending => $trendCandidates !== []
-                ? self::trendingBrief($topic, $trendCandidates)
-                : "MODE: trending topic.\n"
-                    ."\"{$topic}\" is currently rising in search. Write an article\n"
-                    ."that genuinely serves someone searching for it, while\n"
-                    ."connecting it to this company's field of business below. Do\n"
-                    ."not force the connection: if the link is thin, keep the\n"
-                    ."article about the topic and mention the company's field only\n"
-                    .'where it is actually relevant.',
+            ContentGenerationMode::Trending => self::fill(
+                (string) ($settings->mode_brief_trending[$locale] ?? self::DEFAULT_TRENDING_BRIEF),
+                [
+                    'topic' => $topic,
+                    'candidates' => $trendCandidates === [] ? '' : self::candidatesBlock($trendCandidates),
+                ],
+            ),
         };
 
-        return $brief."\n\nCOMPANY:\n".$company;
+        // Company context goes out ONLY in specialised mode. A standalone
+        // trending article carries none, even if a caller passed input —
+        // the model cannot bridge to a business it never sees.
+        if ($mode !== ContentGenerationMode::Industry || $input === []) {
+            return $brief;
+        }
+
+        return $brief."\n\nCOMPANY:\n"
+            .json_encode($input, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     /**
+     * Code-owned rendering of the candidate shortlist: the model still picks
+     * WHICH rising query to write about, but purely on article merit — the
+     * old "most plausible connection to the company's field" instruction,
+     * and the fall back to specialised mode, are gone for good.
+     *
      * @param  list<string>  $trendCandidates
      */
-    private static function trendingBrief(string $fallbackTopic, array $trendCandidates): string
+    private static function candidatesBlock(array $trendCandidates): string
     {
         $list = implode("\n", array_map(fn (string $candidate): string => '- "'.$candidate.'"', $trendCandidates));
 
-        return "MODE: trending topic.\n"
-            ."These queries are currently rising in search, in this company's\n"
-            ."market:\n\n{$list}\n\n"
-            ."Pick the ONE query above with the most plausible, genuine\n"
-            ."connection to this company's field of business (described\n"
-            ."below). Write the article bridging that trending query to the\n"
-            ."company's business — do not force a weak or superficial link.\n"
+        return "These queries are also currently rising in search:\n"
             ."\n"
-            ."If truly NONE of the queries above has any reasonable connection\n"
-            ."to this company's field, ignore all of them and instead write\n"
-            ."as if in specialised mode: choose your own topic from strictly\n"
-            ."within the company's own field, the same way you would for\n"
-            .'"'.$fallbackTopic.'".';
+            .$list."\n"
+            ."\n"
+            .'Pick the ONE query above that would make the most engaging, '
+            ."informative standalone article, and write about that one instead\n"
+            .'of the fallback topic — still with no company or industry angle.';
+    }
+
+    /**
+     * Substitutes every placeholder, tolerating edits that removed one:
+     * {fallback_topic} is kept as an alias of {topic}, and a template that
+     * lost its {topic} placeholder entirely still gets the topic appended —
+     * the article must never be generated without its subject.
+     *
+     * @param  array<string, string>  $replacements
+     */
+    private static function fill(string $template, array $replacements): string
+    {
+        $topic = $replacements['topic'] ?? null;
+
+        if ($topic !== null && ! isset($replacements['fallback_topic'])) {
+            $replacements['fallback_topic'] = $topic;
+        }
+
+        $hasTopicPlaceholder = str_contains($template, '{topic}')
+            || str_contains($template, '{fallback_topic}');
+
+        $filled = str_replace(
+            array_map(fn (string $key): string => '{'.$key.'}', array_keys($replacements)),
+            array_values($replacements),
+            $template,
+        );
+
+        if ($topic !== null && ! $hasTopicPlaceholder) {
+            $filled .= "\n\nThe topic to write about: {$topic}";
+        }
+
+        return $filled;
     }
 
     private static function languageName(string $locale): string

@@ -25,13 +25,20 @@ class GenerateWordPressPostContent extends AbstractWordPressPostJob
     protected function run(WordPressContentPost $post): void
     {
         $company = $post->company;
-        $input = app(CompanyInputCollector::class)->collect($company);
+
+        // Trend articles are standalone: no company context is collected or
+        // sent, so the model physically cannot bridge the topic to the
+        // company's industry (the prompt also forbids it — belt and braces).
+        $input = $post->mode === ContentGenerationMode::Industry
+            ? app(CompanyInputCollector::class)->collect($company)
+            : [];
 
         $system = WordPressPostPrompt::system($post->locale);
         $user = WordPressPostPrompt::user(
             $input,
             $post->topic,
             $post->mode,
+            $post->locale,
             $this->trendCandidates($post),
         );
 

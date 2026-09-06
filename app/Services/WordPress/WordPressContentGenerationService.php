@@ -12,7 +12,7 @@ use App\Models\Company;
 use App\Models\WordPressContentPost;
 use App\Services\Trends\GoogleTrendsService;
 use App\Services\Trends\TrendFailureReason;
-use App\Settings\ContentSettings;
+use App\Settings\WordPressContentSettings;
 use App\Support\WordPressContentQuota;
 use Illuminate\Support\Facades\Bus;
 
@@ -31,7 +31,7 @@ class WordPressContentGenerationService
 
     public function request(Company $company, string $locale, ContentGenerationMode $mode): WordPressContentGenerationResult
     {
-        if (! app(ContentSettings::class)->enabled) {
+        if (! app(WordPressContentSettings::class)->enabled) {
             return WordPressContentGenerationResult::failed(WordPressContentGenerationFailureReason::GenerationDisabled);
         }
 

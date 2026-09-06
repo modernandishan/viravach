@@ -8,7 +8,7 @@ namespace App\Services\WordPress;
  */
 enum WordPressContentGenerationFailureReason: string
 {
-    /** The global AI content kill-switch (ContentSettings::$enabled) is off. */
+    /** The automatic WordPress pipeline's kill-switch (WordPressContentSettings::$enabled) is off. */
     case GenerationDisabled = 'generation_disabled';
 
     /** The company's WordPress connection has not been proven to work. */
