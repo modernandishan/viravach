@@ -7,17 +7,23 @@ use App\Enums\WordPressConnectionStatus;
 use App\Models\Company;
 use App\Services\WordPress\WordPressConnectionService;
 use App\Support\LocalizedDate;
+use App\Support\PlanFeature;
+use App\Support\VideoMetadata;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 new
 #[Layout('layouts::landing')]
 class extends Component {
+    use WithFileUploads;
     /**
      * Every setting on this page lives on a Company, but the dashboard's
      * "Settings" button is global, so the company is chosen the same way
@@ -41,6 +47,13 @@ class extends Component {
 
     /** The language generated articles are written in; defaults to fa. */
     public string $contentLanguage = 'fa';
+
+    /**
+     * The pending intro-video upload (plan-gated). Kept separate from
+     * save(): a 256MB temp upload must not be re-transferred by the main
+     * settings form's other saves.
+     */
+    public $introVideo = null;
 
     /**
      * Feedback from the connection test performed in *this* request. The
@@ -239,6 +252,78 @@ class extends Component {
         $website = preg_replace('#^(https?://|//)#i', '', trim((string) ($website ?? ''))) ?? '';
 
         return $website !== '' ? 'https://'.$website : null;
+    }
+
+    /**
+     * Whether the selected company's plan grants the intro-video feature.
+     * Read live from the plan feature (PlanFeature), so a plan change takes
+     * effect immediately — same convention as the WordPress quotas.
+     */
+    public function canUploadIntroVideo(): bool
+    {
+        $company = $this->selectedCompany();
+
+        return $company !== null
+            && PlanFeature::value($company, 'intro-video') === 'true';
+    }
+
+    /** The currently stored intro video, if any. */
+    public function currentIntroVideo(): ?Media
+    {
+        return $this->selectedCompany()?->getFirstMedia('intro_video');
+    }
+
+    /**
+     * Stores (or replaces) the company's single intro video. The full
+     * chain re-runs here even though the UI gates the card: eligibility →
+     * file type/size → duration (getID3 reads only container metadata, so
+     * a 256MB file costs no more than a small one).
+     */
+    public function saveIntroVideo(): void
+    {
+        $company = $this->selectedCompany();
+        abort_unless($company !== null, 404);
+
+        if (! $this->canUploadIntroVideo()) {
+            throw ValidationException::withMessages([
+                'introVideo' => __('settings.intro_video_ineligible'),
+            ]);
+        }
+
+        $this->validate([
+            'introVideo' => ['required', 'file', 'mimes:mp4,webm,mov,avi,mkv', 'max:262144'],
+        ]);
+
+        $duration = app(VideoMetadata::class)->durationSeconds($this->introVideo->getRealPath());
+
+        if ($duration === null || $duration > VideoMetadata::MAX_SECONDS) {
+            throw ValidationException::withMessages([
+                'introVideo' => __('settings.intro_video_validation_duration'),
+            ]);
+        }
+
+        $company->clearMediaCollection('intro_video');
+
+        $company->addMedia($this->introVideo->getRealPath())
+            ->usingFileName($this->introVideo->getClientOriginalName())
+            ->toMediaCollection('intro_video', 's3');
+
+        $this->introVideo = null;
+
+        session()->flash('settings-status', __('settings.intro_video_saved'));
+    }
+
+    /** Replaces nothing silently: removal is its own explicit action. */
+    public function removeIntroVideo(): void
+    {
+        $company = $this->selectedCompany();
+        abort_unless($company !== null, 404);
+
+        $company->clearMediaCollection('intro_video');
+
+        $this->introVideo = null;
+
+        session()->flash('settings-status', __('settings.intro_video_removed'));
     }
 
     /**
@@ -544,6 +629,72 @@ class extends Component {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {{-- Intro video (plan-gated) --}}
+                <div class="card mb-5 mb-xl-10">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <h3>{{ __('settings.intro_video_section_title') }}</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (! $this->canUploadIntroVideo())
+                            {{-- Visible rather than hidden: the owner should
+                                 learn the feature exists and what unlocks it. --}}
+                            <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-6">
+                                <i class="ki-duotone ki-video fs-2tx text-primary me-4">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="fw-semibold text-gray-800 mb-3">{{ __('settings.intro_video_upsell') }}</div>
+                                    <div>
+                                        <a href="{{ route('subscriptions') }}" class="btn btn-sm btn-primary">
+                                            {{ __('settings.intro_video_upsell_cta') }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            @php $currentVideo = $this->currentIntroVideo(); @endphp
+
+                            @if ($currentVideo)
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <i class="ki-duotone ki-video fs-2 text-success">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <span class="fw-semibold text-gray-900">{{ $currentVideo->file_name }}</span>
+                                    </div>
+                                    <button type="button" class="btn btn-light-danger btn-sm"
+                                            wire:click="removeIntroVideo"
+                                            wire:loading.attr="disabled" wire:target="removeIntroVideo">
+                                        {{ __('settings.intro_video_remove') }}
+                                    </button>
+                                </div>
+                            @endif
+
+                            <form wire:submit="saveIntroVideo">
+                                <div class="fv-row mb-6">
+                                    <label class="form-label">{{ __('settings.intro_video_label') }}</label>
+                                    <div class="form-text mt-0 mb-4">{{ __('settings.intro_video_hint') }}</div>
+                                    <input type="file" wire:model="introVideo"
+                                           accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska"
+                                           class="form-control form-control-solid @error('introVideo') is-invalid @enderror" />
+                                    @error('introVideo')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <button type="submit" class="btn btn-primary"
+                                        wire:loading.attr="disabled" wire:target="saveIntroVideo">
+                                    <span wire:loading.remove wire:target="saveIntroVideo">{{ __('settings.intro_video_save_button') }}</span>
+                                    <span wire:loading wire:target="saveIntroVideo">{{ __('settings.intro_video_saving') }}</span>
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
 

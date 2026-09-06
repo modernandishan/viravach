@@ -7,6 +7,7 @@ use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\Companies\Pages\ListCompanies;
 use App\Filament\Resources\Companies\RelationManagers\AddressesRelationManager;
 use App\Filament\Resources\Companies\RelationManagers\BrandsRelationManager;
+use App\Filament\Resources\Companies\RelationManagers\WordPressContentRelationManager;
 use App\Filament\Resources\Companies\Schemas\CompanyForm;
 use App\Filament\Resources\Companies\Tables\CompaniesTable;
 use App\Models\Company;
@@ -47,6 +48,7 @@ class CompanyResource extends Resource
         return [
             AddressesRelationManager::class,
             BrandsRelationManager::class,
+            WordPressContentRelationManager::class,
         ];
     }
 

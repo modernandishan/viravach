@@ -2,7 +2,7 @@
 
 return [
 
-    'page_title' => 'محتوى ووردبريس',
+    'page_title' => 'ViraWP — إنشاء المحتوى تلقائيًا',
 
     'schedule_section_title' => 'المقالات التلقائية',
 

@@ -2,7 +2,7 @@
 
 return [
 
-    'page_title' => 'WordPress içeriği',
+    'page_title' => 'ViraWP — otomatik içerik üretimi',
 
     'schedule_section_title' => 'Otomatik makaleler',
 

@@ -11,10 +11,12 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Image;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MediaTable
@@ -104,6 +106,33 @@ class MediaTable
                     ->options(fn () => Media::query()->distinct()->pluck('collection_name', 'collection_name')),
             ])
             ->recordActions([
+                // Read-only helpers available on EVERY media row, regardless
+                // of how the file arrived (library upload, company logo,
+                // generated article image, ...). The URL resolution reuses
+                // spatie's getUrl() — the same call the preview column
+                // already makes — so it honours each row's own disk/driver.
+                Action::make('view')
+                    ->label('مشاهده')
+                    ->icon(Heroicon::Eye)
+                    ->color('gray')
+                    ->url(fn (Media $record): ?string => Str::sanitizeUrl($record->getUrl()), shouldOpenInNewTab: true),
+                // Filament has no first-class copy action for row actions
+                // (only ->copyable() on columns/fields), so this is the
+                // documented fallback: a plain anchor whose Alpine click
+                // handler writes the clipboard and raises the framework's
+                // own JS notification. No confirmation — it is side-effect
+                // free.
+                Action::make('copy_link')
+                    ->label('کپی لینک')
+                    ->icon(Heroicon::Link)
+                    ->color('gray')
+                    ->url('#')
+                    ->extraAttributes(fn (Media $record): array => [
+                        'x-on:click.prevent' => 'navigator.clipboard.writeText('
+                            .json_encode($record->getUrl())
+                            .').then(() => { new FilamentNotification().title('
+                            .json_encode('لینک کپی شد').').success().send(); })',
+                    ]),
                 Action::make('edit')
                     ->label('ویرایش')
                     ->modalHeading(fn (Media $record) => $record->name)

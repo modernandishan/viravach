@@ -8,6 +8,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\CanUseDatabaseTransactions;
 use Filament\Pages\Concerns\HasUnsavedDataChangesAlert;
@@ -18,6 +19,7 @@ use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Storage;
@@ -180,6 +182,34 @@ class ManageGeneralSettings extends Page
                             ->label('ایمیل')
                             ->email()
                             ->maxLength(255),
+                    ])
+                    ->columns(2),
+
+                Section::make('ویجت تراستپایلوت (Trustpilot)')
+                    ->description('نظرات مشتریان درباره ویراواچ در تراستپایلوت. ویجت فقط زمانی در فوتر نمایش داده می‌شود که فعال باشد و هر سه مقدار زیر پر شده باشند.')
+                    ->schema([
+                        Toggle::make('trustpilot_enabled')
+                            ->label('نمایش ویجت تراستپایلوت در فوتر')
+                            ->live()
+                            ->required(),
+                        TextInput::make('trustpilot_business_unit_id')
+                            ->label('شناسه بیزینس‌یونیت (Business Unit ID)')
+                            ->visible(fn (Get $get): bool => (bool) $get('trustpilot_enabled'))
+                            ->maxLength(64)
+                            ->helperText('از پنل تراستپایلوت یا کد ویجت؛ مقدار data-businessunit-id.')
+                            ->placeholder('4f8e5b8d00006400057c8d1c'),
+                        TextInput::make('trustpilot_template_id')
+                            ->label('شناسه قالب ویجت (Template ID)')
+                            ->visible(fn (Get $get): bool => (bool) $get('trustpilot_enabled'))
+                            ->maxLength(64)
+                            ->helperText('مقدار data-template-id در کد ویجت تراستپایلوت.')
+                            ->placeholder('5419b6ffb0d04a07eed4f9d2'),
+                        TextInput::make('trustpilot_locale')
+                            ->label('زبان ویجت (data-locale)')
+                            ->visible(fn (Get $get): bool => (bool) $get('trustpilot_enabled'))
+                            ->maxLength(16)
+                            ->helperText('مثال: en-US یا fa-IR — بسته به زبان‌هایی که تراستپایلوت پشتیبانی می‌کند.')
+                            ->placeholder('en-US'),
                     ])
                     ->columns(2),
 

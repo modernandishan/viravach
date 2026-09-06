@@ -201,4 +201,79 @@ class FooterTest extends TestCase
         $faResponse->assertOk();
         $faResponse->assertSee(__('footer.company_heading'));
     }
+
+    public function test_no_trustpilot_widget_renders_when_unconfigured(): void
+    {
+        // A fresh settings row: enabled defaults to false and every value
+        // is null — neither the widget div nor the bootstrap script may
+        // reach the page.
+        GeneralSetting::current()->update([
+            'trustpilot_enabled' => false,
+            'trustpilot_business_unit_id' => null,
+            'trustpilot_template_id' => null,
+            'trustpilot_locale' => null,
+        ]);
+
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('trustpilot-widget', $html);
+        $this->assertStringNotContainsString('tp.widget.bootstrap.min.js', $html);
+    }
+
+    public function test_no_trustpilot_widget_renders_while_a_required_value_is_missing(): void
+    {
+        GeneralSetting::current()->update([
+            'trustpilot_enabled' => true,
+            'trustpilot_business_unit_id' => '4f8e5b8d00006400057c8d1c',
+            'trustpilot_template_id' => null,
+            'trustpilot_locale' => 'en-US',
+        ]);
+
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('trustpilot-widget', $html);
+        $this->assertStringNotContainsString('tp.widget.bootstrap.min.js', $html);
+    }
+
+    public function test_a_configured_trustpilot_widget_renders_the_bootstrap_script_and_escaped_values(): void
+    {
+        GeneralSetting::current()->update([
+            'trustpilot_enabled' => true,
+            'trustpilot_business_unit_id' => '4f8e5b8d00006400057c8d1c',
+            'trustpilot_template_id' => '5419b6ffb0d04a07eed4f9d2',
+            'trustpilot_locale' => 'en-US',
+        ]);
+
+        $html = $this->render();
+
+        $this->assertStringContainsString('class="trustpilot-widget"', $html);
+        $this->assertStringContainsString('data-locale="en-US"', $html);
+        $this->assertStringContainsString('data-template-id="5419b6ffb0d04a07eed4f9d2"', $html);
+        $this->assertStringContainsString('data-businessunit-id="4f8e5b8d00006400057c8d1c"', $html);
+        $this->assertStringContainsString('tp.widget.bootstrap.min.js', $html);
+    }
+
+    public function test_a_pasted_trustpilot_value_cannot_inject_markup(): void
+    {
+        // The settings fields are echoed with Blade escaping into data-
+        // attributes: even a hostile value can only appear escaped, and no
+        // attacker-authored tag can reach the DOM.
+        GeneralSetting::current()->update([
+            'trustpilot_enabled' => true,
+            'trustpilot_business_unit_id' => 'x"><script>alert(1)</script>',
+            'trustpilot_template_id' => '"><img src=x onerror=alert(1)>',
+            'trustpilot_locale' => 'en-US',
+        ]);
+
+        $html = $this->render();
+
+        $this->assertStringContainsString('trustpilot-widget', $html);
+        // The hostile payload only ever appears escaped: no raw tag, no
+        // attribute breakout, nothing executable reaches the DOM.
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringNotContainsString('<img src=x', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        // The raw double quote cannot break out of the attribute either.
+        $this->assertStringNotContainsString('data-businessunit-id="x"', $html);
+    }
 }

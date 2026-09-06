@@ -393,6 +393,22 @@
                    cannot overflow its column on a narrow viewport. */
                 max-inline-size: 100%;
             }
+            /* No plate for Trustpilot: the widget paints its own surface, so
+               a white card behind it reads as a box floating on the footer.
+               This wrapper carries no background, border or padding — it only
+               gives the iframe a width for its data-style-width:100% to
+               resolve against, and the same 96px baseline height as the plate
+               so the two trust items match instead of merely being centred by
+               the row's align-items. */
+            .vv-footer-trust-widget {
+                display: inline-flex;
+                align-items: center;
+                min-block-size: 96px;
+                inline-size: min(100%, 280px);
+            }
+            .vv-footer-trust-widget iframe {
+                display: block;
+            }
             .vv-footer-locales {
                 display: flex;
                 flex-wrap: wrap;

@@ -160,6 +160,38 @@ new class extends Component
     }
 
     /**
+     * Viravach's own Trustpilot review widget, rendered next to the trust
+     * badges but ONLY when the admin switched it on and filled in every
+     * identifying value — an empty widget div must never reach the page.
+     * The values are returned as plain data and escaped into data-
+     * attributes by the template; the footer builds the markup itself, so
+     * nothing pasted into the settings can inject markup (unlike the
+     * Enamad badge, which needs a sanitizer because it IS raw HTML).
+     *
+     * @return array{locale: string, template_id: string, business_unit_id: string}|null
+     */
+    public function trustpilot(): ?array
+    {
+        if (! $this->gs->trustpilot_enabled) {
+            return null;
+        }
+
+        $locale = trim((string) $this->gs->trustpilot_locale);
+        $templateId = trim((string) $this->gs->trustpilot_template_id);
+        $businessUnitId = trim((string) $this->gs->trustpilot_business_unit_id);
+
+        if ($locale === '' || $templateId === '' || $businessUnitId === '') {
+            return null;
+        }
+
+        return [
+            'locale' => $locale,
+            'template_id' => $templateId,
+            'business_unit_id' => $businessUnitId,
+        ];
+    }
+
+    /**
      * @return array{address: ?string, phone: ?string, email: ?string}
      */
     public function contact(): array
@@ -210,6 +242,7 @@ new class extends Component
     $social = $this->socialLinks();
     $contact = $this->contact();
     $trustBadges = $this->trustBadges();
+    $trustpilot = $this->trustpilot();
     $locales = $this->locales();
     $logoUrl = $this->brandLogoUrl();
     $about = $this->brandAbout();
@@ -316,8 +349,12 @@ new class extends Component
             </div>
         </div>
 
-        @if ($trustBadges !== [])
+        @if ($trustBadges !== [] || $trustpilot !== null)
             <div class="vv-footer-divider"></div>
+            {{-- One row for every trust item so they share a baseline: the
+                 row centres them against each other, which is the only thing
+                 that keeps a portrait eNamad seal and a landscape Trustpilot
+                 widget from looking offset when their natural heights differ. --}}
             <div class="vv-footer-trust">
                 @foreach ($trustBadges as $badge)
                     <div class="vv-footer-trust-plate">
@@ -330,6 +367,32 @@ new class extends Component
                         {!! $badge['html'] !!}
                     </div>
                 @endforeach
+
+                @if ($trustpilot !== null)
+                    {{-- Deliberately NOT a .vv-footer-trust-plate: the widget
+                         paints its own surface, so a white plate behind it
+                         reads as a card floating on the footer. This wrapper
+                         only sizes and centres it — no background, border or
+                         padding of its own. --}}
+                    <div class="vv-footer-trust-widget">
+                        {{-- The three identifying values are escaped into data-
+                             attributes by the interpolations below; the
+                             bootstrap script is the same Trustpilot
+                             infrastructure for every business, so it is
+                             hardcoded here rather than admin-editable. --}}
+                        <div class="trustpilot-widget"
+                             data-locale="{{ $trustpilot['locale'] }}"
+                             data-template-id="{{ $trustpilot['template_id'] }}"
+                             data-businessunit-id="{{ $trustpilot['business_unit_id'] }}"
+                             data-style-height="96px"
+                             data-style-width="100%"
+                             data-theme="light">
+                        </div>
+                        <script type="text/javascript"
+                                src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
+                                async></script>
+                    </div>
+                @endif
             </div>
         @endif
 

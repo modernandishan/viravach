@@ -149,6 +149,7 @@ class Company extends Model implements HasMedia
     {
         $this->addMediaCollection('logo')->singleFile();
         $this->addMediaCollection('featured_image')->singleFile();
+        $this->addMediaCollection('intro_video')->singleFile();
         $this->addMediaCollection('certificates');
     }
 

@@ -26,6 +26,10 @@ use Spatie\Translatable\HasTranslations;
     'contact_phone',
     'contact_email',
     'enamad_html',
+    'trustpilot_enabled',
+    'trustpilot_business_unit_id',
+    'trustpilot_template_id',
+    'trustpilot_locale',
 ])]
 #[Translatable([
     'site_name',

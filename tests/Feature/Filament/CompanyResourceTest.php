@@ -9,6 +9,7 @@ use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\Companies\Pages\ListCompanies;
 use App\Filament\Resources\Companies\RelationManagers\AddressesRelationManager;
 use App\Filament\Resources\Companies\RelationManagers\BrandsRelationManager;
+use App\Filament\Resources\Companies\RelationManagers\WordPressContentRelationManager;
 use App\Models\Company;
 use App\Models\CompanyAddress;
 use App\Models\CompanyBrand;
@@ -17,6 +18,7 @@ use App\Models\CompanyPublication;
 use App\Models\Country;
 use App\Models\Plan;
 use App\Models\User;
+use App\Models\WordPressContentPost;
 use App\Services\Ai\ContentGenerationService;
 use App\Services\CompanyPublicationService;
 use App\Services\CompanySubscriptionService;
@@ -424,5 +426,34 @@ class CompanyResourceTest extends TestCase
             'ownerRecord' => $company,
             'pageClass' => EditCompany::class,
         ])->assertCanSeeTableRecords($brands);
+    }
+
+    public function test_it_can_list_wordpress_content_relation_manager(): void
+    {
+        $company = Company::factory()->create();
+        $published = WordPressContentPost::factory()->create([
+            'company_id' => $company->id,
+            'title' => 'A Published Article',
+            'wp_post_url' => 'https://example.com/a-published-article',
+        ]);
+        $failed = WordPressContentPost::factory()->failed()->create([
+            'company_id' => $company->id,
+        ]);
+
+        Livewire::test(WordPressContentRelationManager::class, [
+            'ownerRecord' => $company,
+            'pageClass' => EditCompany::class,
+        ])
+            ->assertCanSeeTableRecords([$published, $failed])
+            ->assertSee('https://example.com/a-published-article')
+            // A failed row has no real URL yet — the placeholder shows
+            // instead of a dead link.
+            ->assertDontSee('a-generated-nonexistent-url');
+
+        $this->assertSame(
+            'https://example.com/a-published-article',
+            $published->refresh()->wp_post_url,
+        );
+        $this->assertNull($failed->refresh()->wp_post_url);
     }
 }

@@ -166,4 +166,39 @@ class MediaResourceTest extends TestCase
             Media::query()->where('model_type', MediaLibraryEntry::class)->count()
         );
     }
+
+    public function test_view_and_copy_link_actions_are_available_on_any_media_row(): void
+    {
+        // A row owned by a real model (category logo) and a manually
+        // uploaded library row: the actions must exist on both.
+        $owned = $this->createMedia();
+
+        $file = UploadedFile::fake()->image('banner.jpg', 10, 10);
+        Storage::disk('local')->put('uploads/banner.jpg', $file->getContent());
+
+        Livewire::test(ListMedia::class)
+            ->callAction(TestAction::make('upload'), ['image_files' => ['uploads/banner.jpg']])
+            ->assertNotified();
+
+        $library = Media::query()->where('collection_name', 'library_images')->firstOrFail();
+
+        foreach ([$owned, $library] as $media) {
+            Livewire::test(ListMedia::class)
+                ->assertActionVisible(TestAction::make('view')->table($media))
+                ->assertActionVisible(TestAction::make('copy_link')->table($media));
+        }
+    }
+
+    public function test_the_view_action_targets_the_media_public_url_in_a_new_tab(): void
+    {
+        $media = $this->createMedia();
+
+        // The view action renders as a plain anchor (a URL action), so its
+        // href carries the resolved public URL and opens a new tab; the
+        // copy action is the fallback Alpine anchor with a click handler.
+        Livewire::test(ListMedia::class)
+            ->assertSee('target="_blank"', escape: false)
+            ->assertSee($media->getUrl(), escape: false)
+            ->assertSee('x-on:click.prevent', escape: false);
+    }
 }

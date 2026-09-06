@@ -31,5 +31,5 @@ return [
     'export_top_subtitle' => 'الشركات والأعمال ذات أعلى تقييم تصدير',
     'view' => 'عرض',
     'tickets' => 'التذاكر',
-    'wordpress_content' => 'محتوى ووردبريس',
+    'wordpress_content' => 'ViraWP — إنشاء المحتوى تلقائيًا',
 ];
