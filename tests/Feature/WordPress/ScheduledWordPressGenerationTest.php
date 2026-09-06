@@ -153,6 +153,36 @@ class ScheduledWordPressGenerationTest extends TestCase
         Bus::assertNothingDispatched();
     }
 
+    /**
+     * Regression test mirroring the real production report: a connected
+     * company with every setting filled in and a single FAILED attempt
+     * older than the 3-day cadence must be selected and queued — not
+     * silently dropped by the eligibility query.
+     */
+    public function test_a_connected_company_with_a_failed_attempt_older_than_the_cadence_is_queued(): void
+    {
+        Bus::fake();
+
+        $company = $this->automaticCompany();
+        WordPressContentPost::factory()->failed()->create([
+            'company_id' => $company->id,
+            'created_at' => now()->subDays(4),
+        ]);
+
+        $output = $this->runScheduler();
+
+        $post = $company->wordPressContentPosts()->where('status', '!=', 'failed')->sole();
+
+        $this->assertSame('en', $post->locale);
+        $this->assertSame(ContentGenerationMode::Industry, $post->mode);
+        $this->assertStringContainsString('1 queued', $output);
+        Bus::assertChained([
+            GenerateWordPressPostContent::class,
+            GenerateWordPressPostImage::class,
+            PublishWordPressPost::class,
+        ]);
+    }
+
     public function test_an_exhausted_quota_is_skipped(): void
     {
         Bus::fake();
