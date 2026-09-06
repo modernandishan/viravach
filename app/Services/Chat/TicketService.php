@@ -8,6 +8,7 @@ use App\Events\TicketCreated;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
@@ -28,6 +29,9 @@ use Musonza\Chat\Models\Message as ChatMessage;
  */
 class TicketService
 {
+    /** Bounded retries for the reference-number collision race. */
+    protected const REFERENCE_MAX_ATTEMPTS = 3;
+
     /**
      * Open a new ticket for the user: private conversation tagged
      * type=ticket, first message from the user, Ticket row with a
@@ -35,23 +39,20 @@ class TicketService
      */
     public function create(User $user, string $subject, string $body): Ticket
     {
-        return DB::transaction(function () use ($user, $subject, $body): Ticket {
-            $conversation = Chat::createConversation([$user], ['type' => 'ticket']);
+        $conversation = Chat::createConversation([$user], ['type' => 'ticket']);
 
-            Chat::message($body)->from($user)->to($conversation)->send();
+        Chat::message($body)->from($user)->to($conversation)->send();
 
-            $ticket = Ticket::create([
-                'reference_number' => $this->nextReferenceNumber(),
-                'subject' => $subject,
-                'status' => TicketStatus::Open,
-                'user_id' => $user->getKey(),
-                'conversation_id' => $conversation->getKey(),
-            ]);
-
-            TicketCreated::dispatch($ticket, $this->staffChannelNames());
-
-            return $ticket;
+        // The conversation + first message are outside the retry loop: they
+        // have no collision surface. Only the Ticket insert races (unique
+        // index on reference_number), so only that is retried.
+        $ticket = DB::transaction(function () use ($conversation, $user, $subject): Ticket {
+            return $this->insertTicketWithRetry($conversation, $user, $subject);
         });
+
+        TicketCreated::dispatch($ticket, $this->staffChannelNames());
+
+        return $ticket;
     }
 
     /**
@@ -92,9 +93,7 @@ class TicketService
 
     /**
      * TICKET-YYYYMMDD-NNNN: per-day sequence derived from the count of
-     * existing references with the same date prefix, created inside the
-     * caller's transaction; the unique index on reference_number is the
-     * race-condition safety net.
+     * existing references with the same date prefix.
      */
     protected function nextReferenceNumber(): string
     {
@@ -105,6 +104,37 @@ class TicketService
             ->count() + 1;
 
         return $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Two concurrent creations can compute the same per-day sequence — the
+     * unique index on reference_number is the arbiter. On that violation the
+     * count is recomputed and the insert retried a bounded number of times;
+     * only a persistent failure (far beyond realistic same-day traffic)
+     * surfaces as an error. A bounded retry rather than lockForUpdate: at
+     * this traffic scale collisions are rare and cheap to re-run.
+     */
+    protected function insertTicketWithRetry(Conversation $conversation, User $user, string $subject): Ticket
+    {
+        $attempts = 0;
+
+        while (true) {
+            try {
+                return Ticket::create([
+                    'reference_number' => $this->nextReferenceNumber(),
+                    'subject' => $subject,
+                    'status' => TicketStatus::Open,
+                    'user_id' => $user->getKey(),
+                    'conversation_id' => $conversation->getKey(),
+                ]);
+            } catch (UniqueConstraintViolationException $exception) {
+                $attempts++;
+
+                if ($attempts >= self::REFERENCE_MAX_ATTEMPTS) {
+                    throw $exception;
+                }
+            }
+        }
     }
 
     /**

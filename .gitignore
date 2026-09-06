@@ -16,6 +16,9 @@
 /auth.json
 /node_modules
 /public/build
+# Metronic demo2 reference templates: kept on disk to copy markup from,
+# never part of the deployed app.
+/public/demo2
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage

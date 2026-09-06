@@ -206,6 +206,7 @@ class PlanSeeder extends Seeder
             // 'team-members' => '1',
             'support' => 'true',
             'ai-content-generations' => '1',
+            'virawp-monthly-contents' => '1',
         ];
     }
 
@@ -225,7 +226,7 @@ class PlanSeeder extends Seeder
             'virabot' => 'true',
             'verified-badge' => 'true',
             'certifications' => 'true',
-            'virawp-monthly-contents' => '10',
+            'virawp-monthly-contents' => '3',
             'ai-content-generations' => '3',
         ];
     }
@@ -239,7 +240,7 @@ class PlanSeeder extends Seeder
             // 'gallery-images' => '50',
             // 'team-members' => '10',
             // 'rfq-monthly-limit' => 'unlimited',
-            'virawp-monthly-contents' => '50',
+            'virawp-monthly-contents' => '10',
             'ai-content-generations' => '10',
             'premium-placement' => 'true',
             'multilingual-catalog' => 'true',

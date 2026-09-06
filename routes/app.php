@@ -47,8 +47,17 @@ Route::middleware('auth')->group(function () {
     Route::livewire('/profile', 'pages::dashboard.profile')
         ->name('profile');
 
-    Route::livewire('/settings', 'pages::dashboard.settings')
+    // The settings live on the Company, not the User, so the page takes the
+    // same optional {company?} segment as /subscriptions: with no segment it
+    // falls back to the user's first company and the in-page selector
+    // switches between the rest.
+    Route::livewire('/settings/{company?}', 'pages::dashboard.settings')
         ->name('settings');
+
+    // Monthly AI-generated WordPress articles: same optional {company?}
+    // segment convention as /settings and /subscriptions.
+    Route::livewire('/content/{company?}', 'pages::dashboard.wordpress-content')
+        ->name('wordpress-content');
 
     Route::livewire('/my-companies', 'pages::dashboard.my-companies')
         ->name('my-companies');
@@ -65,9 +74,12 @@ Route::middleware('auth')->group(function () {
     Route::livewire('/chat', 'pages::dashboard.chat')
         ->name('chat');
 
-    // Ticket support: the user's own ticket threads. Access control is the
-    // auth group itself — eligibility is the plan 'support' feature, which
-    // PlanSeeder sets 'true' on every plan (checked in the component).
+    // Ticket support: the user's own ticket threads. The enclosing 'auth'
+    // middleware is the SOLE gate — being logged in is the whole eligibility
+    // rule. There is deliberately no plan/feature or company check: the
+    // 'support' feature is true on every plan including Free, so such a check
+    // could only ever produce false negatives for a user who has no company
+    // or subscription row yet.
     Route::livewire('/tickets', 'pages::dashboard.tickets')
         ->name('tickets');
 

@@ -31,4 +31,5 @@ return [
     'export_top_subtitle' => 'Компании с наивысшим экспортным рейтингом',
     'view' => 'Просмотреть',
     'tickets' => 'Тикеты',
+    'wordpress_content' => 'Контент WordPress',
 ];

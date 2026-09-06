@@ -4,6 +4,9 @@ namespace App\Models;
 
 use App\Enums\CompanyReviewStatus;
 use App\Enums\CompanyType;
+use App\Enums\ContentGenerationMode;
+use App\Enums\SeoPlugin;
+use App\Enums\WordPressConnectionStatus;
 use App\Models\Concerns\HasSeo;
 use App\Models\Concerns\HasTranslatableSlug;
 use App\Observers\CompanyObserver;
@@ -49,6 +52,15 @@ use Spatie\Translatable\HasTranslations;
     'is_verified',
     'is_featured',
     'employee_range',
+    'seo_plugin',
+    'wp_application_password',
+    'content_generation_mode',
+    'content_language',
+    'wp_username',
+    'wp_connection_status',
+    'wp_last_checked_at',
+    'wp_last_posts',
+    'wp_seo_meta_writable',
 ])]
 #[Translatable([
     'name',
@@ -101,6 +113,17 @@ class Company extends Model implements HasMedia
             'phones' => 'array',
             'social_links' => 'array',
             'content' => 'array',
+            'seo_plugin' => SeoPlugin::class,
+            'content_generation_mode' => ContentGenerationMode::class,
+            // A live credential for the owner's WordPress install: encrypted
+            // at rest so a database dump alone cannot publish to their site.
+            'wp_application_password' => 'encrypted',
+            'wp_connection_status' => WordPressConnectionStatus::class,
+            'wp_last_checked_at' => 'datetime',
+            // The 3 posts confirmed by the last successful connection test,
+            // as {title, link, date} rows.
+            'wp_last_posts' => 'array',
+            'wp_seo_meta_writable' => 'boolean',
         ];
     }
 
@@ -183,6 +206,11 @@ class Company extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function wordPressContentPosts(): HasMany
+    {
+        return $this->hasMany(WordPressContentPost::class);
     }
 
     public function publication(): HasOne

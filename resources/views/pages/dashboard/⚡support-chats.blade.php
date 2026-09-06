@@ -607,6 +607,14 @@ class extends Component
 };
 ?>
 
+{{--
+    Queue rows and the ticket thread follow Metronic's Support Center
+    template (apps/support-center/tickets/list.html and tickets/view.html);
+    assets all resolve from theme/1, the same Metronic release. Bootstrap's
+    me-*/ms-*/ps-*/pe-* utilities are logical here (the layout swaps
+    style.bundle.rtl.css in for fa/ar), so nothing below uses a physical
+    left/right (DESIGN.md §8).
+--}}
 <div class="d-flex flex-column-fluid align-items-start container-xxl">
     <div class="content flex-row-fluid">
         {{-- Same infobar + tab bar as the rest of the dashboard. This inbox has
@@ -628,34 +636,62 @@ class extends Component
                 <div class="row g-0" style="min-height: 500px;">
                     <!--begin::Conversation list-->
                     <div class="col-12 col-md-4 border-end">
-                        <div class="scroll-y mh-500px">
+                        <div class="scroll-y mh-500px pe-md-4">
                             @forelse($conversations as $conversation)
+                                @php
+                                    // Ticket rows carry the demo's colour-coded file glyph; support and
+                                    // company threads keep the participant initial they already had.
+                                    $isTicket = $conversation['type'] === 'ticket';
+                                    $ticketColor = $conversation['ticketStatusColor'] ?? 'primary';
+                                    $ticketIcon = $ticketColor === 'warning' ? 'ki-add-files' : 'ki-file-added';
+                                    $ticketIconPaths = $ticketColor === 'warning' ? 3 : 2;
+                                @endphp
                                 <!--begin::Conversation item-->
                                 <div
-                                    class="d-flex align-items-center py-3 px-3 border-bottom cursor-pointer {{ $selectedConversationId === $conversation['id'] ? 'bg-light-primary' : '' }}"
+                                    class="d-flex p-4 mb-2 rounded cursor-pointer {{ $selectedConversationId === $conversation['id'] ? 'bg-light-primary' : 'bg-hover-light' }}"
                                     wire:click="selectConversation({{ $conversation['id'] }}, '{{ $conversation['type'] }}'{{ $conversation['companyId'] !== null ? ', '.$conversation['companyId'] : '' }})"
                                     wire:key="support-conversation-{{ $conversation['id'] }}"
                                 >
-                                    <div class="symbol symbol-40px me-3">
-                                        <span class="symbol-label bg-light-info text-info fw-bold">
-                                            {{ \Illuminate\Support\Str::substr($conversation['participantName'], 0, 1) }}
-                                        </span>
-                                    </div>
+                                    @if($isTicket)
+                                        <!--begin::Symbol-->
+                                        <i class="ki-duotone {{ $ticketIcon }} fs-2x me-4 ms-n1 mt-1 text-{{ $ticketColor }}">
+                                            @for($path = 1; $path <= $ticketIconPaths; $path++)
+                                                <span class="path{{ $path }}"></span>
+                                            @endfor
+                                        </i>
+                                        <!--end::Symbol-->
+                                    @else
+                                        <div class="symbol symbol-40px me-3">
+                                            <span class="symbol-label bg-light-info text-info fw-bold">
+                                                {{ \Illuminate\Support\Str::substr($conversation['participantName'], 0, 1) }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                    <!--begin::Section-->
                                     <div class="flex-grow-1 overflow-hidden">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="fw-bold text-gray-900 text-truncate">{{ $conversation['participantName'] }}</span>
+                                        <!--begin::Content-->
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold fs-6 text-truncate {{ $selectedConversationId === $conversation['id'] ? 'text-primary' : 'text-gray-900 text-hover-primary' }}">{{ $conversation['participantName'] }}</span>
                                             @if($conversation['unreadCount'] > 0)
-                                                <span class="badge badge-circle badge-primary">{{ $conversation['unreadCount'] }}</span>
+                                                <span class="badge badge-circle badge-primary flex-shrink-0 ms-2">{{ $conversation['unreadCount'] }}</span>
                                             @endif
                                         </div>
-                                        @if($conversation['companyName'])
-                                            <div class="text-muted fs-9 text-truncate">{{ $conversation['companyName'] }}</div>
+                                        <!--end::Content-->
+                                        @if($isTicket && ($conversation['creatorName'] ?? null))
+                                            <div class="text-muted fw-semibold fs-8 text-truncate">{{ $conversation['creatorName'] }}</div>
                                         @endif
-                                        <div class="text-muted fs-8 text-truncate">
-                                            {{ $conversation['lastMessage'] ?? __('chat.no_message_preview') }}
+                                        @if($conversation['companyName'])
+                                            {{-- Ticket rows put "reference · status" here; company rows put the company name. --}}
+                                            <div class="fw-semibold fs-8 text-truncate {{ $isTicket ? 'text-'.$ticketColor : 'text-muted' }}">{{ $conversation['companyName'] }}</div>
+                                        @endif
+                                        <!--begin::Text-->
+                                        <div class="text-muted fw-semibold fs-8 text-truncate">
+                                            <bdi>{{ $conversation['lastMessage'] ?? __('chat.no_message_preview') }}</bdi>
                                         </div>
-                                        <div class="text-muted fs-9">{{ $conversation['updatedAt'] }}</div>
+                                        <div class="text-muted fs-9"><bdi>{{ $conversation['updatedAt'] }}</bdi></div>
+                                        <!--end::Text-->
                                     </div>
+                                    <!--end::Section-->
                                 </div>
                                 <!--end::Conversation item-->
                             @empty
@@ -669,10 +705,45 @@ class extends Component
                     <!--begin::Thread-->
                     <div class="col-12 col-md-8 ps-md-5 d-flex flex-column">
                         @if($selectedConversationId === null)
-                            <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted fs-6">
-                                {{ __('chat.select_conversation') }}
+                            <div class="d-flex flex-column flex-center flex-grow-1 py-10">
+                                <i class="ki-duotone ki-questionnaire-tablet fs-5tx text-gray-300 mb-6">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <div class="fs-4 fw-semibold text-muted">{{ __('chat.select_conversation') }}</div>
                             </div>
                         @else
+                            @php $selectedTicketRow = collect($conversations)->firstWhere('id', $selectedConversationId); @endphp
+                            @if($selectedType === 'ticket' && $selectedTicketRow)
+                                @php $selectedTicketColor = $selectedTicketRow['ticketStatusColor'] ?? 'primary'; @endphp
+                                <!--begin::Ticket heading-->
+                                <div class="d-flex align-items-start mb-8">
+                                    <!--begin::Icon-->
+                                    <i class="ki-duotone ki-file-added fs-3qx text-{{ $selectedTicketColor }} ms-n2 me-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    <!--end::Icon-->
+                                    <!--begin::Content-->
+                                    <div class="d-flex flex-column">
+                                        <h2 class="text-gray-800 fw-semibold mb-1">{{ $selectedTicketRow['participantName'] }}</h2>
+                                        <div>
+                                            @if($selectedTicketRow['creatorName'] ?? null)
+                                                <span class="fw-semibold text-muted me-6">{{ __('tickets.requester') }}:
+                                                    <span class="fw-bold text-gray-600">{{ $selectedTicketRow['creatorName'] }}</span></span>
+                                            @endif
+                                            @if($selectedTicketRow['companyName'])
+                                                {{-- "reference · status" is a mixed-script string, so it follows the paragraph's
+                                                     own direction — forcing LTR flips the two halves round in fa/ar (DESIGN.md §8). --}}
+                                                <span class="fw-semibold text-muted">{{ __('tickets.reference') }}:
+                                                    <span class="fw-bold text-gray-600">{{ $selectedTicketRow['companyName'] }}</span></span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <!--end::Content-->
+                                </div>
+                                <!--end::Ticket heading-->
+                            @endif
                             {{--
                                 FALLBACK ONLY, not the primary mechanism: Echo listeners
                                 (getListeners()) drive updates; this slow poll recovers
@@ -691,7 +762,98 @@ class extends Component
                                     && window.listenToChatConversation({{ (int) $selectedConversationId }}, (e) => $wire.onConversationMessage(e))"
                             >
                                 @foreach($messages as $msg)
-                                    @include('components.chat-elements.message-item', ['msg' => $msg, 'translations' => $translations])
+                                    @if($selectedType === 'ticket')
+                                        {{--
+                                            Ticket threads render the demo's comment card instead of the
+                                            shared bubble. Every capability of
+                                            components/chat-elements/message-item is carried over verbatim:
+                                            the system-notice branch, the sanitized bodyHtml fallback, the
+                                            sender avatar, and the toggleTranslation() control (support here
+                                            is multilingual, so translation must not be lost) — only the
+                                            markup and classes differ.
+                                        --}}
+                                        @if($msg['type'] === 'system')
+                                            <!--begin::System notice-->
+                                            <div class="text-center text-muted fs-8 my-3" wire:key="chat-message-{{ $msg['id'] }}">
+                                                {{ $msg['body'] }}
+                                            </div>
+                                            <!--end::System notice-->
+                                        @else
+                                            <!--begin::Comment-->
+                                            <div class="mb-5 {{ $msg['isOwn'] ? '' : 'ms-lg-9' }}" wire:key="chat-message-{{ $msg['id'] }}">
+                                                <!--begin::Card-->
+                                                <div class="card card-bordered w-100 {{ $msg['isOwn'] ? '' : 'bg-light-primary border-primary border-opacity-25' }}">
+                                                    <!--begin::Body-->
+                                                    <div class="card-body p-5">
+                                                        <!--begin::Wrapper-->
+                                                        <div class="w-100 d-flex flex-stack mb-4">
+                                                            <!--begin::Container-->
+                                                            <div class="d-flex align-items-center">
+                                                                <!--begin::Author-->
+                                                                <div class="symbol symbol-45px me-4">
+                                                                    @if($msg['senderAvatar'] ?? null)
+                                                                        <img src="{{ $msg['senderAvatar'] }}" alt="{{ $msg['senderName'] }}"/>
+                                                                    @else
+                                                                        <div class="symbol-label fs-2 fw-bold {{ $msg['isOwn'] ? 'bg-light-info text-info' : 'bg-light-primary text-primary' }}">{{ \Illuminate\Support\Str::substr($msg['senderName'], 0, 1) }}</div>
+                                                                    @endif
+                                                                </div>
+                                                                <!--end::Author-->
+                                                                <!--begin::Info-->
+                                                                <div class="d-flex flex-column fw-semibold text-gray-600">
+                                                                    <!--begin::Text-->
+                                                                    <div class="d-flex align-items-center">
+                                                                        <span class="text-gray-800 fw-bold fs-6 me-3">{{ $msg['senderName'] }}</span>
+                                                                        @unless($msg['isOwn'])
+                                                                            <span class="badge badge-light-info">{{ __('tickets.requester') }}</span>
+                                                                        @endunless
+                                                                    </div>
+                                                                    <!--end::Text-->
+                                                                    <!--begin::Date-->
+                                                                    <span class="text-muted fw-semibold fs-7"><bdi>{{ $msg['time'] }}</bdi></span>
+                                                                    <!--end::Date-->
+                                                                </div>
+                                                                <!--end::Info-->
+                                                            </div>
+                                                            <!--end::Container-->
+                                                            <!--begin::Actions-->
+                                                            {{-- ViraBot replies are already in the user's language, so translating them is wrong and wasteful. --}}
+                                                            @unless($msg['isOwn'] || ($msg['senderType'] ?? null) === 'ai')
+                                                                <div class="m-0">
+                                                                    <button type="button" class="btn btn-color-gray-500 btn-active-color-primary p-0 fw-bold fs-7" wire:click="toggleTranslation({{ $msg['id'] }})" wire:target="toggleTranslation({{ $msg['id'] }})" wire:loading.attr="disabled">
+                                                                        <span wire:loading.remove wire:target="toggleTranslation({{ $msg['id'] }})">
+                                                                            {{ ($translations[$msg['id']]['visible'] ?? false) ? __('chat.hide_translation') : __('chat.translate_link') }}
+                                                                        </span>
+                                                                        <span wire:loading wire:target="toggleTranslation({{ $msg['id'] }})" class="spinner-border spinner-border-sm align-middle"></span>
+                                                                    </button>
+                                                                </div>
+                                                            @endunless
+                                                            <!--end::Actions-->
+                                                        </div>
+                                                        <!--end::Wrapper-->
+                                                        <!--begin::Desc-->
+                                                        <div class="fw-normal fs-6 text-gray-700 m-0" style="white-space: pre-wrap;" dir="auto">{!! ($msg['bodyHtml'] ?? null) !== null ? $msg['bodyHtml'] : e(trim($msg['body'])) !!}</div>
+                                                        <!--end::Desc-->
+                                                        @if($translations[$msg['id']]['visible'] ?? false)
+                                                            <!--begin::Translation-->
+                                                            <div class="text-muted fs-7 fw-normal mt-3 pt-3 border-top border-gray-300" style="white-space: pre-wrap;" dir="auto">
+                                                                @if($translations[$msg['id']]['error'] ?? null)
+                                                                    <span class="text-danger">{{ $translations[$msg['id']]['error'] }}</span>
+                                                                @else
+                                                                    {{ $translations[$msg['id']]['text'] ?? '' }}
+                                                                @endif
+                                                            </div>
+                                                            <!--end::Translation-->
+                                                        @endif
+                                                    </div>
+                                                    <!--end::Body-->
+                                                </div>
+                                                <!--end::Card-->
+                                            </div>
+                                            <!--end::Comment-->
+                                        @endif
+                                    @else
+                                        @include('components.chat-elements.message-item', ['msg' => $msg, 'translations' => $translations])
+                                    @endif
                                 @endforeach
                             </div>
 
@@ -702,7 +864,7 @@ class extends Component
                                 <div class="text-danger fs-8 mb-2">{{ $sendError }}</div>
                             @endif
 
-                            <textarea class="form-control mb-3" rows="2" wire:model="body" wire:keydown.enter.prevent="sendMessage" placeholder="{{ __('chat.placeholder') }}"></textarea>
+                            <textarea class="form-control form-control-solid mb-3" rows="2" wire:model="body" wire:keydown.enter.prevent="sendMessage" placeholder="{{ __('chat.placeholder') }}"></textarea>
                             <div class="d-flex justify-content-end">
                                 <button class="btn btn-primary" type="button" wire:click="sendMessage" wire:target="sendMessage" wire:loading.attr="disabled">
                                     {{ __('chat.send') }}

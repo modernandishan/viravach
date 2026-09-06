@@ -23,5 +23,5 @@ return [
     'language_switcher_label' => 'انتخاب زبان',
 
     'copyright' => 'کلیه حقوق محفوظ است © :year ویراواچ',
-    'credit' => 'طراحی و توسعه توسط اچ‌کی‌تی‌پی',
+    'credit' => 'طراحی و توسعه توسط HKTP',
 ];

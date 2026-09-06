@@ -83,6 +83,47 @@ class TicketTest extends TestCase
         $this->assertSame(TicketStatus::Answered, $ticket->fresh()->status);
     }
 
+    public function test_concurrent_ticket_creations_get_distinct_reference_numbers(): void
+    {
+        // Simulate the race: both "workers" read the count BEFORE either
+        // commits its insert, so both compute the same next number. One wins
+        // the unique index; the loser must retry with a recomputed count and
+        // still succeed — not bubble a QueryException to the user.
+        $collidingReference = null;
+
+        $service = new class extends TicketService
+        {
+            /** Next call returns this exact value once, then delegates — the one-shot race simulation. */
+            public ?string $collideWith = null;
+
+            protected function nextReferenceNumber(): string
+            {
+                if ($this->collideWith !== null) {
+                    $forced = $this->collideWith;
+                    $this->collideWith = null;
+
+                    return $forced;
+                }
+
+                return parent::nextReferenceNumber();
+            }
+        };
+
+        $first = $service->create($this->user, 'First', 'First body.');
+
+        // Second creation's FIRST attempt is forced onto the same number as
+        // the committed first ticket: unique violation on insert, the retry
+        // recomputes the day's count (now 1 committed row) and succeeds with
+        // the next sequence.
+        $service->collideWith = $first->reference_number;
+
+        $second = $service->create($this->user, 'Second', 'Second body.');
+
+        $this->assertNotSame($first->reference_number, $second->reference_number);
+        $this->assertSame(2, (int) substr($second->reference_number, -4));
+        $this->assertSame(2, Ticket::query()->count());
+    }
+
     public function test_user_reply_reopens_a_closed_ticket(): void
     {
         $service = app(TicketService::class);
@@ -153,6 +194,106 @@ class TicketTest extends TestCase
             ->assertOk()
             ->assertSee('One')
             ->assertSee($ticket->reference_number);
+    }
+
+    public function test_a_user_with_no_company_and_no_subscription_can_create_a_ticket(): void
+    {
+        // Being logged in is the whole eligibility rule (see routes/app.php):
+        // no plan feature, no company and no subscription is required.
+        $newcomer = User::factory()->create();
+
+        $this->assertFalse($newcomer->companies()->exists());
+        $this->assertSame(0, $newcomer->tickets()->count());
+
+        $this->actingAs($newcomer);
+
+        Livewire::test('pages::dashboard.tickets')
+            ->set('subject', 'Cannot sign in on mobile')
+            ->set('createBody', 'The app logs me out immediately.')
+            ->call('createTicket')
+            ->assertHasNoErrors()
+            ->assertDispatched('ticket-created');
+
+        $this->assertDatabaseHas('tickets', [
+            'user_id' => $newcomer->id,
+            'subject' => 'Cannot sign in on mobile',
+            'status' => TicketStatus::Open->value,
+        ]);
+    }
+
+    public function test_a_guest_cannot_reach_the_ticket_form(): void
+    {
+        $this->get(route('tickets'))
+            ->assertRedirect(route('auth.sign-in'));
+
+        $this->assertGuest();
+        $this->assertDatabaseCount('tickets', 0);
+    }
+
+    public function test_the_tickets_page_renders_the_support_center_markup(): void
+    {
+        $this->actingAs($this->user);
+
+        app(TicketService::class)->create($this->user, 'One', 'One body.');
+
+        $response = $this->get(route('tickets'))->assertOk();
+
+        // Support Center hero, the create-ticket modal and the queue row glyph.
+        $response->assertSee('kt_modal_new_ticket', false)
+            ->assertSee('ki-duotone ki-add-files', false)
+            ->assertSee(__('tickets.hero_subtitle'), false)
+            ->assertSee(__('tickets.my_tickets'), false);
+
+        // Reference markup must never leak demo2 asset paths.
+        $response->assertDontSee('/demo2/', false);
+    }
+
+    public function test_the_tickets_thread_renders_the_comment_card_markup(): void
+    {
+        $this->actingAs($this->user);
+
+        $ticket = app(TicketService::class)->create($this->user, 'One', 'One body.');
+
+        Livewire::test('pages::dashboard.tickets')
+            ->call('selectTicket', $ticket->id)
+            ->assertSee('card card-bordered', false)
+            ->assertSee(__('tickets.reply_title'), false)
+            ->assertSee(__('tickets.reference'), false);
+    }
+
+    public function test_the_tickets_page_renders_right_to_left_in_persian(): void
+    {
+        $this->actingAs($this->user);
+
+        app(TicketService::class)->create($this->user, 'One', 'One body.');
+
+        // Dashboard routes carry no locale prefix — SetLocaleFromSession
+        // resolves the language from the shared session cookie instead.
+        $this->withSession(['locale' => 'fa'])
+            ->get(route('tickets'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('style.bundle.rtl.css', false)
+            ->assertDontSee('/demo2/', false);
+    }
+
+    public function test_the_staff_ticket_thread_keeps_the_translation_control(): void
+    {
+        $this->actingAs($this->staff);
+
+        $ticket = app(TicketService::class)->create($this->user, 'Broken export', 'Details.');
+
+        // musonza scopes a thread's messages to its participants, so staff only
+        // see the history once addStaffReply() has joined them.
+        app(TicketService::class)->addStaffReply($ticket, $this->staff, 'Looking into it.');
+        app(TicketService::class)->addUserReply($ticket, $this->user, 'Any update?');
+
+        Livewire::test('pages::dashboard.support-chats')
+            ->call('selectConversation', $ticket->conversation_id, 'ticket')
+            ->assertSee('card card-bordered', false)
+            ->assertSee('toggleTranslation', false)
+            ->assertSee(__('chat.translate_link'), false)
+            ->assertSee(__('tickets.requester'), false);
     }
 
     public function test_staff_inbox_surfaces_ticket_conversations(): void

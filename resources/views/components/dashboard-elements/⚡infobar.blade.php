@@ -220,7 +220,7 @@ new class extends Component
                     <!--end::user-->
                     <!--begin::Actions-->
                     <div class="d-flex my-4">
-                        <a href="{{ route('profile') }}" class="btn btn-sm btn-primary me-3">
+                        <a href="{{ route('settings') }}" class="btn btn-sm btn-primary me-3">
                             {{ __('menu.settings') }}
                         </a>
                     </div>
@@ -370,6 +370,20 @@ new class extends Component
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('tickets') ? 'active' : '' }}" href="{{ route('tickets') }}">
                     {{ __('menu.tickets') }}
+                </a>
+            </li>
+            <!--end::Nav item-->
+            <!--begin::Nav item-->
+            <li class="nav-item mt-2">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('wordpress-content') ? 'active' : '' }}" href="{{ route('wordpress-content') }}">
+                    {{ __('menu.wordpress_content') }}
+                </a>
+            </li>
+            <!--end::Nav item-->
+            <!--begin::Nav item-->
+            <li class="nav-item mt-2">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('settings') ? 'active' : '' }}" href="{{ route('settings') }}">
+                    {{ __('menu.settings') }}
                 </a>
             </li>
             <!--end::Nav item-->

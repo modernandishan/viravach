@@ -30,4 +30,5 @@ return [
     'export_top_subtitle' => 'Businesses and companies with the highest export scores',
     'view' => 'View',
     'tickets' => 'Tickets',
+    'wordpress_content' => 'WordPress Content',
 ];

@@ -31,4 +31,5 @@ return [
     'export_top_subtitle' => 'کسب و کار ها و شرکت ها با بیشترین امتیاز صادرات',
     'view' => 'مشاهده',
     'tickets' => 'تیکت‌ها',
+    'wordpress_content' => 'محتوای وردپرس',
 ];

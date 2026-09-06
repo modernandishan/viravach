@@ -188,107 +188,342 @@ class extends Component {
 };
 ?>
 
+{{--
+    Markup follows Metronic's Support Center template (apps/support-center:
+    tickets/list.html for the hero + queue rows, tickets/view.html for the
+    thread, and its #kt_modal_new_ticket modal for the create form). Every
+    asset resolves from theme/1, which ships the same Metronic release.
+
+    Direction: Bootstrap's me-*/ms-*/ps-*/pe-*/text-end utilities are logical
+    here — the layout loads style.bundle.rtl.css for fa/ar and
+    style.bundle.css otherwise — so no physical left/right is used anywhere
+    below (DESIGN.md §8).
+--}}
 <div class="d-flex flex-column-fluid align-items-start container-xxl">
     <div class="content flex-row-fluid">
         {{-- Same infobar + tab bar every dashboard page renders; the Tickets
              tab activates itself via request()->routeIs('tickets'). --}}
         <livewire:dashboard-elements.infobar/>
 
-        <div class="d-flex flex-column flex-lg-row">
-            <!--begin::Sidebar-->
-            <div class="flex-column flex-lg-row-auto w-100 w-lg-350px mb-10 mb-lg-0">
-                {{-- Create form --}}
-                <div class="card card-flush mb-6">
-                    <div class="card-header pt-7">
-                        <div class="card-title"><h2 class="fs-4">{{ __('tickets.create_title') }}</h2></div>
-                    </div>
-                    <div class="card-body">
-                        <form wire:submit="createTicket">
-                            <div class="mb-4">
-                                <label class="fs-7 fw-semibold text-gray-600 mb-2 d-block" for="ticket-subject">{{ __('tickets.subject') }}</label>
-                                <input id="ticket-subject" type="text" class="form-control form-control-solid" wire:model="subject" maxlength="150">
-                                @error('subject') <div class="fs-8 text-danger mt-1">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="mb-5">
-                                <label class="fs-7 fw-semibold text-gray-600 mb-2 d-block" for="ticket-body">{{ __('tickets.message') }}</label>
-                                <textarea id="ticket-body" class="form-control form-control-solid" rows="4" wire:model="createBody"></textarea>
-                                @error('createBody') <div class="fs-8 text-danger mt-1">{{ $message }}</div> @enderror
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" wire:loading.attr="disabled">
-                                {{ __('tickets.submit') }}
-                            </button>
-                        </form>
-                    </div>
+        <!--begin::Hero-->
+        <div class="bgi-no-repeat bgi-position-center bgi-size-cover d-flex flex-column justify-content-center h-200px h-lg-250px"
+             style="background-image: url('{{ asset('theme/1/media/misc/menu-header-bg.jpg') }}')">
+            <!--begin::Container-->
+            <div class="container">
+                <!--begin::Head-->
+                <div class="d-flex flex-stack py-3 py-lg-8">
+                    <!--begin::Title-->
+                    <h2 class="fw-bold text-white pe-2 m-0">{{ __('tickets.title') }}</h2>
+                    <!--end::Title-->
+                    <!--begin::Actions-->
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#kt_modal_new_ticket">
+                        {{ __('tickets.create_title') }}
+                    </button>
+                    <!--end::Actions-->
                 </div>
-
-                {{-- Own tickets list --}}
-                <div class="card card-flush" wire:poll.60s="refreshThread">
-                    <div class="card-header pt-7">
-                        <div class="card-title"><h2 class="fs-4">{{ __('tickets.title') }}</h2></div>
-                    </div>
-                    <div class="card-body pt-4">
-                        @forelse ($this->tickets as $ticket)
-                            <div class="menu-item rounded p-2 mb-1 cursor-pointer {{ $selectedTicketId === $ticket['id'] ? 'bg-light-primary' : '' }}" wire:key="ticket-{{ $ticket['id'] }}" wire:click="selectTicket({{ $ticket['id'] }})">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-semibold text-gray-800 text-truncate">{{ $ticket['subject'] }}</span>
-                                    <span class="badge badge-light-{{ $ticket['status_color'] }} flex-shrink-0 ms-2">{{ $ticket['status_label'] }}</span>
-                                </div>
-                                <div class="fs-8 text-muted mt-1">{{ $ticket['reference_number'] }} · {{ $ticket['updated_at'] }}</div>
-                            </div>
-                        @empty
-                            <div class="text-muted fs-7 py-4 text-center">{{ __('tickets.empty') }}</div>
-                        @endforelse
-                    </div>
-                </div>
+                <!--end::Head-->
             </div>
-            <!--end::Sidebar-->
-
-            <!--begin::Thread-->
-            <div class="flex-column flex-lg-row-fluid w-100 mb-10">
-                <div class="card card-flush h-lg-700px d-flex flex-column">
-                    <div class="card-header pt-7">
-                        <div class="card-title">
-                            @if ($selectedTicketId !== null)
-                                @php $selected = collect($this->tickets)->firstWhere('id', $selectedTicketId); @endphp
-                                <h2 class="fs-4">{{ $selected['subject'] ?? '' }}</h2>
-                                <span class="badge badge-light-{{ $selected['status_color'] ?? 'secondary' }} ms-3">{{ $selected['status_label'] ?? '' }}</span>
-                                <span class="fs-8 text-muted ms-3">{{ $selected['reference_number'] ?? '' }}</span>
-                            @else
-                                <h2 class="fs-4 text-muted">{{ __('tickets.select_hint') }}</h2>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="card-body flex-row-fluid overflow-y-auto">
-                        @foreach ($messages as $message)
-                            <div class="d-flex {{ $message['isOwn'] ? 'justify-content-end' : 'justify-content-start' }} mb-4" wire:key="msg-{{ $message['id'] }}">
-                                <div class="max-w-600px">
-                                    @if (! $message['isOwn'])
-                                        <div class="fs-8 fw-semibold text-muted mb-1">{{ $message['senderName'] }}</div>
-                                    @endif
-                                    <div class="p-4 rounded {{ $message['isOwn'] ? 'bg-light-primary' : 'bg-light' }}">
-                                        <div class="fs-7">{{ $message['body'] }}</div>
-                                    </div>
-                                    <div class="fs-8 text-muted mt-1 {{ $message['isOwn'] ? 'text-end' : '' }}">{{ $message['time'] }}</div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    @if ($selectedTicketId !== null)
-                        <div class="card-footer border-0 pt-0">
-                            @if ($sendError !== null)
-                                <div class="fs-8 text-danger mb-2">{{ $sendError }}</div>
-                            @endif
-                            <form wire:submit="sendReply" class="d-flex gap-3">
-                                <input type="text" class="form-control form-control-solid" wire:model="replyBody" placeholder="{{ __('tickets.reply_placeholder') }}" autocomplete="off">
-                                <button type="submit" class="btn btn-primary flex-shrink-0" wire:loading.attr="disabled">{{ __('tickets.send') }}</button>
-                            </form>
-                        </div>
-                    @endif
-                </div>
+            <!--end::Container-->
+            <!--begin::Container-->
+            <div class="container pb-5 pb-lg-10">
+                <h3 class="fs-2x fw-bold text-white text-center m-0">{{ __('tickets.hero_subtitle') }}</h3>
             </div>
-            <!--end::Thread-->
+            <!--end::Container-->
         </div>
+        <!--end::Hero-->
+        <!--begin::Svg-->
+        <div class="mt-n8 text-page-bg">
+            <svg width="100%" height="56px" viewBox="0 0 100 100" version="1.1" preserveAspectRatio="none">
+                <path d="M0,0 C16.6666667,66 33.3333333,99 50,99 C66.6666667,99 83.3333333,66 100,0 L100,100 L0,100 L0,0 Z" fill="currentColor"></path>
+            </svg>
+        </div>
+        <!--end::Svg-->
+
+        <!--begin::Card-->
+        <div class="card">
+            <!--begin::Card body-->
+            <div class="card-body">
+                <!--begin::Layout-->
+                <div class="d-flex flex-column flex-xl-row p-md-7">
+                    <!--begin::Sidebar-->
+                    <div class="flex-column flex-xl-row-auto w-100 w-xl-350px mb-15 mb-xl-0 me-xl-15" wire:poll.60s="refreshThread">
+                        <!--begin::Heading-->
+                        <h1 class="text-gray-900 mb-10">{{ __('tickets.my_tickets') }}</h1>
+                        <!--end::Heading-->
+                        <!--begin::Tickets list-->
+                        <div class="mb-0">
+                            @forelse ($this->tickets as $ticket)
+                                @php
+                                    // Mirrors the demo's two row glyphs: an "incoming" file icon for
+                                    // tickets still awaiting us, an "added" one once they are handled.
+                                    $rowIcon = $ticket['status'] === 'open' ? 'ki-add-files' : 'ki-file-added';
+                                    $rowIconPaths = $ticket['status'] === 'open' ? 3 : 2;
+                                @endphp
+                                <!--begin::Ticket-->
+                                <div class="d-flex mb-10 cursor-pointer" wire:key="ticket-{{ $ticket['id'] }}" wire:click="selectTicket({{ $ticket['id'] }})">
+                                    <!--begin::Symbol-->
+                                    <i class="ki-duotone {{ $rowIcon }} fs-2x me-5 ms-n1 mt-2 text-{{ $ticket['status_color'] }}">
+                                        @for ($path = 1; $path <= $rowIconPaths; $path++)
+                                            <span class="path{{ $path }}"></span>
+                                        @endfor
+                                    </i>
+                                    <!--end::Symbol-->
+                                    <!--begin::Section-->
+                                    <div class="d-flex flex-column overflow-hidden">
+                                        <!--begin::Content-->
+                                        <div class="d-flex align-items-center mb-2">
+                                            <!--begin::Title-->
+                                            <span class="fs-4 me-3 fw-semibold text-truncate {{ $selectedTicketId === $ticket['id'] ? 'text-primary' : 'text-gray-900 text-hover-primary' }}">{{ $ticket['subject'] }}</span>
+                                            <!--end::Title-->
+                                            <!--begin::Tags-->
+                                            <span class="badge badge-light-{{ $ticket['status_color'] }} my-1 flex-shrink-0">{{ $ticket['status_label'] }}</span>
+                                            <!--end::Tags-->
+                                        </div>
+                                        <!--end::Content-->
+                                        <!--begin::Text-->
+                                        {{-- <bdi> keeps reference numbers and dates internally LTR inside RTL copy
+                                             without dragging the block's own alignment along (DESIGN.md §8). --}}
+                                        <span class="text-muted fw-semibold fs-6"><bdi>{{ $ticket['reference_number'] }}</bdi></span>
+                                        <span class="text-muted fw-semibold fs-7"><bdi>{{ $ticket['updated_at'] }}</bdi></span>
+                                        <!--end::Text-->
+                                    </div>
+                                    <!--end::Section-->
+                                </div>
+                                <!--end::Ticket-->
+                            @empty
+                                <div class="text-muted fs-6 fw-semibold py-4">{{ __('tickets.empty') }}</div>
+                            @endforelse
+                        </div>
+                        <!--end::Tickets list-->
+                    </div>
+                    <!--end::Sidebar-->
+
+                    <!--begin::Content-->
+                    <div class="flex-lg-row-fluid">
+                        @if ($selectedTicketId === null)
+                            <!--begin::Empty state-->
+                            <div class="d-flex flex-column flex-center py-20">
+                                <i class="ki-duotone ki-questionnaire-tablet fs-5tx text-gray-300 mb-6">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <div class="fs-4 fw-semibold text-muted">{{ __('tickets.select_hint') }}</div>
+                            </div>
+                            <!--end::Empty state-->
+                        @else
+                            @php
+                                $selected = collect($this->tickets)->firstWhere('id', $selectedTicketId);
+                                $selectedColor = $selected['status_color'] ?? 'secondary';
+                            @endphp
+                            <!--begin::Ticket view-->
+                            <div class="mb-0">
+                                <!--begin::Heading-->
+                                <div class="d-flex align-items-start mb-12">
+                                    <!--begin::Icon-->
+                                    <i class="ki-duotone ki-file-added fs-4qx text-{{ $selectedColor }} ms-n2 me-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    <!--end::Icon-->
+                                    <!--begin::Content-->
+                                    <div class="d-flex flex-column">
+                                        <!--begin::Title-->
+                                        <h1 class="text-gray-800 fw-semibold">{{ $selected['subject'] ?? '' }}</h1>
+                                        <!--end::Title-->
+                                        <!--begin::Info-->
+                                        <div class="">
+                                            <!--begin::Tags-->
+                                            <span class="fw-semibold text-muted me-6">{{ __('tickets.reference') }}:
+                                                <bdi class="fw-bold text-gray-600">{{ $selected['reference_number'] ?? '' }}</bdi></span>
+                                            <!--end::Tags-->
+                                            <!--begin::Tags-->
+                                            <span class="fw-semibold text-muted me-6">{{ __('tickets.status') }}:
+                                                <span class="badge badge-light-{{ $selectedColor }}">{{ $selected['status_label'] ?? '' }}</span></span>
+                                            <!--end::Tags-->
+                                            <!--begin::Tags-->
+                                            <span class="fw-semibold text-muted">{{ __('tickets.updated') }}:
+                                                <bdi class="fw-bold text-gray-600">{{ $selected['updated_at'] ?? '' }}</bdi></span>
+                                            <!--end::Tags-->
+                                        </div>
+                                        <!--end::Info-->
+                                    </div>
+                                    <!--end::Content-->
+                                </div>
+                                <!--end::Heading-->
+
+                                <!--begin::Comments-->
+                                <div class="mb-15">
+                                    @foreach ($messages as $message)
+                                        @if ($message['type'] === 'system')
+                                            <!--begin::System notice-->
+                                            <div class="text-center text-muted fs-7 my-5" wire:key="msg-{{ $message['id'] }}">{{ $message['body'] }}</div>
+                                            <!--end::System notice-->
+                                        @else
+                                            <!--begin::Comment-->
+                                            <div class="mb-9 {{ $message['isOwn'] ? '' : 'ms-xl-9' }}" wire:key="msg-{{ $message['id'] }}">
+                                                <!--begin::Card-->
+                                                <div class="card card-bordered w-100 {{ $message['isOwn'] ? '' : 'bg-light-primary border-primary border-opacity-25' }}">
+                                                    <!--begin::Body-->
+                                                    <div class="card-body">
+                                                        <!--begin::Wrapper-->
+                                                        <div class="w-100 d-flex flex-stack mb-5">
+                                                            <!--begin::Container-->
+                                                            <div class="d-flex align-items-center">
+                                                                <!--begin::Author-->
+                                                                <div class="symbol symbol-50px me-5">
+                                                                    @if ($message['senderAvatar'] ?? null)
+                                                                        <img src="{{ $message['senderAvatar'] }}" alt="{{ $message['senderName'] }}"/>
+                                                                    @else
+                                                                        <div class="symbol-label fs-1 fw-bold {{ $message['isOwn'] ? 'bg-light-info text-info' : 'bg-light-primary text-primary' }}">{{ \Illuminate\Support\Str::substr($message['senderName'], 0, 1) }}</div>
+                                                                    @endif
+                                                                </div>
+                                                                <!--end::Author-->
+                                                                <!--begin::Info-->
+                                                                <div class="d-flex flex-column fw-semibold fs-5 text-gray-600">
+                                                                    <!--begin::Text-->
+                                                                    <div class="d-flex align-items-center">
+                                                                        <!--begin::Username-->
+                                                                        <span class="text-gray-800 fw-bold fs-5 me-3">{{ $message['senderName'] }}</span>
+                                                                        <!--end::Username-->
+                                                                        @if ($message['isOwn'])
+                                                                            <span class="badge badge-light-info">{{ __('tickets.requester') }}</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    <!--end::Text-->
+                                                                    <!--begin::Date-->
+                                                                    <span class="text-muted fw-semibold fs-6"><bdi>{{ $message['time'] }}</bdi></span>
+                                                                    <!--end::Date-->
+                                                                </div>
+                                                                <!--end::Info-->
+                                                            </div>
+                                                            <!--end::Container-->
+                                                        </div>
+                                                        <!--end::Wrapper-->
+                                                        <!--begin::Desc-->
+                                                        <div class="fw-normal fs-5 text-gray-700 m-0" style="white-space: pre-wrap;" dir="auto">{!! ($message['bodyHtml'] ?? null) !== null ? $message['bodyHtml'] : e(trim($message['body'])) !!}</div>
+                                                        <!--end::Desc-->
+                                                    </div>
+                                                    <!--end::Body-->
+                                                </div>
+                                                <!--end::Card-->
+                                            </div>
+                                            <!--end::Comment-->
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <!--end::Comments-->
+
+                                <!--begin::Reply-->
+                                <div class="mb-0">
+                                    <h3 class="text-gray-900 fw-semibold mb-5">{{ __('tickets.reply_title') }}</h3>
+                                    @if ($sendError !== null)
+                                        <div class="fs-7 text-danger mb-3">{{ $sendError }}</div>
+                                    @endif
+                                    @error('replyBody') <div class="fs-7 text-danger mb-3">{{ $message }}</div> @enderror
+                                    <form wire:submit="sendReply">
+                                        <textarea class="form-control form-control-solid fw-bold fs-4 ps-9 pt-7" rows="6" wire:model="replyBody" placeholder="{{ __('tickets.reply_placeholder') }}"></textarea>
+                                        <div class="d-flex justify-content-end mt-n20 mb-10 pe-7 position-relative">
+                                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('tickets.send') }}</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <!--end::Reply-->
+                            </div>
+                            <!--end::Ticket view-->
+                        @endif
+                    </div>
+                    <!--end::Content-->
+                </div>
+                <!--end::Layout-->
+            </div>
+            <!--end::Card body-->
+        </div>
+        <!--end::Card-->
+
+        <!--begin::Modal - Create ticket-->
+        {{--
+            The create form lives in the demo's #kt_modal_new_ticket modal.
+            createTicket() already dispatches 'ticket-created' on success, so
+            the modal closes itself on that browser event; a validation
+            failure dispatches nothing and the modal stays open with errors.
+        --}}
+        <div class="modal fade" id="kt_modal_new_ticket" tabindex="-1" aria-hidden="true"
+             x-data
+             x-on:ticket-created.window="window.bootstrap && window.bootstrap.Modal.getOrCreateInstance($el).hide()">
+            <!--begin::Modal dialog-->
+            <div class="modal-dialog modal-dialog-centered mw-750px">
+                <!--begin::Modal content-->
+                <div class="modal-content rounded">
+                    <!--begin::Modal header-->
+                    <div class="modal-header pb-0 border-0 justify-content-end">
+                        <!--begin::Close-->
+                        <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
+                            <i class="ki-duotone ki-cross fs-1">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                        <!--end::Close-->
+                    </div>
+                    <!--end::Modal header-->
+                    <!--begin::Modal body-->
+                    <div class="modal-body scroll-y px-10 px-lg-15 pt-0 pb-15">
+                        <!--begin::Form-->
+                        <form id="kt_modal_new_ticket_form" class="form" wire:submit="createTicket">
+                            <!--begin::Heading-->
+                            <div class="mb-13 text-center">
+                                <!--begin::Title-->
+                                <h1 class="mb-3">{{ __('tickets.create_title') }}</h1>
+                                <!--end::Title-->
+                                <!--begin::Description-->
+                                <div class="text-gray-500 fw-semibold fs-5">{{ __('tickets.create_hint') }}</div>
+                                <!--end::Description-->
+                            </div>
+                            <!--end::Heading-->
+                            <!--begin::Input group-->
+                            <div class="d-flex flex-column mb-8 fv-row">
+                                <!--begin::Label-->
+                                <label class="d-flex align-items-center fs-6 fw-semibold mb-2" for="ticket-subject">
+                                    <span class="required">{{ __('tickets.subject') }}</span>
+                                    <span class="ms-2" data-bs-toggle="tooltip" title="{{ __('tickets.subject_hint') }}">
+                                        <i class="ki-duotone ki-information fs-7">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                    </span>
+                                </label>
+                                <!--end::Label-->
+                                <input id="ticket-subject" type="text" class="form-control form-control-solid" wire:model="subject" maxlength="150" placeholder="{{ __('tickets.subject_placeholder') }}">
+                                @error('subject') <div class="fs-7 text-danger mt-2">{{ $message }}</div> @enderror
+                            </div>
+                            <!--end::Input group-->
+                            <!--begin::Input group-->
+                            <div class="d-flex flex-column mb-8 fv-row">
+                                <label class="required fs-6 fw-semibold mb-2" for="ticket-body">{{ __('tickets.message') }}</label>
+                                <textarea id="ticket-body" class="form-control form-control-solid" rows="5" wire:model="createBody" placeholder="{{ __('tickets.message_placeholder') }}"></textarea>
+                                @error('createBody') <div class="fs-7 text-danger mt-2">{{ $message }}</div> @enderror
+                            </div>
+                            <!--end::Input group-->
+                            <!--begin::Actions-->
+                            <div class="text-center">
+                                <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('tickets.cancel') }}</button>
+                                <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
+                                    <span wire:loading.remove wire:target="createTicket">{{ __('tickets.submit') }}</span>
+                                    <span wire:loading wire:target="createTicket">{{ __('tickets.please_wait') }}
+                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                </button>
+                            </div>
+                            <!--end::Actions-->
+                        </form>
+                        <!--end::Form-->
+                    </div>
+                    <!--end::Modal body-->
+                </div>
+                <!--end::Modal content-->
+            </div>
+            <!--end::Modal dialog-->
+        </div>
+        <!--end::Modal - Create ticket-->
     </div>
 </div>

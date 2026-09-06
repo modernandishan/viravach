@@ -31,4 +31,5 @@ return [
     'export_top_subtitle' => 'En yüksek ihracat puanına sahip işletme ve şirketler',
     'view' => 'Görüntüle',
     'tickets' => 'Destek talepleri',
+    'wordpress_content' => 'WordPress İçeriği',
 ];
