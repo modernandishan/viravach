@@ -1,15 +1,13 @@
 <?php
 
-use App\Enums\ContentGenerationMode;
 use App\Enums\WordPressConnectionStatus;
 use App\Enums\WordPressPostStatus;
 use App\Models\Company;
-use App\Services\WordPress\WordPressContentGenerationService;
 use App\Support\LocalizedDate;
 use App\Support\WordPressContentQuota;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -26,13 +24,6 @@ class extends Component {
     #[Url]
     public ?int $selectedCompanyId = null;
 
-    /** Defaults to fa per the product requirement: one generation, one language. */
-    public string $locale = 'fa';
-
-    public string $mode = ContentGenerationMode::Industry->value;
-
-    public ?string $generateFailureReason = null;
-
     public function mount(?Company $company = null): void
     {
         if ($company) {
@@ -45,11 +36,6 @@ class extends Component {
         }
     }
 
-    public function updatedSelectedCompanyId(): void
-    {
-        $this->generateFailureReason = null;
-    }
-
     /** @return Collection<int, Company> */
     #[Computed]
     public function myCompanies(): Collection
@@ -60,15 +46,6 @@ class extends Component {
     public function selectedCompany(): ?Company
     {
         return $this->myCompanies()->firstWhere('id', $this->selectedCompanyId);
-    }
-
-    /** @return array<string, string> */
-    public function locales(): array
-    {
-        return array_map(
-            fn (array $locale): string => $locale['name'],
-            (array) config('laravellocalization.supportedLocales'),
-        );
     }
 
     public function quota(): ?WordPressContentQuota
@@ -95,27 +72,36 @@ class extends Component {
         return $this->posts()->contains(fn ($post) => $post->status->isProcessing());
     }
 
-    public function generate(WordPressContentGenerationService $service): void
+    /**
+     * When the company's most recent generation attempt happened, of any
+     * status — the same moment the scheduler's 3-day cadence is measured
+     * against, so the page and the scheduler can never disagree.
+     */
+    public function lastAttemptAt(): ?Carbon
     {
         $company = $this->selectedCompany();
-        abort_unless($company !== null, 404);
 
-        $this->generateFailureReason = null;
-
-        $this->validate([
-            'locale' => ['required', Rule::in(array_keys($this->locales()))],
-            'mode' => ['required', Rule::enum(ContentGenerationMode::class)],
-        ]);
-
-        $result = $service->request($company, $this->locale, ContentGenerationMode::from($this->mode));
-
-        if (! $result->successful) {
-            $this->generateFailureReason = $result->reason?->value;
-
-            return;
+        if ($company === null) {
+            return null;
         }
 
-        session()->flash('wordpress-content-status', __('wordpress_content.generation_queued'));
+        return $company->wordPressContentPosts()->latest()->value('created_at');
+    }
+
+    /**
+     * When the next scheduled attempt lands: the latest attempt plus the
+     * scheduler's 3-day cadence, or null when that window has already
+     * passed (the article goes out with the next nightly run).
+     */
+    public function nextGenerationAt(): ?Carbon
+    {
+        $lastAttempt = $this->lastAttemptAt();
+
+        if ($lastAttempt === null) {
+            return null;
+        }
+
+        return $lastAttempt->copy()->addDays(3);
     }
 
     public function render()
@@ -131,14 +117,10 @@ class extends Component {
     <div class="content flex-row-fluid" id="kt_content">
         <livewire:dashboard-elements.infobar/>
 
-        @if (session('wordpress-content-status'))
-            <div class="alert alert-success">{{ session('wordpress-content-status') }}</div>
-        @endif
-
         @if ($this->myCompanies()->isEmpty())
             <div class="card">
                 <div class="card-body text-center py-15">
-                    <p class="fs-4 text-gray-700 mb-5">{{ __('subscriptions.no_companies_notice') }}</p>
+                    <p class="fs-4 text-gray-700">{{ __('subscriptions.no_companies_notice') }}</p>
                     <a href="{{ route('create.company') }}" class="btn btn-primary">
                         {{ __('subscriptions.create_company_cta') }}
                     </a>
@@ -164,10 +146,13 @@ class extends Component {
                 $quota = $this->quota();
             @endphp
 
+            {{-- Observer card: generation is fully automatic. The owner sees
+                 the allowance and when the next attempt lands; there is no
+                 manual trigger on this page. --}}
             <div class="card mb-5 mb-xl-10">
                 <div class="card-header">
                     <div class="card-title">
-                        <h3>{{ __('wordpress_content.generate_section_title') }}</h3>
+                        <h3>{{ __('wordpress_content.schedule_section_title') }}</h3>
                     </div>
                 </div>
                 <div class="card-body">
@@ -181,66 +166,36 @@ class extends Component {
                             </div>
                         </div>
                     @else
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-6">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
                             <span class="badge badge-light-primary fs-7">
                                 {{ __('wordpress_content.quota_used', ['used' => $quota->used(), 'limit' => $quota->limit()]) }}
                             </span>
-                            @if (! $quota->canGenerate())
-                                <span class="fs-7 text-muted">
-                                    {{ __('wordpress_content.quota_resets_at', ['date' => LocalizedDate::format($quota->resetsAt(), LocalizedDate::FORMAT_DATE)]) }}
-                                </span>
-                            @endif
                         </div>
 
-                        <form wire:submit="generate">
-                            <div class="row">
-                                <div class="col-md-6 fv-row mb-7">
-                                    <label class="form-label">{{ __('wordpress_content.language_label') }}</label>
-                                    <select wire:model="locale" class="form-select form-select-solid @error('locale') is-invalid @enderror">
-                                        @foreach ($this->locales() as $code => $name)
-                                            <option value="{{ $code }}">{{ $name }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('locale')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6 fv-row mb-7">
-                                    <label class="form-label">{{ __('wordpress_content.mode_label') }}</label>
-                                    <div class="d-flex flex-column gap-2">
-                                        @foreach (ContentGenerationMode::cases() as $modeCase)
-                                            <label class="form-check form-check-custom form-check-solid">
-                                                <input class="form-check-input" type="radio"
-                                                       wire:model="mode" value="{{ $modeCase->value }}" />
-                                                <span class="form-check-label">{{ $modeCase->getLabel() }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                    @error('mode')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            @if ($generateFailureReason)
-                                <div class="alert alert-danger">
-                                    {{ __('wordpress_content.guard_'.$generateFailureReason) }}
-                                </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="ki-duotone ki-calendar-tick fs-2 text-primary">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            @if ($this->hasProcessingPost())
+                                <span class="fw-semibold text-gray-800">{{ __('wordpress_content.schedule_in_progress') }}</span>
+                            @elseif (! $quota->canGenerate())
+                                <span class="fw-semibold text-gray-800">
+                                    {{ __('wordpress_content.schedule_quota_reached', [
+                                        'date' => LocalizedDate::format($quota->resetsAt(), LocalizedDate::FORMAT_DATE),
+                                    ]) }}
+                                </span>
+                            @elseif (($next = $this->nextGenerationAt()) !== null && $next->isFuture())
+                                <span class="fw-semibold text-gray-800">
+                                    {{ __('wordpress_content.schedule_next_at', [
+                                        'date' => LocalizedDate::format($next, LocalizedDate::FORMAT_DATE),
+                                    ]) }}
+                                </span>
+                            @else
+                                <span class="fw-semibold text-gray-800">{{ __('wordpress_content.schedule_tonight') }}</span>
                             @endif
-
-                            <button type="submit" class="btn btn-primary"
-                                    wire:loading.attr="disabled" wire:target="generate"
-                                    @disabled(! $quota->canGenerate() || $this->hasProcessingPost())>
-                                <span class="indicator-label" wire:loading.remove wire:target="generate">
-                                    {{ __('wordpress_content.generate_button') }}
-                                </span>
-                                <span class="indicator-progress" wire:loading.flex wire:target="generate" style="display: none;">
-                                    {{ __('wordpress_content.generating') }}
-                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                                </span>
-                            </button>
-                        </form>
+                        </div>
                     @endif
                 </div>
             </div>

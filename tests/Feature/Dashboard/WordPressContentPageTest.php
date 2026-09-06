@@ -2,23 +2,26 @@
 
 namespace Tests\Feature\Dashboard;
 
-use App\Enums\ContentGenerationMode;
 use App\Enums\WordPressConnectionStatus;
-use App\Jobs\WordPress\GenerateWordPressPostContent;
-use App\Jobs\WordPress\GenerateWordPressPostImage;
-use App\Jobs\WordPress\PublishWordPressPost;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\WordPressContentPost;
 use App\Services\CompanySubscriptionService;
 use App\Settings\ContentSettings;
+use App\Support\LocalizedDate;
+use App\Support\WordPressContentQuota;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Tests\TestCase;
 
+/**
+ * The WordPress content page is observer-only: generation is fully
+ * automatic (scheduled), so the page shows the allowance, when the next
+ * attempt lands, and the publish history — and must show no manual
+ * trigger anywhere.
+ */
 class WordPressContentPageTest extends TestCase
 {
     use RefreshDatabase;
@@ -63,7 +66,7 @@ class WordPressContentPageTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_an_unconnected_company_sees_the_not_connected_guard_and_no_generate_form(): void
+    public function test_an_unconnected_company_sees_the_not_connected_guard(): void
     {
         $user = User::factory()->create();
         $company = Company::factory()->for($user)->create([
@@ -73,92 +76,81 @@ class WordPressContentPageTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::dashboard.wordpress-content', ['company' => $company])
             ->assertSee(__('wordpress_content.guard_not_connected'))
-            ->assertDontSee(__('wordpress_content.generate_button'));
+            ->assertSee(__('wordpress_content.guard_go_to_settings'));
     }
 
-    public function test_a_connected_company_can_request_a_generation(): void
+    public function test_a_company_with_no_attempts_sees_the_tonight_schedule(): void
     {
-        Bus::fake();
-
         $user = User::factory()->create();
         $company = $this->connectedCompany($user);
 
         Livewire::actingAs($user)
             ->test('pages::dashboard.wordpress-content', ['company' => $company])
-            ->set('locale', 'fa')
-            ->set('mode', ContentGenerationMode::Industry->value)
-            ->call('generate')
-            ->assertSet('generateFailureReason', null)
-            ->assertSee(__('wordpress_content.generation_queued'));
-
-        $this->assertSame(1, $company->wordPressContentPosts()->count());
-        Bus::assertChained([
-            GenerateWordPressPostContent::class,
-            GenerateWordPressPostImage::class,
-            PublishWordPressPost::class,
-        ]);
+            ->assertSee(__('wordpress_content.schedule_tonight'))
+            ->assertDontSee(__('wordpress_content.generate_button'));
     }
 
-    public function test_an_exhausted_quota_shows_its_own_guard_message_and_disables_the_button(): void
+    public function test_a_company_within_the_cadence_window_sees_the_next_attempt_date(): void
     {
-        Bus::fake();
-
-        $user = User::factory()->create();
-        $company = $this->connectedCompany($user);
-        WordPressContentPost::factory()->create(['company_id' => $company->id]);
-
-        $component = Livewire::actingAs($user)
-            ->test('pages::dashboard.wordpress-content', ['company' => $company])
-            ->call('generate');
-
-        $component->assertSet('generateFailureReason', 'quota_exhausted')
-            ->assertSee(__('wordpress_content.guard_quota_exhausted'));
-
-        // The refusal itself must not have queued a second row.
-        $this->assertSame(1, $company->wordPressContentPosts()->count());
-        Bus::assertNothingDispatched();
-    }
-
-    public function test_a_generation_already_in_progress_blocks_a_second_request(): void
-    {
-        Bus::fake();
-
         $user = User::factory()->create();
         $company = $this->connectedCompany($user);
 
-        // Pro, not Free, so the in-progress guard is what triggers here —
-        // not the (also true) fact that Free's single monthly slot is taken.
+        // Pro, so the single post below stays inside the allowance and the
+        // status line reflects the cadence rather than an exhausted quota.
         app(CompanySubscriptionService::class)->switchToPlan(
             $company,
             Plan::where('slug', 'pro-3-months')->firstOrFail(),
         );
 
-        WordPressContentPost::factory()->queued()->create(['company_id' => $company->id]);
+        WordPressContentPost::factory()->create([
+            'company_id' => $company->id,
+            'created_at' => now()->subDay(),
+        ]);
+
+        $expected = __('wordpress_content.schedule_next_at', [
+            'date' => LocalizedDate::format(now()->subDay()->addDays(3), LocalizedDate::FORMAT_DATE),
+        ]);
 
         Livewire::actingAs($user)
             ->test('pages::dashboard.wordpress-content', ['company' => $company])
-            ->call('generate')
-            ->assertSet('generateFailureReason', 'already_running')
-            ->assertSee(__('wordpress_content.guard_already_running'));
-
-        Bus::assertNothingDispatched();
+            ->assertSee($expected);
     }
 
-    public function test_generation_disabled_globally_blocks_the_request(): void
+    public function test_an_in_flight_generation_shows_the_in_progress_status(): void
     {
-        Bus::fake();
-        app(ContentSettings::class)->fill(['enabled' => false])->save();
-
         $user = User::factory()->create();
         $company = $this->connectedCompany($user);
 
+        WordPressContentPost::factory()->queued()->create([
+            'company_id' => $company->id,
+            'created_at' => now()->subDays(5),
+        ]);
+
         Livewire::actingAs($user)
             ->test('pages::dashboard.wordpress-content', ['company' => $company])
-            ->call('generate')
-            ->assertSet('generateFailureReason', 'generation_disabled')
-            ->assertSee(__('wordpress_content.guard_generation_disabled'));
+            ->assertSee(__('wordpress_content.schedule_in_progress'));
+    }
 
-        Bus::assertNothingDispatched();
+    public function test_an_exhausted_quota_shows_when_it_resets(): void
+    {
+        $user = User::factory()->create();
+        $company = $this->connectedCompany($user);
+
+        WordPressContentPost::factory()->create([
+            'company_id' => $company->id,
+            'created_at' => now()->subDays(5),
+        ]);
+
+        $expected = __('wordpress_content.schedule_quota_reached', [
+            'date' => LocalizedDate::format(
+                WordPressContentQuota::for($company)->resetsAt(),
+                LocalizedDate::FORMAT_DATE,
+            ),
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::dashboard.wordpress-content', ['company' => $company])
+            ->assertSee($expected);
     }
 
     public function test_the_history_table_lists_the_companys_posts(): void

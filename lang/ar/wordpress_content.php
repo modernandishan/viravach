@@ -4,7 +4,7 @@ return [
 
     'page_title' => 'محتوى ووردبريس',
 
-    'generate_section_title' => 'توليد مقال',
+    'schedule_section_title' => 'المقالات التلقائية',
 
     'guard_not_connected' => 'لم يتم إثبات عمل الاتصال بووردبريس بعد.',
     'guard_go_to_settings' => 'اذهب إلى الإعدادات لاختبار الاتصال',
@@ -16,12 +16,10 @@ return [
     'quota_used' => 'تم استخدام :used من :limit هذا الشهر',
     'quota_resets_at' => 'تُعاد الحصة في :date',
 
-    'language_label' => 'اللغة',
-    'mode_label' => 'طريقة اختيار الموضوع',
-
-    'generate_button' => 'توليد المقال',
-    'generating' => 'جارٍ التوليد...',
-    'generation_queued' => 'أُضيف المقال إلى قائمة الانتظار. سيظهر أدناه بعد نشره.',
+    'schedule_in_progress' => 'يتم حالياً توليد مقال.',
+    'schedule_quota_reached' => 'تم استهلاك حصة هذا الشهر بالكامل. تُعاد في :date.',
+    'schedule_next_at' => 'المقال التالي مجدول في :date.',
+    'schedule_tonight' => 'سيصدر المقال التالي مع التشغيل الليلي المجدول.',
 
     'history_title' => 'المقالات المولَّدة',
     'history_empty' => 'لم يتم توليد أي مقال بعد.',

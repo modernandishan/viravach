@@ -4,7 +4,7 @@ return [
 
     'page_title' => 'WordPress içeriği',
 
-    'generate_section_title' => 'Makale oluştur',
+    'schedule_section_title' => 'Otomatik makaleler',
 
     'guard_not_connected' => 'WordPress bağlantısı henüz doğrulanmadı.',
     'guard_go_to_settings' => 'Bağlantıyı test etmek için Ayarlar\'a gidin',
@@ -16,12 +16,10 @@ return [
     'quota_used' => 'Bu ay :limit hakkın :used tanesi kullanıldı',
     'quota_resets_at' => ':date tarihinde yenilenir',
 
-    'language_label' => 'Dil',
-    'mode_label' => 'Konu seçim şekli',
-
-    'generate_button' => 'Makale oluştur',
-    'generating' => 'Oluşturuluyor...',
-    'generation_queued' => 'Makale sıraya alındı. Yayımlandığında aşağıda görünecek.',
+    'schedule_in_progress' => 'Şu anda bir makale oluşturuluyor.',
+    'schedule_quota_reached' => 'Bu ayki hak kullanıldı. :date tarihinde yenilenir.',
+    'schedule_next_at' => 'Sonraki makale :date için planlandı.',
+    'schedule_tonight' => 'Sonraki makale bu geceki zamanlanmış çalışmayla yayımlanacak.',
 
     'history_title' => 'Oluşturulan makaleler',
     'history_empty' => 'Henüz makale oluşturulmadı.',

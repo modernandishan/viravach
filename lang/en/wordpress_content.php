@@ -4,7 +4,7 @@ return [
 
     'page_title' => 'WordPress content',
 
-    'generate_section_title' => 'Generate an article',
+    'schedule_section_title' => 'Automatic articles',
 
     'guard_not_connected' => 'The WordPress connection has not been proven to work yet.',
     'guard_go_to_settings' => 'Go to Settings to test the connection',
@@ -16,12 +16,10 @@ return [
     'quota_used' => ':used of :limit used this month',
     'quota_resets_at' => 'Resets :date',
 
-    'language_label' => 'Language',
-    'mode_label' => 'Topic mode',
-
-    'generate_button' => 'Generate article',
-    'generating' => 'Generating...',
-    'generation_queued' => 'The article has been queued. It will appear below once it is published.',
+    'schedule_in_progress' => 'An article is being generated right now.',
+    'schedule_quota_reached' => 'This month\'s allowance is used up. It resets on :date.',
+    'schedule_next_at' => 'The next article is scheduled for :date.',
+    'schedule_tonight' => 'The next article goes out with tonight\'s scheduled run.',
 
     'history_title' => 'Generated articles',
     'history_empty' => 'No articles have been generated yet.',

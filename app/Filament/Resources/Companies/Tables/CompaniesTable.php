@@ -8,6 +8,7 @@ use App\Jobs\Ai\GenerateFeaturedImage;
 use App\Models\Company;
 use App\Services\Ai\ContentGenerationService;
 use App\Services\CompanyPublicationService;
+use App\Services\WordPress\WordPressContentGenerationService;
 use App\Settings\ContentSettings;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -109,6 +110,7 @@ class CompaniesTable
                 static::resetContentQuotaAction(),
                 static::allowContentRegenerationAction(),
                 static::generateFeaturedImageAction(),
+                static::generateWordPressPostAction(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -369,6 +371,59 @@ class CompaniesTable
                 Notification::make()
                     ->title('شرکت رد شد')
                     ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Staff-only manual override for the now fully automatic WordPress
+     * article pipeline: debugging/demo force-runs the same
+     * WordPressContentGenerationService the scheduler uses, so every gate
+     * (kill-switch, connection, quota, in-flight run) is still enforced and
+     * staff can only queue a run that is otherwise eligible. Guarded by the
+     * same Approve:Company permission as the other staff actions.
+     */
+    public static function generateWordPressPostAction(): Action
+    {
+        return Action::make('generate_wordpress_post')
+            ->label('تولید مقاله وردپرس')
+            ->icon(Heroicon::DocumentText)
+            ->color('info')
+            ->authorize(fn (Company $record): bool => auth()->user()?->can('Approve:Company') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('تولید مقاله وردپرس')
+            ->modalDescription('یک مقاله وردپرس با تنظیمات ذخیره‌شده این شرکت (زبان و شیوه موضوع) به صف تولید اضافه می‌شود.')
+            ->action(function (Company $record) {
+                if ($record->content_language === null || $record->content_generation_mode === null) {
+                    Notification::make()
+                        ->title('تولید مقاله انجام نشد')
+                        ->body('زبان محتوا یا شیوه انتخاب موضوع در تنظیمات این شرکت تعیین نشده است.')
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                $result = app(WordPressContentGenerationService::class)->request(
+                    $record,
+                    $record->content_language,
+                    $record->content_generation_mode,
+                );
+
+                if ($result->successful) {
+                    Notification::make()
+                        ->title('مقاله وردپرس به صف تولید اضافه شد')
+                        ->body('مقاله پس از انتشار در تب «محتوای وردپرس» داشبورد شرکت نمایش داده می‌شود.')
+                        ->success()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title('تولید مقاله انجام نشد')
+                    ->body(__('wordpress_content.guard_'.$result->reason?->value))
+                    ->warning()
                     ->send();
             });
     }

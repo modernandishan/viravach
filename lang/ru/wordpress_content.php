@@ -4,7 +4,7 @@ return [
 
     'page_title' => 'Контент для WordPress',
 
-    'generate_section_title' => 'Создать статью',
+    'schedule_section_title' => 'Автоматические статьи',
 
     'guard_not_connected' => 'Подключение к WordPress ещё не подтверждено.',
     'guard_go_to_settings' => 'Перейдите в настройки, чтобы проверить подключение',
@@ -16,12 +16,10 @@ return [
     'quota_used' => 'Использовано :used из :limit в этом месяце',
     'quota_resets_at' => 'Обновится :date',
 
-    'language_label' => 'Язык',
-    'mode_label' => 'Способ выбора темы',
-
-    'generate_button' => 'Создать статью',
-    'generating' => 'Создаём...',
-    'generation_queued' => 'Статья поставлена в очередь. Она появится ниже после публикации.',
+    'schedule_in_progress' => 'Прямо сейчас создаётся статья.',
+    'schedule_quota_reached' => 'Лимит этого месяца исчерпан. Обновится :date.',
+    'schedule_next_at' => 'Следующая статья запланирована на :date.',
+    'schedule_tonight' => 'Следующая статья выйдет с ночным запуском по расписанию.',
 
     'history_title' => 'Созданные статьи',
     'history_empty' => 'Пока не создано ни одной статьи.',

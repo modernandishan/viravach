@@ -4,7 +4,7 @@ return [
 
     'page_title' => 'محتوای وردپرس',
 
-    'generate_section_title' => 'تولید مقاله',
+    'schedule_section_title' => 'مقالات خودکار',
 
     'guard_not_connected' => 'اتصال به وردپرس هنوز تأیید نشده است.',
     'guard_go_to_settings' => 'برای آزمایش اتصال به تنظیمات بروید',
@@ -16,12 +16,10 @@ return [
     'quota_used' => ':used از :limit در این ماه استفاده شده',
     'quota_resets_at' => 'بازنشانی در :date',
 
-    'language_label' => 'زبان',
-    'mode_label' => 'شیوه انتخاب موضوع',
-
-    'generate_button' => 'تولید مقاله',
-    'generating' => 'در حال تولید...',
-    'generation_queued' => 'مقاله در صف تولید قرار گرفت. پس از انتشار در پایین همین صفحه نمایش داده می‌شود.',
+    'schedule_in_progress' => 'هم‌اکنون یک مقاله در حال تولید است.',
+    'schedule_quota_reached' => 'سهمیه این ماه به پایان رسیده است. بازنشانی در :date.',
+    'schedule_next_at' => 'مقاله بعدی برای :date برنامه‌ریزی شده است.',
+    'schedule_tonight' => 'مقاله بعدی در اجرای شبانه برنامه‌ریزی‌شده تولید می‌شود.',
 
     'history_title' => 'مقالات تولیدشده',
     'history_empty' => 'هنوز مقاله‌ای تولید نشده است.',

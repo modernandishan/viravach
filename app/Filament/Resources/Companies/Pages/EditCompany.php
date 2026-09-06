@@ -21,6 +21,7 @@ class EditCompany extends EditRecord
         return [
             CompaniesTable::approveAction(),
             CompaniesTable::rejectAction(),
+            CompaniesTable::generateWordPressPostAction(),
             DeleteAction::make(),
             ForceDeleteAction::make(),
             RestoreAction::make(),
