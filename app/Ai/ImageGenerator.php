@@ -82,13 +82,18 @@ class ImageGenerator
         }
 
         if (! $response->successful()) {
+            // The gateway's JSON error body is the only place that explains
+            // WHAT was wrong with the request (bad parameter, prompt too
+            // long, model unavailable) — without it a 400 is undiagnosable.
             Log::warning('Image generation: request failed.', [
                 'model' => $model,
                 'failure' => 'HTTP '.$response->status(),
+                'response_body' => mb_substr($response->body(), 0, 2000),
             ]);
 
             throw new ContentGenerationException(
-                "The image gateway request failed: HTTP {$response->status()}.",
+                'The image gateway request failed: HTTP '.$response->status()
+                .' ('.mb_substr($response->body(), 0, 500).').',
             );
         }
 
