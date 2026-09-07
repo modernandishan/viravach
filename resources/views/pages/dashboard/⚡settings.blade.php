@@ -308,6 +308,14 @@ class extends Component {
             ->usingFileName($this->introVideo->getClientOriginalName())
             ->toMediaCollection('intro_video', 's3');
 
+        // Same rule ⚡edit-company applies to a replaced logo: the video is
+        // one of the collections CompanyPublicationService copies into the
+        // public snapshot, so swapping it makes the live page stale and the
+        // draft has to go back through review. Without this the new video
+        // sits in the draft indefinitely — the snapshot keeps serving the old
+        // one and nothing tells an admin a republish is due.
+        $company->update(['review_status' => CompanyReviewStatus::PendingReview]);
+
         $this->introVideo = null;
 
         session()->flash('settings-status', __('settings.intro_video_saved'));
@@ -320,6 +328,9 @@ class extends Component {
         abort_unless($company !== null, 404);
 
         $company->clearMediaCollection('intro_video');
+
+        // Removal is a published-content change too — see saveIntroVideo().
+        $company->update(['review_status' => CompanyReviewStatus::PendingReview]);
 
         $this->introVideo = null;
 

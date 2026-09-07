@@ -3,6 +3,7 @@
 use App\Livewire\Concerns\RecordsPageView;
 use Artesaos\SEOTools\Facades\SEOTools;
 use App\Models\CompanyPublication;
+use App\Support\PlanFeature;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -130,6 +131,28 @@ class extends Component {
         $introVideo = $this->publication->getFirstMedia('intro_video');
 
         if ($introVideo === null) {
+            return;
+        }
+
+        // A lapsed plan hides the video, it does not delete it, so the media
+        // being present says nothing about entitlement — the CURRENT plan
+        // does. This reads through the live Company (a belongsTo to the draft,
+        // not part of the snapshot), so activeSubscription() reflects today's
+        // plan and resubscribing brings the same file back on the next render
+        // with no admin action.
+        //
+        // A null company is an ordinary state here, not an error: Company
+        // soft-deletes and a publication outlives even a force-deleted one, so
+        // the relation resolves to null — which the markup below already
+        // expects ($publication->company?->brands). No company means no active
+        // subscription, so it lands on the same answer as an expired plan.
+        //
+        // Returning before any property is set is what also keeps the
+        // VideoObject out of the JSON-LD: no point advertising a video the
+        // page will not render.
+        $company = $this->publication->company;
+
+        if ($company === null || PlanFeature::value($company, 'intro-video') !== 'true') {
             return;
         }
 

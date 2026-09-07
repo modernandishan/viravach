@@ -178,10 +178,36 @@ class CompanyForm
 
                 Section::make('وضعیت بررسی')
                     ->schema([
+                        // "Approved" is not selectable here. It is reachable
+                        // only through CompaniesTable::approveAction(), which
+                        // publishes the snapshot in the same step; setting it
+                        // straight from this form marks a company live with no
+                        // CompanyPublication behind it, and that state is
+                        // invisible — both the approve and republish actions
+                        // hide themselves for such a record, so nothing in the
+                        // panel can move it afterwards.
+                        //
+                        // The option stays listed rather than being removed, so
+                        // an already-approved company still displays its real
+                        // status; it is only disabled, and only while the record
+                        // is not already approved — otherwise editing an
+                        // approved company's name would fail validation on its
+                        // own unchanged status. ->in() is what makes this a
+                        // real gate: unlike Radio and ToggleButtons, Filament's
+                        // Select does not derive its validation from the
+                        // enabled options, so disableOptionWhen() alone would
+                        // only hide the choice in the browser.
                         Select::make('review_status')
                             ->label('وضعیت بررسی')
                             ->options(CompanyReviewStatus::class)
                             ->default(CompanyReviewStatus::PendingReview)
+                            ->disableOptionWhen(fn (string $value, ?Company $record): bool => $value === CompanyReviewStatus::Approved->value
+                                && $record?->review_status !== CompanyReviewStatus::Approved)
+                            ->in(fn (Select $component, ?Company $record): array => array_values(array_unique(array_merge(
+                                array_keys($component->getEnabledOptions()),
+                                $record?->review_status !== null ? [$record->review_status->value] : [],
+                            ))))
+                            ->helperText('تأیید فقط از طریق دکمه «تأیید» در فهرست شرکت‌ها انجام می‌شود تا نسخه عمومی هم منتشر شود.')
                             ->native(false)
                             ->required(),
                         DateTimePicker::make('reviewed_at')

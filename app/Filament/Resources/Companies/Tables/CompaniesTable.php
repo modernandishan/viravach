@@ -17,6 +17,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Notifications\Notification;
+use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
@@ -25,7 +26,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Laravelcm\Subscriptions\Models\Subscription;
+use Throwable;
 
 class CompaniesTable
 {
@@ -123,8 +126,26 @@ class CompaniesTable
     }
 
     /**
-     * Approving stamps the review fields and (re)publishes the public
-     * snapshot. Guarded by the Approve:Company Shield permission via
+     * Approving publishes the public snapshot and only then stamps the review
+     * fields — that order is the whole point.
+     *
+     * Stamping first is what stranded company 7 (2026-09-01): publish() threw
+     * before it ever inserted the CompanyPublication row, the already-committed
+     * status update stayed, and the record became unreachable — approveAction
+     * hides itself once the status is no longer PendingReview, republishAction
+     * hides itself while no publication exists, so neither recovery button
+     * renders and only a manual DB edit gets the company moving again.
+     *
+     * Publishing first removes the need to roll anything back: if publish()
+     * throws, review_status was never touched, the company stays PendingReview
+     * and this button stays on screen for a retry. Note this is deliberately
+     * NOT wrapped in a DB::transaction() spanning both steps — publish()
+     * copies media to S3 after its own transaction commits, so an outer
+     * transaction would turn that inner commit into a savepoint and put the
+     * (non-transactional) S3 writes back inside a rollback window, which is
+     * the exact failure CompanyPublicationService was restructured to avoid.
+     *
+     * Guarded by the Approve:Company Shield permission via
      * CompanyPolicy::approve().
      */
     public static function approveAction(): Action
@@ -139,12 +160,32 @@ class CompaniesTable
             ->modalHeading('تأیید شرکت')
             ->modalDescription('با تأیید، نسخه فعلی شرکت به‌عنوان نسخه عمومی منتشر می‌شود.')
             ->action(function (Company $record) {
+                try {
+                    app(CompanyPublicationService::class)->publish($record);
+                } catch (Throwable $exception) {
+                    // Never silently. The admin has to be able to tell a failed
+                    // approve from a successful one, so the reason goes on
+                    // screen (persistent, because a toast that auto-dismisses
+                    // is how this went unnoticed for a week) and report() puts
+                    // the stack trace in the log. Halt stops the action without
+                    // Filament's generic "something went wrong" replacing the
+                    // specific message above.
+                    report($exception);
+
+                    Notification::make()
+                        ->title('انتشار شرکت ناموفق بود — وضعیت بررسی تغییر نکرد')
+                        ->body(Str::limit($exception->getMessage(), 300))
+                        ->danger()
+                        ->persistent()
+                        ->send();
+
+                    throw new Halt;
+                }
+
                 $record->update([
                     'review_status' => CompanyReviewStatus::Approved,
                     'reviewed_at' => now(),
                 ]);
-
-                app(CompanyPublicationService::class)->publish($record);
 
                 Notification::make()
                     ->title('شرکت تأیید و منتشر شد')

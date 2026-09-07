@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Enums\CompanyReviewStatus;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\User;
@@ -87,6 +88,51 @@ class SettingsIntroVideoTest extends TestCase
         $this->assertSame('s3', $media->disk);
         $this->assertSame('intro.mp4', $media->file_name);
         Storage::disk('s3')->assertExists($media->getPathRelativeToRoot());
+    }
+
+    /**
+     * The video is one of the collections copied into the public snapshot, so
+     * replacing it has to send an already-live company back through review —
+     * otherwise nothing surfaces it in the admin's republish queue and the
+     * public page serves the old video indefinitely.
+     */
+    public function test_saving_a_video_sends_an_approved_company_back_into_the_review_queue(): void
+    {
+        Storage::fake('s3');
+
+        $company = $this->onPlan('pro-3-months');
+        $company->update(['review_status' => CompanyReviewStatus::Approved]);
+        $this->mockDuration(300.0);
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.settings', ['company' => $company])
+            ->set('introVideo', $this->fakeVideo())
+            ->call('saveIntroVideo')
+            ->assertHasNoErrors();
+
+        $this->assertSame(CompanyReviewStatus::PendingReview, $company->fresh()->review_status);
+    }
+
+    public function test_removing_a_video_sends_an_approved_company_back_into_the_review_queue(): void
+    {
+        Storage::fake('s3');
+
+        $company = $this->onPlan('pro-3-months');
+        $this->mockDuration(300.0);
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.settings', ['company' => $company])
+            ->set('introVideo', $this->fakeVideo())
+            ->call('saveIntroVideo')
+            ->assertHasNoErrors();
+
+        $company->update(['review_status' => CompanyReviewStatus::Approved]);
+
+        Livewire::actingAs($company->user)
+            ->test('pages::dashboard.settings', ['company' => $company])
+            ->call('removeIntroVideo');
+
+        $this->assertSame(CompanyReviewStatus::PendingReview, $company->fresh()->review_status);
     }
 
     public function test_uploading_again_replaces_the_single_video(): void

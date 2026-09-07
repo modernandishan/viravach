@@ -14,6 +14,7 @@ use Carbon\CarbonInterface;
 use Filament\Forms\Components\RichEditor\Models\Concerns\InteractsWithRichContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -153,9 +154,15 @@ class Company extends Model implements HasMedia
         $this->addMediaCollection('certificates');
     }
 
+    /**
+     * The webp conversion is image-only. intro_video is deliberately left out
+     * of performOnCollections(): medialibrary would otherwise hand an MP4 to
+     * the image manipulator on every upload and fail the queued job.
+     */
     public function registerMediaConversions(?Media $media = null): void
     {
         $this->addMediaConversion('webp')
+            ->performOnCollections('logo', 'featured_image', 'certificates')
             ->format('webp')
             ->queued();
     }
@@ -217,6 +224,29 @@ class Company extends Model implements HasMedia
     public function publication(): HasOne
     {
         return $this->hasOne(CompanyPublication::class);
+    }
+
+    /**
+     * Companies that are already live but whose draft has moved on since the
+     * snapshot was published — the admin's "needs republishing" queue.
+     *
+     * Detection rides on review_status rather than comparing timestamps or
+     * carrying a second flag, because every write path that touches something
+     * the publication actually copies already flips the draft back to
+     * PendingReview: ⚡edit-company (reviewed fields, categories, addresses,
+     * logo), ⚡settings (website, intro video), ⚡content-editor and
+     * FinalizeContent (the AI payload), and Filament's own EditCompany. There
+     * is no second invariant to keep in sync.
+     *
+     * whereHas('publication') is what separates "edited since it went live"
+     * from "submitted but never approved" — both sit at PendingReview, but
+     * only the former has a stale public page to fix.
+     */
+    public function scopePendingRepublish(Builder $query): Builder
+    {
+        return $query
+            ->where('review_status', CompanyReviewStatus::PendingReview)
+            ->whereHas('publication');
     }
 
     public function contentRecord(): HasOne

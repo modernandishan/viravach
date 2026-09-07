@@ -194,11 +194,14 @@ class MediaResourceTest extends TestCase
         $media = $this->createMedia();
 
         // The view action renders as a plain anchor (a URL action), so its
-        // href carries the resolved public URL and opens a new tab; the
-        // copy action is the fallback Alpine anchor with a click handler.
+        // href carries the resolved public URL and opens a new tab. The copy
+        // action is a button whose ->alpineClickHandler() writes the
+        // clipboard; Filament renders that as a plain x-on:click attribute,
+        // so the clipboard call itself is what pins the behaviour here.
         Livewire::test(ListMedia::class)
             ->assertSee('target="_blank"', escape: false)
             ->assertSee($media->getUrl(), escape: false)
-            ->assertSee('x-on:click.prevent', escape: false);
+            ->assertSee('x-on:click', escape: false)
+            ->assertSee('navigator.clipboard.writeText', escape: false);
     }
 }

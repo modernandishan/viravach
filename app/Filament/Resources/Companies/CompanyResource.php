@@ -16,6 +16,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -59,6 +60,30 @@ class CompanyResource extends Resource
             'create' => CreateCompany::route('/create'),
             'edit' => EditCompany::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Count of live companies sitting on unpublished draft edits, so the
+     * republish queue is visible from the sidebar without opening the
+     * resource. Shares Company::scopePendingRepublish() with the list page's
+     * "در انتظار انتشار مجدد" tab. Returns null rather than "0" when the queue
+     * is empty, which is how Filament is told to render no badge at all.
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $count = Company::query()->pendingRepublish()->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): string|Htmlable|null
+    {
+        return 'شرکت‌های منتشرشده با تغییرات منتشرنشده';
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder

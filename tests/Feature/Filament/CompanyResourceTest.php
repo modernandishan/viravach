@@ -28,6 +28,7 @@ use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -38,6 +39,17 @@ class CompanyResourceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Every test in this class needs the plans, not just the billing ones:
+        // CompanyObserver::created() runs assignFreePlanIfMissing() for any
+        // Company the factory makes, and that silently no-ops when no Free plan
+        // exists. The company then has no subscription, so CompanyForm's
+        // required plan_id field — which loads its state from the active
+        // subscription rather than a column — comes up empty and fails the save
+        // on a field the test was never about. Seeding here rather than per
+        // test means a new test cannot forget it, the same way the base
+        // TestCase seeds RoleSeeder for every test that refreshes the database.
+        $this->seed(PlanSeeder::class);
 
         $user = User::factory()->create();
 
@@ -76,8 +88,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_it_can_create_a_company_with_translations(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $user = User::factory()->create();
 
         Livewire::test(CreateCompany::class)
@@ -103,8 +113,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_it_can_update_a_company(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $company = Company::factory()->create(['slug' => 'old-slug']);
 
         Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
@@ -119,8 +127,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_creating_a_company_without_picking_a_plan_defaults_to_free(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $user = User::factory()->create();
 
         Livewire::test(CreateCompany::class)
@@ -141,8 +147,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_creating_a_company_with_an_explicitly_picked_plan_activates_that_plan(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $user = User::factory()->create();
         $proPlan = Plan::where('slug', 'pro-3-months')->firstOrFail();
 
@@ -168,8 +172,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_editing_the_plan_field_switches_the_active_subscription(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $company = Company::factory()->create();
         app(CompanySubscriptionService::class)->assignFreePlanIfMissing($company);
 
@@ -188,8 +190,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_the_plan_field_preloads_the_companys_current_active_plan(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $company = Company::factory()->create();
         $proPlan = Plan::where('slug', 'pro-6-months')->firstOrFail();
         app(CompanySubscriptionService::class)->switchToPlan($company, $proPlan);
@@ -221,6 +221,68 @@ class CompanyResourceTest extends TestCase
         );
     }
 
+    /**
+     * Regression for the state company 7 ended up in: publish() threw, the
+     * already-committed Approved status stayed, and both recovery actions
+     * hid themselves. The status must survive untouched, and the admin must
+     * be told — a failed approve that looks like a successful one is what let
+     * this go unnoticed.
+     */
+    public function test_a_failed_publish_leaves_the_company_pending_and_notifies_the_admin(): void
+    {
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::PendingReview,
+        ]);
+
+        $this->mock(CompanyPublicationService::class)
+            ->shouldReceive('publish')
+            ->once()
+            ->andThrow(new RuntimeException('s3 exploded'));
+
+        Livewire::test(ListCompanies::class)
+            ->callAction(TestAction::make('approve')->table($company))
+            ->assertNotified();
+
+        $company->refresh();
+
+        $this->assertSame(CompanyReviewStatus::PendingReview, $company->review_status);
+        $this->assertNull($company->reviewed_at);
+        $this->assertFalse(CompanyPublication::where('company_id', $company->id)->exists());
+
+        // Still actionable: the approve button is the recovery path, so it has
+        // to remain on screen after the failure.
+        Livewire::test(ListCompanies::class)
+            ->assertActionVisible(TestAction::make('approve')->table($company));
+    }
+
+    public function test_the_edit_form_cannot_set_approved_directly(): void
+    {
+        $company = Company::factory()->create([
+            'review_status' => CompanyReviewStatus::PendingReview,
+        ]);
+
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->fillForm(['review_status' => CompanyReviewStatus::Approved->value])
+            ->call('save')
+            ->assertHasFormErrors(['review_status']);
+
+        $this->assertSame(CompanyReviewStatus::PendingReview, $company->refresh()->review_status);
+    }
+
+    public function test_an_already_approved_company_can_still_be_saved_from_the_edit_form(): void
+    {
+        // The Approved option is disabled, not removed — otherwise a company
+        // approved the proper way could never be edited again, because its own
+        // unchanged status would fail the in() rule.
+        $company = Company::factory()->approved()->create();
+
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(CompanyReviewStatus::Approved, $company->refresh()->review_status);
+    }
+
     public function test_approve_action_is_hidden_without_the_approve_permission(): void
     {
         $user = User::factory()->create();
@@ -237,8 +299,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_reset_content_quota_action_clears_usage_and_the_company_can_generate_again(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $company = Company::factory()->create();
         $subscription = $company->activeSubscription();
         $featureSlug = $subscription->plan->slug.'-ai-content-generations';
@@ -259,8 +319,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_reset_content_quota_action_is_hidden_when_no_usage_has_been_recorded(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $company = Company::factory()->create();
 
         Livewire::test(ListCompanies::class)
@@ -269,8 +327,6 @@ class CompanyResourceTest extends TestCase
 
     public function test_reset_content_quota_action_is_hidden_without_the_approve_permission(): void
     {
-        $this->seed(PlanSeeder::class);
-
         $user = User::factory()->create();
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'ViewAny:Company', 'guard_name' => 'web']));
         $this->actingAs($user);
@@ -455,5 +511,41 @@ class CompanyResourceTest extends TestCase
             $published->refresh()->wp_post_url,
         );
         $this->assertNull($failed->refresh()->wp_post_url);
+    }
+
+    public function test_a_failed_wordpress_article_can_be_deleted_from_the_relation_manager(): void
+    {
+        $company = Company::factory()->create();
+        $failed = WordPressContentPost::factory()->failed()->create([
+            'company_id' => $company->id,
+        ]);
+
+        Livewire::test(WordPressContentRelationManager::class, [
+            'ownerRecord' => $company,
+            'pageClass' => EditCompany::class,
+        ])->callAction(TestAction::make('delete')->table($failed));
+
+        $this->assertDatabaseMissing('wordpress_content_posts', ['id' => $failed->id]);
+    }
+
+    /**
+     * Published rows are the local record of an article live on someone
+     * else's site, and dropping one would also make the trend picker forget
+     * the topic was used (topic_normalized is the repeat ledger) — so the
+     * pipeline could regenerate it as a duplicate. Queued/Generating rows are
+     * mid-flight and would break the running job chain.
+     */
+    public function test_the_delete_action_is_hidden_for_articles_that_are_not_failed(): void
+    {
+        $company = Company::factory()->create();
+        $published = WordPressContentPost::factory()->create(['company_id' => $company->id]);
+        $queued = WordPressContentPost::factory()->queued()->create(['company_id' => $company->id]);
+
+        Livewire::test(WordPressContentRelationManager::class, [
+            'ownerRecord' => $company,
+            'pageClass' => EditCompany::class,
+        ])
+            ->assertActionHidden(TestAction::make('delete')->table($published))
+            ->assertActionHidden(TestAction::make('delete')->table($queued));
     }
 }

@@ -14,12 +14,28 @@ class CompanyPublicationService
      * Upsert the public snapshot for the given company from its current
      * draft data, replacing the publication's media with fresh copies so
      * the snapshot's files stay independent of the source company.
+     *
+     * Media is copied AFTER the transaction commits, deliberately. S3 is not
+     * transactional: copyMedia() uploads and deletes objects the moment it
+     * runs, so while it sat inside the transaction a rollback would restore
+     * media rows pointing at files clearMediaCollection() had already removed
+     * from the bucket — dangling rows and broken images on the live page.
+     * Outside it, the media rows and the bucket can no longer disagree.
+     *
+     * The accepted trade-off: publish is no longer atomic end to end. Between
+     * the commit and the end of copyMedia() a FIRST publish is briefly live
+     * with no media at all, and a republish briefly shows the previous
+     * snapshot's (still valid) files. A copyMedia() failure part-way leaves
+     * some collections updated and some not, with the snapshot already
+     * committed. That is intentional: every surviving row still points at a
+     * file that exists, and re-running the publish converges. Do not "fix"
+     * this by moving copyMedia() back inside the transaction.
      */
     public function publish(Company $company): CompanyPublication
     {
         $company->loadMissing(['categories', 'primaryAddress', 'exportCountries', 'seo', 'media']);
 
-        return DB::transaction(function () use ($company): CompanyPublication {
+        $publication = DB::transaction(function () use ($company): CompanyPublication {
             // Resolved inside the closure, not outside it: a variable declared
             // in the enclosing scope is NOT visible here unless it is named in
             // `use`, and omitting it made every approve/republish throw
@@ -71,16 +87,23 @@ class CompanyPublicationService
             $publication->exportCountries()->sync($company->exportCountries->pluck('id'));
 
             $this->copySeoMeta($company, $publication);
-            $this->copyMedia($company, $publication);
-
-            // Publishing changes what the owner's dashboard widgets show
-            // (view-derived widgets gain a page, the subscriptions widget can
-            // gain a company). Clear their cached payloads so the dashboard is
-            // never stale immediately after an approval.
-            DashboardWidgetCache::forgetForUser($company->user_id);
 
             return $publication;
         });
+
+        $this->copyMedia($company, $publication);
+
+        // Publishing changes what the owner's dashboard widgets show
+        // (view-derived widgets gain a page, the subscriptions widget can
+        // gain a company). Clear their cached payloads so the dashboard is
+        // never stale immediately after an approval. Ordered after
+        // copyMedia() for the same reason it is outside the transaction:
+        // clearing earlier lets a concurrent dashboard request re-cache the
+        // pre-copy media state and stay stale exactly as long as the cache
+        // lives.
+        DashboardWidgetCache::forgetForUser($company->user_id);
+
+        return $publication;
     }
 
     /**

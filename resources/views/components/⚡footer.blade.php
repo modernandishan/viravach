@@ -248,7 +248,7 @@ new class extends Component
     $about = $this->brandAbout();
 @endphp
 
-<footer class="vv-footer">
+<footer class="vv-footer mt-4">
     <div class="container-xxl">
         <div class="vv-footer-grid">
             {{-- COLUMN 1 — Brand --}}
