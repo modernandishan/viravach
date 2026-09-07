@@ -108,6 +108,7 @@ return [
     'profile_about' => 'О компании',
     'profile_brands' => 'Бренды',
     'profile_export_countries' => 'Страны экспорта',
+    'profile_intro_video' => 'Видеопрезентация',
     'profile_contact_info' => 'Контактная информация',
     'profile_social_links' => 'Социальные сети',
     'profile_no_contact_info' => 'Контактная информация не указана.',

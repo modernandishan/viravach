@@ -316,75 +316,100 @@ new class extends Component
         </div>
         <!--end::Details-->
         <!--begin::Navs-->
+        {{-- No overflow-auto/flex-nowrap here: the dropdown panels are
+             absolutely positioned inside their <li>, and a scrolling
+             ancestor would clip them. With 7 top-level items the strip
+             fits without wrapping. --}}
         <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold">
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Dashboard-->
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                     {{ __('menu.user_dashboard') }}
                 </a>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: My Companies-->
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('my-companies') ? 'active' : '' }}" href="{{ route('my-companies') }}">
                     {{ __('menu.my_companies') }}
                 </a>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Billing dropdown-->
+            @php $billingActive = request()->routeIs('subscriptions') || request()->routeIs('payments'); @endphp
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('subscriptions') ? 'active' : '' }}" href="{{ route('subscriptions') }}">
-                    {{ __('menu.subscriptions_and_plans') }}
+                {{-- KTMenu's _click() bails out on any trigger whose href is
+                     not exactly "#", so javascript:/:; here would silently
+                     disable the dropdown. --}}
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ $billingActive ? 'active' : '' }}" href="#" data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+                    {{ __('menu.nav_billing') }}
                 </a>
+                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-225px" data-kt-menu="true">
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('subscriptions') ? 'active' : '' }}" href="{{ route('subscriptions') }}">
+                            {{ __('menu.subscriptions_and_plans') }}
+                        </a>
+                    </div>
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('payments') ? 'active' : '' }}" href="{{ route('payments') }}">
+                            {{ __('menu.payment_history') }}
+                        </a>
+                    </div>
+                </div>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Content dropdown-->
+            @php $contentActive = request()->routeIs('wordpress-content') || request()->routeIs('company-views'); @endphp
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('payments') ? 'active' : '' }}" href="{{ route('payments') }}">
-                    {{ __('menu.payment_history') }}
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ $contentActive ? 'active' : '' }}" href="#" data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+                    {{ __('menu.nav_content') }}
                 </a>
+                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-225px" data-kt-menu="true">
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('wordpress-content') ? 'active' : '' }}" href="{{ route('wordpress-content') }}">
+                            {{ __('menu.wordpress_content') }}
+                        </a>
+                    </div>
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('company-views') ? 'active' : '' }}" href="{{ route('company-views') }}">
+                            {{ __('menu.company_visit_statistics') }}
+                        </a>
+                    </div>
+                </div>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
-            <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('profile') ? 'active' : '' }}" href="{{ route('profile') }}">
-                    {{ __('menu.my_profile') }}
-                </a>
-            </li>
-            <!--end::Nav item-->
-            <!--begin::Nav item-->
-            <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('company-views') ? 'active' : '' }}" href="{{ route('company-views') }}">
-                    {{ __('menu.company_visit_statistics') }}
-                </a>
-            </li>
-            <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Chat-->
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('chat') ? 'active' : '' }}" href="{{ route('chat') }}">
                     {{ __('menu.chat') }}
                 </a>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Tickets-->
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('tickets') ? 'active' : '' }}" href="{{ route('tickets') }}">
                     {{ __('menu.tickets') }}
                 </a>
             </li>
             <!--end::Nav item-->
-            <!--begin::Nav item-->
+            <!--begin::Nav item: Account dropdown-->
+            @php $accountActive = request()->routeIs('profile') || request()->routeIs('settings'); @endphp
             <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('wordpress-content') ? 'active' : '' }}" href="{{ route('wordpress-content') }}">
-                    {{ __('menu.wordpress_content') }}
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ $accountActive ? 'active' : '' }}" href="#" data-kt-menu-trigger="click" data-kt-menu-attach="parent" data-kt-menu-placement="{{ LaravelLocalization::getCurrentLocaleDirection() === 'rtl' ? 'bottom-end' : 'bottom-start' }}">
+                    {{ __('menu.nav_account') }}
                 </a>
-            </li>
-            <!--end::Nav item-->
-            <!--begin::Nav item-->
-            <li class="nav-item mt-2">
-                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('settings') ? 'active' : '' }}" href="{{ route('settings') }}">
-                    {{ __('menu.settings') }}
-                </a>
+                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-225px" data-kt-menu="true">
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('profile') ? 'active' : '' }}" href="{{ route('profile') }}">
+                            {{ __('menu.my_profile') }}
+                        </a>
+                    </div>
+                    <div class="menu-item px-5">
+                        <a class="menu-link px-5 {{ request()->routeIs('settings') ? 'active' : '' }}" href="{{ route('settings') }}">
+                            {{ __('menu.settings') }}
+                        </a>
+                    </div>
+                </div>
             </li>
             <!--end::Nav item-->
         </ul>

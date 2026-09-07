@@ -90,6 +90,27 @@ class CompanyPublicationServiceTest extends TestCase
         );
     }
 
+    /**
+     * Regression: intro_video was registered on Company but not on
+     * CompanyPublication, and copyMedia() iterates the PUBLICATION's
+     * registered collections — so the video silently never reached a
+     * snapshot and the public page could never render a player.
+     */
+    public function test_publish_copies_the_intro_video_into_the_snapshot(): void
+    {
+        $company = Company::factory()->create();
+        $company->addMedia(UploadedFile::fake()->create('intro.mp4', 16, 'video/mp4'))
+            ->toMediaCollection('intro_video', 's3');
+
+        $publication = app(CompanyPublicationService::class)->publish($company);
+
+        $this->assertCount(1, $publication->getMedia('intro_video'));
+        $this->assertNotSame(
+            $company->getFirstMedia('intro_video')->id,
+            $publication->getFirstMedia('intro_video')->id,
+        );
+    }
+
     public function test_republish_upserts_the_same_row_and_drops_removed_media(): void
     {
         $company = Company::factory()->create(['name' => ['fa' => 'قدیمی']]);

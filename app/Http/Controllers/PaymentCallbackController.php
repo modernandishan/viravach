@@ -17,7 +17,7 @@ class PaymentCallbackController extends Controller
 
         if (! $invoice || $invoice->user_id !== $request->user()->id) {
             return redirect()->route('subscriptions')->with(
-                'subscription-status',
+                'flash_error',
                 __('payments.callback_invoice_not_found'),
             );
         }
@@ -31,9 +31,10 @@ class PaymentCallbackController extends Controller
         // that change invoice state without going through it.
         DashboardWidgetCache::forgetForUser($invoice->user_id);
 
-        return redirect()->route('subscriptions')->with(
-            'subscription-status',
-            $paid ? __('payments.callback_success') : __('payments.callback_failed'),
-        );
+        // Key choice drives the toast icon: see
+        // resources/views/partials/flash-alerts.blade.php.
+        return $paid
+            ? redirect()->route('subscriptions')->with('subscription-status', __('payments.callback_success'))
+            : redirect()->route('subscriptions')->with('flash_error', __('payments.callback_failed'));
     }
 }

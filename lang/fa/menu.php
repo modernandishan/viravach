@@ -32,4 +32,8 @@ return [
     'view' => 'مشاهده',
     'tickets' => 'تیکت‌ها',
     'wordpress_content' => 'ViraWP — تولید خودکار محتوا',
+
+    'nav_billing' => 'صورتحساب',
+    'nav_content' => 'محتوا',
+    'nav_account' => 'حساب کاربری',
 ];

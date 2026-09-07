@@ -31,4 +31,8 @@ return [
     'view' => 'View',
     'tickets' => 'Tickets',
     'wordpress_content' => 'ViraWP — Automatic Content Generation',
+
+    'nav_billing' => 'Billing',
+    'nav_content' => 'Content',
+    'nav_account' => 'Account',
 ];

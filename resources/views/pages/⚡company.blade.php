@@ -22,6 +22,12 @@ class extends Component {
 
     public ?string $featuredImageCaption = null;
 
+    public ?string $introVideoUrl = null;
+
+    public ?string $introVideoTitle = null;
+
+    public ?string $introVideoPosterUrl = null;
+
     public function mount(string $slug): void
     {
         // The public site only ever serves the approved snapshot, never the
@@ -71,6 +77,10 @@ class extends Component {
         }
 
         $this->loadFeaturedImage();
+
+        // Must run after loadFeaturedImage(): the video's poster falls back
+        // to the featured image URL that call resolves.
+        $this->loadIntroVideo();
     }
 
     /**
@@ -102,6 +112,44 @@ class extends Component {
             'contentUrl' => $this->featuredImageUrl,
             'caption' => $this->featuredImageCaption,
             'description' => $this->localizedMediaProperty($featuredImage, 'description', $locale),
+        ]));
+    }
+
+    /**
+     * The intro_video media item, its localized title, and a VideoObject
+     * added onto the SAME default JSON-LD block loadFeaturedImage() and the
+     * specs use — not a second jsonLdMulti() group. Nothing is set when the
+     * snapshot carries no video, so the page renders no player at all.
+     *
+     * 'duration' is deliberately absent: it is validated at upload time but
+     * never persisted, and recovering it here would mean re-reading the file
+     * from S3 on every page render.
+     */
+    private function loadIntroVideo(): void
+    {
+        $introVideo = $this->publication->getFirstMedia('intro_video');
+
+        if ($introVideo === null) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+
+        $this->introVideoUrl = $introVideo->getUrl();
+        $this->introVideoTitle = $this->localizedMediaProperty($introVideo, 'title', $locale)
+            ?? (string) $this->publication->name;
+        // No video-specific thumbnail conversion exists in this project, so
+        // the featured image is the only poster candidate; omitted entirely
+        // when the company has no featured image either.
+        $this->introVideoPosterUrl = $this->featuredImageUrl;
+
+        SEOTools::jsonLdMulti()->addValue('video', array_filter([
+            '@type' => 'VideoObject',
+            'name' => $this->introVideoTitle,
+            'description' => $this->localizedMediaProperty($introVideo, 'description', $locale),
+            'contentUrl' => $this->introVideoUrl,
+            'thumbnailUrl' => $this->introVideoPosterUrl,
+            'uploadDate' => $introVideo->created_at?->toIso8601String(),
         ]));
     }
 
@@ -308,6 +356,55 @@ class extends Component {
                         />
                     </div>
                 @endif
+
+                {{-- Intro video, rendered only when the snapshot actually
+                     carries one. The player bundle is pushed from inside this
+                     @if, so pages without a video never load Vidstack at all.
+
+                     One @vite() call, pushed to the head 'styles' stack rather
+                     than the end-of-body 'scripts' stack: @vite emits BOTH the
+                     <link> and the <script> for an entry, so calling it twice
+                     to separate them would duplicate the stylesheet and run the
+                     module twice. Head placement costs nothing — @vite emits a
+                     type="module" script, which the HTML spec defers by
+                     default, exactly as the layout's own base @vite does. --}}
+                @if ($introVideoUrl)
+                    @push('styles')
+                        @vite(['resources/js/video-player.js'])
+                    @endpush
+                    <div class="card mb-6">
+                        <div class="card-header border-0 pt-6">
+                            <div class="card-title">
+                                <h2>{{ __('companies.profile_intro_video') }}</h2>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            {{-- aria-label, not title: media-player declares the
+                                 former and not the latter. crossorigin is left
+                                 off deliberately — the MinIO bucket serves no
+                                 CORS headers for this origin, and requesting a
+                                 CORS fetch would break playback outright. --}}
+                            <media-player
+                                class="w-100"
+                                aria-label="{{ $introVideoTitle }}"
+                                src="{{ $introVideoUrl }}"
+                                playsinline
+                            >
+                                <media-provider>
+                                    @if ($introVideoPosterUrl)
+                                        <media-poster
+                                            class="vds-poster"
+                                            src="{{ $introVideoPosterUrl }}"
+                                            alt="{{ $introVideoTitle }}"
+                                        ></media-poster>
+                                    @endif
+                                </media-provider>
+                                <media-video-layout></media-video-layout>
+                            </media-player>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="card">
                     <div class="card-header border-0 pt-6">
                         <div class="card-title">

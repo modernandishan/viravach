@@ -32,4 +32,8 @@ return [
     'view' => 'Görüntüle',
     'tickets' => 'Destek talepleri',
     'wordpress_content' => 'ViraWP — otomatik içerik üretimi',
+
+    'nav_billing' => 'Faturalama',
+    'nav_content' => 'İçerik',
+    'nav_account' => 'Hesap',
 ];

@@ -108,6 +108,7 @@ return [
     'profile_about' => 'About the company',
     'profile_brands' => 'Brands',
     'profile_export_countries' => 'Export countries',
+    'profile_intro_video' => 'Intro video',
     'profile_contact_info' => 'Contact information',
     'profile_social_links' => 'Social networks',
     'profile_no_contact_info' => 'No contact information provided.',

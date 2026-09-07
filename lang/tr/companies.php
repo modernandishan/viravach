@@ -108,6 +108,7 @@ return [
     'profile_about' => 'Şirket hakkında',
     'profile_brands' => 'Markalar',
     'profile_export_countries' => 'İhracat ülkeleri',
+    'profile_intro_video' => 'Tanıtım videosu',
     'profile_contact_info' => 'İletişim bilgileri',
     'profile_social_links' => 'Sosyal ağlar',
     'profile_no_contact_info' => 'İletişim bilgisi girilmemiş.',

@@ -354,9 +354,7 @@ class extends Component {
     <div class="content flex-row-fluid" id="kt_content">
         <livewire:dashboard-elements.infobar/>
 
-        @if (session('settings-status'))
-            <div class="alert alert-success">{{ session('settings-status') }}</div>
-        @endif
+        @include('partials.flash-alerts')
 
         @if ($this->myCompanies()->isEmpty())
             {{-- Same empty state as ⚡subscriptions: both pages are per-company,
@@ -631,73 +629,94 @@ class extends Component {
                         </div>
                     </div>
                 </div>
+            </form>
 
-                {{-- Intro video (plan-gated) --}}
-                <div class="card mb-5 mb-xl-10">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <h3>{{ __('settings.intro_video_section_title') }}</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        @if (! $this->canUploadIntroVideo())
-                            {{-- Visible rather than hidden: the owner should
-                                 learn the feature exists and what unlocks it. --}}
-                            <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-6">
-                                <i class="ki-duotone ki-video fs-2tx text-primary me-4">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                                <div class="d-flex flex-column flex-grow-1">
-                                    <div class="fw-semibold text-gray-800 mb-3">{{ __('settings.intro_video_upsell') }}</div>
-                                    <div>
-                                        <a href="{{ route('subscriptions') }}" class="btn btn-sm btn-primary">
-                                            {{ __('settings.intro_video_upsell_cta') }}
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @else
-                            @php $currentVideo = $this->currentIntroVideo(); @endphp
+            {{-- Intro video (plan-gated).
 
-                            @if ($currentVideo)
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <i class="ki-duotone ki-video fs-2 text-success">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
-                                        <span class="fw-semibold text-gray-900">{{ $currentVideo->file_name }}</span>
-                                    </div>
-                                    <button type="button" class="btn btn-light-danger btn-sm"
-                                            wire:click="removeIntroVideo"
-                                            wire:loading.attr="disabled" wire:target="removeIntroVideo">
-                                        {{ __('settings.intro_video_remove') }}
-                                    </button>
-                                </div>
-                            @endif
-
-                            <form wire:submit="saveIntroVideo">
-                                <div class="fv-row mb-6">
-                                    <label class="form-label">{{ __('settings.intro_video_label') }}</label>
-                                    <div class="form-text mt-0 mb-4">{{ __('settings.intro_video_hint') }}</div>
-                                    <input type="file" wire:model="introVideo"
-                                           accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska"
-                                           class="form-control form-control-solid @error('introVideo') is-invalid @enderror" />
-                                    @error('introVideo')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <button type="submit" class="btn btn-primary"
-                                        wire:loading.attr="disabled" wire:target="saveIntroVideo">
-                                    <span wire:loading.remove wire:target="saveIntroVideo">{{ __('settings.intro_video_save_button') }}</span>
-                                    <span wire:loading wire:target="saveIntroVideo">{{ __('settings.intro_video_saving') }}</span>
-                                </button>
-                            </form>
-                        @endif
+                 This card carries its OWN submit action, so it sits BETWEEN the
+                 two sibling wire:submit="save" forms rather than inside either
+                 of them. A form nested in another form is invalid HTML: the
+                 parser drops the inner start tag outright, which left this
+                 card's button submitting the outer form and calling save()
+                 instead of saveIntroVideo(). Keep these boundaries as they
+                 are — Livewire reads component state, not serialized form
+                 fields, so splitting the settings form costs nothing. --}}
+            <div class="card mb-5 mb-xl-10">
+                <div class="card-header">
+                    <div class="card-title">
+                        <h3>{{ __('settings.intro_video_section_title') }}</h3>
                     </div>
                 </div>
+                <div class="card-body">
+                    @if (! $this->canUploadIntroVideo())
+                        {{-- Visible rather than hidden: the owner should
+                             learn the feature exists and what unlocks it. --}}
+                        <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-6">
+                            <i class="ki-duotone ki-video fs-2tx text-primary me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <div class="d-flex flex-column flex-grow-1">
+                                <div class="fw-semibold text-gray-800 mb-3">{{ __('settings.intro_video_upsell') }}</div>
+                                <div>
+                                    <a href="{{ route('subscriptions') }}" class="btn btn-sm btn-primary">
+                                        {{ __('settings.intro_video_upsell_cta') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        @php $currentVideo = $this->currentIntroVideo(); @endphp
 
+                        @if ($currentVideo)
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="ki-duotone ki-video fs-2 text-success">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    <span class="fw-semibold text-gray-900">{{ $currentVideo->file_name }}</span>
+                                </div>
+                                <button type="button" class="btn btn-light-danger btn-sm"
+                                        wire:click="removeIntroVideo"
+                                        wire:loading.attr="disabled" wire:target="removeIntroVideo">
+                                    {{ __('settings.intro_video_remove') }}
+                                </button>
+                            </div>
+                        @endif
+
+                        <form wire:submit="saveIntroVideo">
+                            <div class="fv-row mb-6">
+                                <label class="form-label">{{ __('settings.intro_video_label') }}</label>
+                                <div class="form-text mt-0 mb-4">{{ __('settings.intro_video_hint') }}</div>
+                                <input type="file" wire:model="introVideo"
+                                       accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska"
+                                       class="form-control form-control-solid @error('introVideo') is-invalid @enderror" />
+                                @error('introVideo')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            {{-- Scoped to saveIntroVideo only, so this button's
+                                 spinner never reacts to the main settings save
+                                 (or vice versa) now that they are separate
+                                 forms. Same indicator-label/indicator-progress
+                                 pattern as the WordPress test button above. --}}
+                            <button type="submit" class="btn btn-primary"
+                                    wire:loading.attr="disabled" wire:target="saveIntroVideo">
+                                <span class="indicator-label" wire:loading.remove wire:target="saveIntroVideo">
+                                    {{ __('settings.intro_video_save_button') }}
+                                </span>
+                                <span class="indicator-progress" wire:loading.flex wire:target="saveIntroVideo"
+                                      style="display: none;">
+                                    {{ __('settings.intro_video_saving') }}
+                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+
+            <form wire:submit="save">
                 {{-- Content generation --}}
                 <div class="card mb-5 mb-xl-10">
                     <div class="card-header">

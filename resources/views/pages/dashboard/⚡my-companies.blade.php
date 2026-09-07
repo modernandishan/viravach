@@ -105,9 +105,7 @@ class extends Component
     <div class="content flex-row-fluid">
         <livewire:dashboard-elements.infobar/>
 
-        @if (session('company-status'))
-            <div class="alert alert-success">{{ session('company-status') }}</div>
-        @endif
+        @include('partials.flash-alerts')
 
         <div id="kt_content_container" class="d-flex flex-column-fluid align-items-start container-xxl">
             <div class="content flex-row-fluid" id="kt_content">

@@ -153,7 +153,7 @@ class extends Component {
         $amount = (int) round($plan->price);
 
         if ($amount < config('pricing.min_purchase_amount')) {
-            session()->flash('subscription-status', __('subscriptions.amount_below_minimum'));
+            session()->flash('flash_error', __('subscriptions.amount_below_minimum'));
 
             return null;
         }
@@ -172,7 +172,7 @@ class extends Component {
         try {
             return redirect(app(InvoicePaymentService::class)->purchase($invoice));
         } catch (PurchaseFailedException) {
-            session()->flash('subscription-status', __('subscriptions.purchase_failed'));
+            session()->flash('flash_error', __('subscriptions.purchase_failed'));
 
             return null;
         }
@@ -225,9 +225,7 @@ class extends Component {
     <div class="content flex-row-fluid" id="kt_content">
         <livewire:dashboard-elements.infobar/>
 
-        @if (session('subscription-status'))
-            <div class="alert alert-success">{{ session('subscription-status') }}</div>
-        @endif
+        @include('partials.flash-alerts')
 
         @if ($this->myCompanies()->isEmpty())
             <div class="card">

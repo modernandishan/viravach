@@ -146,12 +146,19 @@ class CompanyPublication extends Model implements HasMedia, Viewable
     {
         $this->addMediaCollection('logo')->singleFile();
         $this->addMediaCollection('featured_image')->singleFile();
+        $this->addMediaCollection('intro_video')->singleFile();
         $this->addMediaCollection('certificates');
     }
 
+    /**
+     * The webp conversion is image-only. intro_video is deliberately left out
+     * of performOnCollections(): medialibrary would otherwise hand an MP4 to
+     * the image manipulator on every publish and fail the queued job.
+     */
     public function registerMediaConversions(?Media $media = null): void
     {
         $this->addMediaConversion('webp')
+            ->performOnCollections('logo', 'featured_image', 'certificates')
             ->format('webp')
             ->queued();
     }

@@ -130,7 +130,12 @@ return [
 
     'temporary_file_upload' => [
         'disk' => env('LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK'), // Example: 'local', 's3'             | Default: 'default'
-        'rules' => null,                                      // Example: ['file', 'mimes:png,jpg'] | Default: ['required', 'file', 'max:12288'] (12MB)
+        // 256MB, matching PHP's upload_max_filesize (256M) and the intro-video
+        // policy. Livewire's default is max:12288 (12MB), which capped EVERY
+        // temporary upload site-wide before any component's own validate()
+        // rule could run. Each feature still enforces its real per-feature
+        // limit after the temporary upload succeeds.
+        'rules' => ['required', 'file', 'max:262144'],
         'directory' => null,                                  // Example: 'tmp'                     | Default: 'livewire-tmp'
         'middleware' => null,                                 // Example: 'throttle:5,1'            | Default: 'throttle:60,1'
         'preview_mimes' => [                                  // Supported file types for temporary pre-signed file URLs...
@@ -138,7 +143,10 @@ return [
             'mov', 'avi', 'wmv', 'mp3', 'm4a',
             'jpg', 'jpeg', 'mpga', 'webp', 'wma',
         ],
-        'max_upload_time' => 5, // Max duration (in minutes) before an upload is invalidated...
+        // Raised from Livewire's default of 5: this value is the validity window
+        // of the signed upload URL, and a 256MB upload on a slow connection can
+        // still be arriving when a 5-minute signature expires.
+        'max_upload_time' => 10, // Max duration (in minutes) before an upload is invalidated...
         'cleanup' => true, // Should cleanup temporary uploads older than 24 hrs...
     ],
 

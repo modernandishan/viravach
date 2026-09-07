@@ -30,6 +30,16 @@ class VideoMetadata
 
         $info = $analyzer->analyze($path);
 
+        // getID3 reports a parse failure in $info['error'] but still returns a
+        // meaningless playtime_seconds of 0 alongside it — a fragmented MP4
+        // ("fragmented mp4 files not currently supported") is the case seen in
+        // production. Reading that 0 as a real duration let any unparseable
+        // video slip past the caller's MAX_SECONDS check, so an error is
+        // reported the same way an absent duration is.
+        if (! empty($info['error'])) {
+            return null;
+        }
+
         $seconds = $info['playtime_seconds'] ?? null;
 
         return is_numeric($seconds) ? (float) $seconds : null;

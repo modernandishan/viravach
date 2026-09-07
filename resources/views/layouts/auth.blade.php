@@ -31,6 +31,10 @@
         // Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }
     </script>
 
+    {{-- Same bundle as layouts::landing — the auth pages need it for the
+         sitewide SweetAlert2 notifications included at the end of <body>. --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     @livewireStyles
 </head>
 <!--end::Head-->
@@ -93,6 +97,9 @@
 @endif--}}
 <!--end::custom Javascript-->
 <!--end::Javascript-->
+
+{{-- Sitewide SweetAlert2 notifications; see partials/flash-alerts.blade.php. --}}
+@include('partials.flash-alerts', ['includeErrorBag' => true])
 
 @livewireScripts
 </body>

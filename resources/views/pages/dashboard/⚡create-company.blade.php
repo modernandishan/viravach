@@ -389,9 +389,7 @@ class extends Component
     <div class="content flex-row-fluid">
         <livewire:dashboard-elements.infobar/>
 
-        @error('cooldown')
-            <div class="alert alert-danger">{{ $message }}</div>
-        @enderror
+        @include('partials.flash-alerts', ['errorKeys' => ['cooldown']])
 
         <div class="content flex-row-fluid" id="kt_content">
             <!--begin::Stepper-->

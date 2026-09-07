@@ -32,4 +32,8 @@ return [
     'view' => 'عرض',
     'tickets' => 'التذاكر',
     'wordpress_content' => 'ViraWP — إنشاء المحتوى تلقائيًا',
+
+    'nav_billing' => 'الفوترة',
+    'nav_content' => 'المحتوى',
+    'nav_account' => 'الحساب',
 ];

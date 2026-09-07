@@ -108,6 +108,7 @@ return [
     'profile_about' => 'درباره کسب‌وکار',
     'profile_brands' => 'برندها',
     'profile_export_countries' => 'کشورهای صادراتی',
+    'profile_intro_video' => 'ویدئوی معرفی',
     'profile_contact_info' => 'اطلاعات تماس',
     'profile_social_links' => 'شبکه‌های اجتماعی',
     'profile_no_contact_info' => 'اطلاعات تماسی ثبت نشده است.',

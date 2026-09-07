@@ -108,6 +108,7 @@ return [
     'profile_about' => 'عن الشركة',
     'profile_brands' => 'العلامات التجارية',
     'profile_export_countries' => 'دول التصدير',
+    'profile_intro_video' => 'فيديو تعريفي',
     'profile_contact_info' => 'معلومات الاتصال',
     'profile_social_links' => 'شبكات التواصل الاجتماعي',
     'profile_no_contact_info' => 'لم يتم تسجيل معلومات اتصال.',

@@ -110,6 +110,13 @@
 
     @livewireStyles
 
+    {{-- Page-specific stylesheets, pushed by whichever ⚡ page needs them
+         (currently the company page's Vidstack player). Last in <head> so a
+         page's own CSS wins over the Metronic bundles and app.css above, and
+         in <head> at all so it is parsed before first paint — pushing it to
+         the end-of-body scripts stack instead made the player flash unstyled. --}}
+    @stack('styles')
+
 </head>
 <body id="kt_body" class="header-fixed header-tablet-and-mobile-fixed toolbar-enabled">
 <!--begin::Theme mode setup on page load-->
@@ -940,6 +947,11 @@
 <!--end::Javascript-->
 
 @stack('scripts')
+
+{{-- Sitewide SweetAlert2 notifications: covers full page loads and
+     redirect-carried flashes. Livewire components that flash without
+     redirecting include this partial themselves as well. --}}
+@include('partials.flash-alerts', ['includeErrorBag' => true])
 
 @livewireScripts
 </body>

@@ -32,4 +32,8 @@ return [
     'view' => 'Просмотреть',
     'tickets' => 'Тикеты',
     'wordpress_content' => 'ViraWP — автоматическая генерация контента',
+
+    'nav_billing' => 'Оплата',
+    'nav_content' => 'Контент',
+    'nav_account' => 'Аккаунт',
 ];

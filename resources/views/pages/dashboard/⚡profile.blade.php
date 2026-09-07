@@ -461,9 +461,9 @@ class extends Component
     <div class="content flex-row-fluid">
         <livewire:dashboard-elements.infobar/>
 
-        @if (session('profile-status'))
-            <div class="alert alert-success">{{ session('profile-status') }}</div>
-        @endif
+        {{-- securityOtp/deactivateOtp are form-level validation keys with no
+             input of their own, so they toast alongside the flashed status. --}}
+        @include('partials.flash-alerts', ['errorKeys' => ['securityOtp', 'deactivateOtp']])
 
         <div class="card mb-5 mb-xl-10">
             <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
@@ -728,10 +728,6 @@ class extends Component
             </div>
             <div id="kt_account_settings_signin_method" class="collapse show">
                 <div class="card-body border-top p-9">
-                    @error('securityOtp')
-                        <div class="alert alert-danger">{{ $message }}</div>
-                    @enderror
-
                     @if ($securityStep === 'form')
                         <div class="d-flex flex-wrap align-items-center">
                             <div>
@@ -831,10 +827,6 @@ class extends Component
             </div>
             <div id="kt_account_settings_deactivate" class="collapse show">
                 <div class="card-body border-top p-9">
-                    @error('deactivateOtp')
-                        <div class="alert alert-danger">{{ $message }}</div>
-                    @enderror
-
                     @if (auth()->user()->deactivated_at)
                         <div class="notice d-flex flex-stack bg-light-warning rounded border-warning border border-dashed p-6">
                             <div class="fw-semibold">{{ __('profile.account_already_deactivated_notice') }}</div>
