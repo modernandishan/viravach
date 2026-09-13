@@ -6,9 +6,11 @@ use App\Ai\ImageGenerator;
 use App\Ai\Input\CompanyInputCollector;
 use App\Ai\Prompts\CompanyContentPrompt;
 use App\Ai\Prompts\CompanyImagePrompt;
+use App\Jobs\Concerns\HasRequestDeadline;
 use App\Models\Company;
 use App\Models\CompanyContent;
 use App\Settings\ContentSettings;
+use App\Support\ImageMimeType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,6 +38,7 @@ use Throwable;
 class GenerateFeaturedImage implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasRequestDeadline;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
@@ -78,14 +81,19 @@ class GenerateFeaturedImage implements ShouldBeUnique, ShouldQueue
         $input = app(CompanyInputCollector::class)->collect($company);
         $prompt = CompanyImagePrompt::build($englishPayload, $input);
 
-        $bytes = app(ImageGenerator::class)->generate($prompt);
+        $bytes = app(ImageGenerator::class)->generate($prompt, $this->deadline());
 
-        $tempPath = $this->writeTempFile($bytes);
+        // Same contract as GenerateWordPressPostImage: the image gateway
+        // does not promise a format, so the stored extension is read off
+        // the bytes rather than assumed to be PNG.
+        $extension = ImageMimeType::extensionForBytes($bytes);
+
+        $tempPath = $this->writeTempFile($bytes, $extension);
 
         try {
             $media = $company->addMedia($tempPath)
                 ->preservingOriginal()
-                ->usingFileName("{$company->slug}-featured-image.png")
+                ->usingFileName("{$company->slug}-featured-image.{$extension}")
                 ->toMediaCollection('featured_image', 's3');
 
             $this->setLocalizedMetadata($media, $company);
@@ -130,9 +138,9 @@ class GenerateFeaturedImage implements ShouldBeUnique, ShouldQueue
         });
     }
 
-    private function writeTempFile(string $bytes): string
+    private function writeTempFile(string $bytes, string $extension): string
     {
-        $path = sys_get_temp_dir().'/featured-image-'.Str::uuid()->toString().'.png';
+        $path = sys_get_temp_dir().'/featured-image-'.Str::uuid()->toString().'.'.$extension;
 
         file_put_contents($path, $bytes);
 

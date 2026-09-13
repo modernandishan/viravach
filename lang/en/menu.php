@@ -30,9 +30,10 @@ return [
     'export_top_subtitle' => 'Businesses and companies with the highest export scores',
     'view' => 'View',
     'tickets' => 'Tickets',
-    'wordpress_content' => 'ViraWP — Automatic Content Generation',
+    'wordpress_content' => 'ViraWP',
 
     'nav_billing' => 'Billing',
     'nav_content' => 'Content',
     'nav_account' => 'Account',
+    'rfqs' => 'Requests',
 ];

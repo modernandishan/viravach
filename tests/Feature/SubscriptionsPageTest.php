@@ -11,10 +11,12 @@ use App\Services\Payment\InvoicePaymentService;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\AssertsFlashMessages;
 use Tests\TestCase;
 
 class SubscriptionsPageTest extends TestCase
 {
+    use AssertsFlashMessages;
     use RefreshDatabase;
 
     public function test_it_renders_plans_from_the_database(): void
@@ -49,10 +51,11 @@ class SubscriptionsPageTest extends TestCase
         $companyA = Company::factory()->for($user)->create();
         $companyB = Company::factory()->for($user)->create();
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::dashboard.subscriptions', ['company' => $companyA->id])
-            ->call('startTrial')
-            ->assertSeeText(__('subscriptions.trial_started_successfully'));
+            ->call('startTrial');
+
+        $this->assertFlashMessage($component, 'subscription-status', __('subscriptions.trial_started_successfully'), 'success');
 
         $user->refresh();
         $this->assertNotNull($user->trial_used_at);
@@ -166,10 +169,11 @@ class SubscriptionsPageTest extends TestCase
         $company = Company::factory()->for($user)->create();
         $freePlan = Plan::where('slug', 'free')->firstOrFail();
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::dashboard.subscriptions', ['company' => $company->id])
-            ->call('subscribeToPlan', $freePlan->id)
-            ->assertSeeText(__('subscriptions.switch_success'));
+            ->call('subscribeToPlan', $freePlan->id);
+
+        $this->assertFlashMessage($component, 'subscription-status', __('subscriptions.switch_success'), 'success');
 
         $this->assertTrue($company->fresh()->subscribedTo($freePlan->id));
         $this->assertDatabaseCount('invoices', 0);
@@ -228,10 +232,14 @@ class SubscriptionsPageTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->for($user)->create();
 
-        Livewire::actingAs($user)
+        // The message contains an apostrophe, which Js::from() renders as
+        // \u0027 in the toast payload; the helper decodes the payload rather
+        // than string-matching it, so the escaping cannot resurface here.
+        $component = Livewire::actingAs($user)
             ->test('pages::dashboard.subscriptions', ['company' => $company->id])
-            ->call('subscribeToPlan', $cheapPlan->id)
-            ->assertSeeText(__('subscriptions.amount_below_minimum'));
+            ->call('subscribeToPlan', $cheapPlan->id);
+
+        $this->assertFlashMessage($component, 'flash_error', __('subscriptions.amount_below_minimum'), 'error');
 
         $this->assertDatabaseMissing('invoices', [
             'company_id' => $company->id,

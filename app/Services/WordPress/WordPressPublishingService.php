@@ -5,6 +5,7 @@ namespace App\Services\WordPress;
 use App\Enums\SeoPlugin;
 use App\Models\Company;
 use App\Models\WordPressContentPost;
+use App\Support\ImageMimeType;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -64,9 +65,16 @@ class WordPressPublishingService
 
     /**
      * @param  string|null  $imageBytes  The featured image; null skips the upload.
+     * @param  string|null  $imageMimeType  The stored media's real mime type. The
+     *                                      gateway's format is not fixed (it returns WebP now, PNG before),
+     *                                      so nothing here may assume one; null falls back to sniffing the
+     *                                      bytes, and only then to PNG.
      */
-    public function publish(WordPressContentPost $post, ?string $imageBytes): WordPressPublishResult
-    {
+    public function publish(
+        WordPressContentPost $post,
+        ?string $imageBytes,
+        ?string $imageMimeType = null,
+    ): WordPressPublishResult {
         $company = $post->company;
         $site = $this->siteUrl($company);
         $username = trim((string) $company->wp_username);
@@ -79,7 +87,7 @@ class WordPressPublishingService
         $mediaId = null;
 
         if ($imageBytes !== null) {
-            $mediaResult = $this->uploadFeaturedImage($post, $site, $username, $password, $imageBytes);
+            $mediaResult = $this->uploadFeaturedImage($post, $site, $username, $password, $imageBytes, $imageMimeType);
 
             if ($mediaResult instanceof WordPressPublishResult) {
                 return $mediaResult;
@@ -100,17 +108,27 @@ class WordPressPublishingService
         string $username,
         string $password,
         string $bytes,
+        ?string $mimeType = null,
     ): int|WordPressPublishResult {
-        $filename = Str::slug(Str::limit($post->title ?: $post->topic, 60, '')).'.png';
-        $filename = $filename === '.png' ? 'featured-image.png' : $filename;
+        // WordPress trusts the Content-Type and the filename extension it is
+        // handed: a WebP file announced as image/png is rejected as an
+        // invalid file type, so both come from the real format.
+        $mimeType = $mimeType !== null
+            ? ImageMimeType::normalize($mimeType)
+            : ImageMimeType::detect($bytes);
+
+        $extension = ImageMimeType::extensionFor($mimeType);
+
+        $slug = Str::slug(Str::limit($post->title ?: $post->topic, 60, ''));
+        $filename = ($slug !== '' ? $slug : 'featured-image').'.'.$extension;
 
         try {
             $response = $this->request($username, $password)
                 ->withHeaders([
                     'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-                    'Content-Type' => 'image/png',
+                    'Content-Type' => $mimeType,
                 ])
-                ->withBody($bytes, 'image/png')
+                ->withBody($bytes, $mimeType)
                 ->post($site.'/wp-json/wp/v2/media');
         } catch (Throwable $exception) {
             $this->logException($post, 'media upload', $exception);

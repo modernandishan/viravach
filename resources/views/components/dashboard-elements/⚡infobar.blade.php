@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\RfqStatus;
 use App\Livewire\Concerns\AggregatesCompanyViews;
 use App\Models\Company;
 use App\Models\CompanyPublication;
+use App\Models\Rfq;
 use App\Support\LocalizedDate;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
@@ -54,6 +56,28 @@ new class extends Component
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             fn (): array => $this->computeStats($userId),
         );
+    }
+
+    /**
+     * Quote requests still waiting on this user, across every company they
+     * own — the number the nav badge shows.
+     *
+     * Deliberately outside stats(): that block is cached for ten minutes,
+     * which is the right trade for a views total but the wrong one for a
+     * counter the owner clears by hand. A badge that keeps claiming work
+     * already closed is worse than one more query, and the
+     * (company_id, status, created_at) index on rfqs covers this count.
+     */
+    #[Computed]
+    public function pendingRfqCount(): int
+    {
+        return Rfq::query()
+            ->whereIn(
+                'company_id',
+                Company::query()->where('user_id', (int) auth()->id())->select('id'),
+            )
+            ->where('status', RfqStatus::Pending)
+            ->count();
     }
 
     /**
@@ -382,6 +406,19 @@ new class extends Component
             <li class="nav-item mt-2">
                 <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('chat') ? 'active' : '' }}" href="{{ route('chat') }}">
                     {{ __('menu.chat') }}
+                </a>
+            </li>
+            <!--end::Nav item-->
+            <!--begin::Nav item: RFQs-->
+            <li class="nav-item mt-2">
+                <a class="nav-link text-active-primary ms-0 me-10 py-5 {{ request()->routeIs('rfqs') ? 'active' : '' }}" href="{{ route('rfqs') }}">
+                    {{ __('menu.rfqs') }}
+                    {{-- Same badge the chat and support columns use for
+                         unread work, and hidden the same way at zero: a
+                         standing "0" reads as a broken counter. --}}
+                    @if ($this->pendingRfqCount > 0)
+                        <span class="badge badge-sm badge-circle badge-light-warning ms-1">{{ $this->pendingRfqCount }}</span>
+                    @endif
                 </a>
             </li>
             <!--end::Nav item-->

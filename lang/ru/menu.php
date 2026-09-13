@@ -31,9 +31,10 @@ return [
     'export_top_subtitle' => 'Компании с наивысшим экспортным рейтингом',
     'view' => 'Просмотреть',
     'tickets' => 'Тикеты',
-    'wordpress_content' => 'ViraWP — автоматическая генерация контента',
+    'wordpress_content' => 'ViraWP',
 
     'nav_billing' => 'Оплата',
     'nav_content' => 'Контент',
     'nav_account' => 'Аккаунт',
+    'rfqs' => 'Запросы',
 ];

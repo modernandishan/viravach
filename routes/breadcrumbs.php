@@ -142,6 +142,11 @@ Breadcrumbs::for('subscriptions', function (Trail $trail) {
     $trail->push(__('breadcrumbs.subscriptions'), route('subscriptions'));
 });
 
+Breadcrumbs::for('rfqs', function (Trail $trail) {
+    $trail->parent('dashboard');
+    $trail->push(__('breadcrumbs.rfqs'), route('rfqs'));
+});
+
 Breadcrumbs::for('payments', function (Trail $trail) {
     $trail->parent('dashboard');
     $trail->push(__('breadcrumbs.payments'), route('payments'));

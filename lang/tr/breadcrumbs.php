@@ -19,4 +19,5 @@ return [
     'company_views' => 'Şirket Ziyaret İstatistikleri',
     'pricing' => 'Fiyatlandırma',
     'home_headline' => 'Viravaç | Sınırsız Ticaret',
+    'rfqs' => 'Talepler',
 ];

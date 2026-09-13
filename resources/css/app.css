@@ -242,6 +242,18 @@
                 }
             }
 
+/* ===== company/⚡company intro video ===== */
+            /* Vidstack's own theme already sets width: 100% — but only under
+               [data-media-player], an attribute the player script adds when it
+               hydrates. Until then <media-player> is an unknown element and so
+               display: inline, which .w-100 cannot size. Declaring it block
+               here means the box is full width from first paint rather than
+               shrink-to-fit until the module runs. */
+            .vv-intro-video {
+                display: block;
+                width: 100%;
+            }
+
 /* ===== ⚡footer ===== */
             .vv-footer {
                 --vv-ink-900: #0F1720;

@@ -91,17 +91,33 @@ class CompanyCategoryPageTest extends TestCase
             ->assertDontSeeText($inOther->name);
     }
 
+    /**
+     * The listing (with its filters, sorting and pagination) no longer lives
+     * on this page component: it was extracted into the reusable
+     * ⚡company-list child, which the page renders as
+     * <livewire:company-elements.company-list :category-id="..." />. Paging is
+     * therefore asserted against that child, scoped the same way the page
+     * scopes it, rather than against a $companies property the page no longer
+     * exposes.
+     */
     public function test_it_paginates_companies_at_twelve_per_page(): void
     {
         $category = CompanyCategory::factory()->create(['slug' => 'paginated-cat']);
+        $otherCategory = CompanyCategory::factory()->create(['slug' => 'unpaginated-cat']);
 
         for ($i = 0; $i < 13; $i++) {
             $this->makeActivePublication($category);
         }
 
-        $component = Livewire::test('pages::company-category', ['slug' => $category->slug]);
+        // Out of scope: proves the categoryId scoping still reaches the child
+        // rather than the page silently listing every published company.
+        $outOfScope = $this->makeActivePublication($otherCategory);
+
+        $component = Livewire::test('company-elements.company-list', ['categoryId' => $category->id]);
 
         $this->assertCount(12, $component->instance()->companies);
+        $this->assertSame(13, $component->instance()->companies->total());
+        $this->assertNotContains($outOfScope->id, $component->instance()->companies->pluck('id')->all());
 
         $component->call('nextPage');
 

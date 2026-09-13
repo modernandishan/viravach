@@ -36,6 +36,12 @@ class ContentGenerationService
      */
     public function request(Company $company): bool
     {
+        // Manual-mode companies opted out of the AI pipeline entirely —
+        // never dispatch, regardless of quota or run state.
+        if ($company->content_mode === 'manual') {
+            return false;
+        }
+
         if (! app(ContentSettings::class)->enabled) {
             return false;
         }
@@ -85,6 +91,14 @@ class ContentGenerationService
 
         if ($claimed !== 1) {
             return false;
+        }
+
+        // The claim won, so this company has now committed to the AI
+        // pipeline: stamp the mode explicitly. Only written once, after
+        // the atomic claim (not inside any early-return branch), so a
+        // request that loses the race never flips the mode.
+        if ($company->content_mode === null) {
+            $company->forceFill(['content_mode' => 'ai'])->save();
         }
 
         // No transaction wraps the claim (it is a single conditional

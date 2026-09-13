@@ -72,4 +72,29 @@ return [
         'basic_pass' => env('LIBRETRANSLATE_BASIC_PASS'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare Turnstile
+    |--------------------------------------------------------------------------
+    |
+    | Bot protection for the public RFQ form. The widget renders with the site
+    | key; App\Services\Turnstile\TurnstileVerifier exchanges the token it
+    | produces for a verdict using the secret key.
+    |
+    | Cloudflare publishes always-pass dummy keys that work on any host, which
+    | is what .env.example ships so a fresh checkout's form submits without a
+    | Cloudflare account. Never let those reach production — they accept every
+    | request.
+    |
+    */
+
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env(
+            'TURNSTILE_VERIFY_URL',
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        ),
+    ],
+
 ];

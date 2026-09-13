@@ -12,9 +12,9 @@ use App\Ai\Schemas\CompanyContentSchema;
  */
 class CompanyContentLocalizationPrompt
 {
-    public static function system(string $targetLocale): string
+    public static function system(string $targetLocale, ?string $extraGuidance = null): string
     {
-        return "You are a senior B2B export copywriter localizing company\n"
+        $prompt = "You are a senior B2B export copywriter localizing company\n"
             ."profiles for buyers in a specific target market.\n"
             ."\n"
             ."OUTPUT CONTRACT — follow exactly:\n"
@@ -60,6 +60,16 @@ class CompanyContentLocalizationPrompt
             ."FORMATTING:\n"
             ."- Never include HTML, markdown, emoji, or contact details\n"
             ."  (emails, phone numbers, URLs) in any field.\n";
+
+        // Optional operator guidance (ContentSettings::localization_prompt,
+        // one Textarea per locale in ManageContentSettings). Appended AFTER
+        // every fixed rule so the operator text can only add to the
+        // contract, never reorder or overwrite it.
+        if (filled($extraGuidance)) {
+            $prompt .= "\n\nADDITIONAL GUIDANCE FROM THE OPERATOR:\n{$extraGuidance}\n";
+        }
+
+        return $prompt;
     }
 
     /**

@@ -407,6 +407,48 @@ class extends Component
     }
 
     /**
+     * Seeds an empty content skeleton (exactly the shape
+     * CompanyContentSchema::definition() defines, empty strings/arrays)
+     * for the company's own content_language, and switches the company to
+     * manual content mode. Only reachable for a company that has never
+     * touched the AI pipeline at all: no stored content and no
+     * CompanyContent row whatsoever. The AI pipeline stays out of reach
+     * afterwards on its own — ContentGenerationService::request() refuses
+     * content_mode = 'manual'.
+     */
+    public function writeContentManually(): void
+    {
+        if (! empty($this->record->content) || $this->record->contentRecord !== null) {
+            return;
+        }
+
+        $skeleton = [
+            'v' => \App\Ai\Schemas\CompanyContentSchema::VERSION,
+            'hero' => ['headline' => '', 'subheadline' => '', 'image_alt' => ''],
+            'about' => ['heading' => '', 'body' => ''],
+            'offerings' => [],
+            'strengths' => [],
+            'markets' => ['heading' => '', 'body' => '', 'countries' => []],
+            'specs' => [],
+            'faq' => [],
+            'cta' => ['heading' => '', 'body' => ''],
+        ];
+
+        // content_language defaults to 'fa' at the database level, so the
+        // fallback below should never trigger; it is defense in depth only.
+        $locale = filled($this->record->content_language) ? $this->record->content_language : 'fa';
+
+        $this->record->forceFill([
+            'content' => [$locale => $skeleton],
+            'content_mode' => 'manual',
+        ])->save();
+
+        $this->record->refresh();
+
+        $this->notifyContent(__('companies.content_manual_seeded'));
+    }
+
+    /**
      * Feedback for the AI-content actions, rendered on THIS page.
      *
      * It used to be session()->flash('company-status'), which is invisible
@@ -638,6 +680,11 @@ class extends Component
                         </div>
                         <div class="text-muted fs-7">{{ __('companies.content_processing_hint') }}</div>
                     </div>
+                {{-- Manual-mode companies never dispatch the pipeline, so the
+                     processing branch below is unreachable for them; this
+                     branch catches them before any AI branch renders. --}}
+                @elseif ($this->record->content_mode === 'manual')
+                    <div class="text-muted fs-7">{{ __('companies.content_manual_mode_notice') }}</div>
                 @elseif ($this->contentAlreadyGenerated())
                     <div class="d-flex flex-column gap-3">
                         <div class="text-gray-700">
@@ -678,12 +725,28 @@ class extends Component
                     <button type="button" wire:click="requestContentGeneration" class="btn btn-primary">
                         {{ __('companies.content_generate') }}
                     </button>
+                    @if ($this->record->contentRecord === null && empty($this->record->content))
+                        {{-- A company that has never touched the AI content
+                             system at all may instead seed manual content. --}}
+                        <button type="button" wire:click="writeContentManually" class="btn btn-light-primary" wire:loading.attr="disabled">
+                            {{ __('companies.content_write_manually') }}
+                        </button>
+                    @endif
                 @endif
             </div>
         </div>
 
+        {{-- The key is what gives the editor a STABLE identity across this
+             page's own re-renders (the wire:poll above, every AI-content
+             button, every wire:model on the form below). Without one,
+             Livewire cannot match the child to its previous instance and
+             re-mounts it with a fresh id on every round-trip — which throws
+             away whatever the owner had typed into it and swaps its live DOM
+             subtree out from under its own component root. --}}
         @if (! empty($this->record->content))
-            <livewire:company-content.content-editor :company="$this->record" />
+            <livewire:company-content.content-editor
+                :company="$this->record"
+                :key="'company-content-editor-'.$this->record->id" />
         @endif
 
         <form wire:submit.prevent="updateCompany">

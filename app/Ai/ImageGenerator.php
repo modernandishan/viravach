@@ -27,7 +27,12 @@ class ImageGenerator
      */
     private static bool $loggedResponseShape = false;
 
-    public function generate(string $prompt): string
+    /**
+     * @param  RequestDeadline|null  $deadline  The calling job's remaining wall-clock
+     *                                          budget. Null (tinker, sync code paths) keeps the historical
+     *                                          behaviour: the request gets the full configured timeout.
+     */
+    public function generate(string $prompt, ?RequestDeadline $deadline = null): string
     {
         $settings = app(ContentSettings::class);
 
@@ -38,8 +43,8 @@ class ImageGenerator
         $model = $settings->image_model;
 
         $startedAt = hrtime(true);
-        $response = $this->send($settings, $model, $prompt);
-        $bytes = $this->extractImageBytes($settings, $response, $model);
+        $response = $this->send($settings, $model, $prompt, $deadline);
+        $bytes = $this->extractImageBytes($settings, $response, $model, $deadline);
 
         Log::info('Image generation completed.', [
             'model' => $model,
@@ -55,11 +60,17 @@ class ImageGenerator
      * the response shape is handled defensively in extractImageBytes()
      * instead of being requested.
      */
-    protected function send(ContentSettings $settings, string $model, string $prompt): Response
-    {
+    protected function send(
+        ContentSettings $settings,
+        string $model,
+        string $prompt,
+        ?RequestDeadline $deadline = null,
+    ): Response {
+        $timeout = $this->attemptTimeout($settings, $deadline, 'image generation');
+
         try {
-            $response = Http::timeout($settings->timeout)
-                ->connectTimeout(5)
+            $response = Http::timeout($timeout)
+                ->connectTimeout(min(5, $timeout))
                 ->withToken($settings->api_key)
                 ->acceptJson()
                 ->asJson()
@@ -101,6 +112,50 @@ class ImageGenerator
     }
 
     /**
+     * The timeout for one image call, clamped to what is left of the calling
+     * job's budget. There is no retry here — one attempt is all an image
+     * generation gets — so an exhausted budget can only mean giving up
+     * before the request, which is still far better than the worker killing
+     * the job mid-request with nothing recorded on the row.
+     *
+     * @throws ContentGenerationException when no usable time is left
+     */
+    protected function attemptTimeout(ContentSettings $settings, ?RequestDeadline $deadline, string $stage): int
+    {
+        if ($deadline === null) {
+            return $settings->timeout;
+        }
+
+        $timeout = $deadline->attemptTimeout($settings->timeout);
+
+        if ($timeout === null) {
+            $remaining = round($deadline->remaining(), 1);
+
+            Log::warning('Image generation: abandoned, job time budget exhausted.', [
+                'stage' => $stage,
+                'model' => $settings->image_model,
+                'attempts_made' => 0,
+                'budget_remaining' => $remaining,
+            ]);
+
+            throw new ContentGenerationException(
+                'The image gateway request was abandoned after 0 attempt(s): '
+                ."the job's time budget was exhausted ({$remaining}s left before the worker kills it).",
+            );
+        }
+
+        if ($timeout < $settings->timeout) {
+            Log::info('Image generation: attempt timeout clamped to the job budget.', [
+                'stage' => $stage,
+                'settings_timeout' => $settings->timeout,
+                'attempt_timeout' => $timeout,
+            ]);
+        }
+
+        return $timeout;
+    }
+
+    /**
      * base_url is 'http://open-webui:8080/api' (chat completions resolve to
      * {base_url}/chat/completions), but the images endpoint lives under
      * /v1/ regardless — verified against the live server.
@@ -116,8 +171,12 @@ class ImageGenerator
      *   - {"data":[{"url": ...}]}                — OpenAI standard
      *   - {"data":[{"b64_json": ...}]}            — other gateways
      */
-    protected function extractImageBytes(ContentSettings $settings, Response $response, string $model): string
-    {
+    protected function extractImageBytes(
+        ContentSettings $settings,
+        Response $response,
+        string $model,
+        ?RequestDeadline $deadline = null,
+    ): string {
         $body = $response->json();
 
         if (! is_array($body)) {
@@ -149,7 +208,7 @@ class ImageGenerator
         if (! empty($data['url']) && is_string($data['url'])) {
             $this->logResponseShapeOnce("{$container}.url", $model);
 
-            return $this->fetch($settings, $this->resolveUrl($settings, $data['url']));
+            return $this->fetch($settings, $this->resolveUrl($settings, $data['url']), $deadline);
         }
 
         if (! empty($data['b64_json']) && is_string($data['b64_json'])) {
@@ -198,11 +257,36 @@ class ImageGenerator
      * magic bytes) before returning it — a gateway auth failure or a
      * moved/expired file often comes back as a 200 HTML error page, which
      * must never be silently written to the featured_image collection.
+     *
+     * The bearer token is only ever sent to base_url's own host: a relative
+     * URL has already been resolved against that origin by resolveUrl() and
+     * so matches trivially, but an ABSOLUTE url returned by the gateway
+     * could point anywhere, and following it with Authorization attached
+     * would hand the API key to a third party. That case is refused
+     * outright rather than fetched token-less, because a gateway pointing
+     * off-host is itself the anomaly worth surfacing.
      */
-    protected function fetch(ContentSettings $settings, string $url): string
+    protected function fetch(ContentSettings $settings, string $url, ?RequestDeadline $deadline = null): string
     {
+        $expectedHost = $this->hostOf($settings->base_url);
+        $actualHost = $this->hostOf($url);
+
+        if ($actualHost !== $expectedHost) {
+            Log::warning('Image generation: refused to send bearer token to an unexpected host.', [
+                'expected_host' => $expectedHost,
+                'actual_host' => $actualHost,
+            ]);
+
+            throw new ContentGenerationException('The image gateway returned a file URL on an unexpected host.');
+        }
+
+        // The file download is a SECOND call against the same job budget, so
+        // it is clamped again rather than reusing generation's timeout.
+        $timeout = $this->attemptTimeout($settings, $deadline, 'image download');
+
         try {
-            $response = Http::timeout($settings->timeout)
+            $response = Http::timeout($timeout)
+                ->connectTimeout(min(5, $timeout))
                 ->withToken($settings->api_key)
                 ->get($url);
         } catch (ConnectionException $e) {
@@ -227,6 +311,18 @@ class ImageGenerator
         }
 
         return $response->body();
+    }
+
+    /**
+     * Hosts are compared case-insensitively (DNS is), and a URL with no
+     * parseable host yields null — which never equals a configured host, so
+     * an unparseable URL is refused along with the off-host ones.
+     */
+    protected function hostOf(string $url): ?string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) ? mb_strtolower($host) : null;
     }
 
     protected function looksLikeImage(Response $response): bool

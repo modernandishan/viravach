@@ -20,46 +20,50 @@ class CompanyContentSchema
      *  - object array: ['type' => 'array', 'min' => .., 'max' => .., 'item' => [...]]
      *  - ISO2 codes:   ['type' => 'countries', 'min' => .., 'max' => ..]
      *
+     * $lenient relaxes the minimum counts/lengths for manually-entered
+     * content (content_mode = 'manual'); maxima and the payload shape are
+     * identical in both modes.
+     *
      * @return array<string, array<string, mixed>>
      */
-    public static function definition(): array
+    public static function definition(bool $lenient = false): array
     {
         return [
             'v' => ['type' => 'integer', 'const' => self::VERSION],
             'hero' => [
                 'type' => 'object',
                 'fields' => [
-                    'headline' => ['type' => 'string', 'min' => 20, 'max' => 70],
-                    'subheadline' => ['type' => 'string', 'min' => 40, 'max' => 160],
-                    'image_alt' => ['type' => 'string', 'min' => 20, 'max' => 125],
+                    'headline' => ['type' => 'string', 'min' => $lenient ? 10 : 20, 'max' => 70],
+                    'subheadline' => ['type' => 'string', 'min' => $lenient ? 20 : 40, 'max' => 160],
+                    'image_alt' => ['type' => 'string', 'min' => $lenient ? 10 : 20, 'max' => 125],
                 ],
             ],
             'about' => [
                 'type' => 'object',
                 'fields' => [
-                    'heading' => ['type' => 'string', 'min' => 10, 'max' => 70],
-                    'body' => ['type' => 'string', 'min' => 800, 'max' => 2500],
+                    'heading' => ['type' => 'string', 'min' => $lenient ? 5 : 10, 'max' => 70],
+                    'body' => ['type' => 'string', 'min' => $lenient ? 400 : 800, 'max' => 2500],
                 ],
             ],
             'offerings' => [
-                'type' => 'array', 'min' => 3, 'max' => 8,
+                'type' => 'array', 'min' => $lenient ? 1 : 3, 'max' => 8,
                 'item' => [
                     'title' => ['type' => 'string', 'min' => 5, 'max' => 80],
-                    'body' => ['type' => 'string', 'min' => 200, 'max' => 800],
+                    'body' => ['type' => 'string', 'min' => $lenient ? 100 : 200, 'max' => 800],
                 ],
             ],
             'strengths' => [
-                'type' => 'array', 'min' => 3, 'max' => 6,
+                'type' => 'array', 'min' => $lenient ? 1 : 3, 'max' => 6,
                 'item' => [
                     'title' => ['type' => 'string', 'min' => 5, 'max' => 80],
-                    'body' => ['type' => 'string', 'min' => 100, 'max' => 400],
+                    'body' => ['type' => 'string', 'min' => $lenient ? 50 : 100, 'max' => 400],
                 ],
             ],
             'markets' => [
                 'type' => 'object',
                 'fields' => [
                     'heading' => ['type' => 'string', 'min' => 10, 'max' => 70],
-                    'body' => ['type' => 'string', 'min' => 200, 'max' => 1000],
+                    'body' => ['type' => 'string', 'min' => $lenient ? 100 : 200, 'max' => 1000],
                     'countries' => ['type' => 'countries', 'min' => 0, 'max' => 15],
                 ],
             ],
@@ -71,17 +75,17 @@ class CompanyContentSchema
                 ],
             ],
             'faq' => [
-                'type' => 'array', 'min' => 4, 'max' => 8,
+                'type' => 'array', 'min' => $lenient ? 1 : 4, 'max' => 8,
                 'item' => [
                     'q' => ['type' => 'string', 'min' => 10, 'max' => 160],
-                    'a' => ['type' => 'string', 'min' => 100, 'max' => 600],
+                    'a' => ['type' => 'string', 'min' => $lenient ? 50 : 100, 'max' => 600],
                 ],
             ],
             'cta' => [
                 'type' => 'object',
                 'fields' => [
-                    'heading' => ['type' => 'string', 'min' => 10, 'max' => 70],
-                    'body' => ['type' => 'string', 'min' => 50, 'max' => 300],
+                    'heading' => ['type' => 'string', 'min' => $lenient ? 5 : 10, 'max' => 70],
+                    'body' => ['type' => 'string', 'min' => $lenient ? 25 : 50, 'max' => 300],
                 ],
             ],
         ];
@@ -89,36 +93,36 @@ class CompanyContentSchema
 
     /**
      * Laravel validation rules for ONE locale's payload. Size limits mirror
-     * definition(); the no-HTML and strict-shape extras are enforced
+     * definition($lenient); the no-HTML and strict-shape extras are enforced
      * separately in validate().
      *
      * @return array<string, mixed>
      */
-    public static function rules(): array
+    public static function rules(bool $lenient = false): array
     {
         return [
             'v' => ['required', 'integer', 'in:'.self::VERSION],
 
             'hero' => ['required', 'array'],
-            'hero.headline' => ['required', 'string', 'min:20', 'max:70'],
-            'hero.subheadline' => ['required', 'string', 'min:40', 'max:160'],
-            'hero.image_alt' => ['required', 'string', 'min:20', 'max:125'],
+            'hero.headline' => ['required', 'string', 'min:'.($lenient ? 10 : 20), 'max:70'],
+            'hero.subheadline' => ['required', 'string', 'min:'.($lenient ? 20 : 40), 'max:160'],
+            'hero.image_alt' => ['required', 'string', 'min:'.($lenient ? 10 : 20), 'max:125'],
 
             'about' => ['required', 'array'],
-            'about.heading' => ['required', 'string', 'min:10', 'max:70'],
-            'about.body' => ['required', 'string', 'min:800', 'max:2500'],
+            'about.heading' => ['required', 'string', 'min:'.($lenient ? 5 : 10), 'max:70'],
+            'about.body' => ['required', 'string', 'min:'.($lenient ? 400 : 800), 'max:2500'],
 
-            'offerings' => ['required', 'array', 'min:3', 'max:8'],
+            'offerings' => ['required', 'array', 'min:'.($lenient ? 1 : 3), 'max:8'],
             'offerings.*.title' => ['required', 'string', 'min:5', 'max:80'],
-            'offerings.*.body' => ['required', 'string', 'min:200', 'max:800'],
+            'offerings.*.body' => ['required', 'string', 'min:'.($lenient ? 100 : 200), 'max:800'],
 
-            'strengths' => ['required', 'array', 'min:3', 'max:6'],
+            'strengths' => ['required', 'array', 'min:'.($lenient ? 1 : 3), 'max:6'],
             'strengths.*.title' => ['required', 'string', 'min:5', 'max:80'],
-            'strengths.*.body' => ['required', 'string', 'min:100', 'max:400'],
+            'strengths.*.body' => ['required', 'string', 'min:'.($lenient ? 50 : 100), 'max:400'],
 
             'markets' => ['required', 'array'],
             'markets.heading' => ['required', 'string', 'min:10', 'max:70'],
-            'markets.body' => ['required', 'string', 'min:200', 'max:1000'],
+            'markets.body' => ['required', 'string', 'min:'.($lenient ? 100 : 200), 'max:1000'],
             'markets.countries' => ['nullable', 'array', 'max:15'],
             'markets.countries.*' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
 
@@ -126,13 +130,13 @@ class CompanyContentSchema
             'specs.*.label' => ['required', 'string', 'min:2', 'max:60'],
             'specs.*.value' => ['required', 'string', 'min:1', 'max:120'],
 
-            'faq' => ['required', 'array', 'min:4', 'max:8'],
+            'faq' => ['required', 'array', 'min:'.($lenient ? 1 : 4), 'max:8'],
             'faq.*.q' => ['required', 'string', 'min:10', 'max:160'],
-            'faq.*.a' => ['required', 'string', 'min:100', 'max:600'],
+            'faq.*.a' => ['required', 'string', 'min:'.($lenient ? 50 : 100), 'max:600'],
 
             'cta' => ['required', 'array'],
-            'cta.heading' => ['required', 'string', 'min:10', 'max:70'],
-            'cta.body' => ['required', 'string', 'min:50', 'max:300'],
+            'cta.heading' => ['required', 'string', 'min:'.($lenient ? 5 : 10), 'max:70'],
+            'cta.body' => ['required', 'string', 'min:'.($lenient ? 25 : 50), 'max:300'],
         ];
     }
 
@@ -238,25 +242,27 @@ class CompanyContentSchema
      * Validate ONE locale's payload: the Laravel rules plus two extras the
      * AI output must always satisfy — no HTML tags inside any string, and
      * a strict shape (no keys outside the definition, at any depth).
+     * $lenient forwards to rules()/definition() to relax the minimums for
+     * manually-entered content; the shape checks are unchanged either way.
      *
      * @param  array<string, mixed>  $payload
      * @return array<string, string> field => error, empty when valid
      */
-    public static function validate(array $payload): array
+    public static function validate(array $payload, bool $lenient = false): array
     {
         $errors = [];
 
-        foreach (self::extraKeys($payload, self::definition()) as $path) {
+        foreach (self::extraKeys($payload, self::definition($lenient)) as $path) {
             $errors[$path] = 'Unknown field: not part of the schema.';
         }
 
-        $validator = Validator::make($payload, self::rules());
+        $validator = Validator::make($payload, self::rules($lenient));
 
         foreach ($validator->errors()->messages() as $field => $messages) {
             $errors[$field] ??= (string) $messages[0];
         }
 
-        foreach (self::htmlViolations($payload, self::definition()) as $path) {
+        foreach (self::htmlViolations($payload, self::definition($lenient)) as $path) {
             $errors[$path] ??= 'HTML tags are not allowed.';
         }
 

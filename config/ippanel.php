@@ -45,4 +45,21 @@ return [
         // Maximum number of wrong-code attempts allowed per sent code.
         'max_attempts' => (int) env('IPPANEL_OTP_MAX_ATTEMPTS', 5),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | RFQ Alert Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Used by App\Notifications\NewRfqReceived to text a company owner that a
+    | new quote request arrived. A separate pattern from the OTP one because
+    | its variables differ (buyer_name, locale) and it is registered
+    | independently in the IPPanel dashboard.
+    |
+    */
+
+    'rfq' => [
+        'origin_number' => env('IPPANEL_RFQ_ORIGIN_NUMBER', env('IPPANEL_ORIGIN_NUMBER', '')),
+        'pattern' => env('IPPANEL_RFQ_PATTERN', ''),
+    ],
 ];

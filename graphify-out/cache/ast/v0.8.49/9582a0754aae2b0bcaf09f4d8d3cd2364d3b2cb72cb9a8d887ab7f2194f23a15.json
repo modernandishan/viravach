@@ -1,0 +1,1 @@
+{"nodes": [{"id": "var_www_viravach_app_services_trends_trendfailurereason_php", "label": "TrendFailureReason.php", "file_type": "code", "source_file": "app/Services/Trends/TrendFailureReason.php", "source_location": "L1"}], "edges": [], "raw_calls": []}

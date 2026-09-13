@@ -44,6 +44,7 @@ use Spatie\Translatable\HasTranslations;
     'brief_locale',
     'summary',
     'content',
+    'content_mode',
     'website',
     'email',
     'phones',
@@ -144,6 +145,27 @@ class Company extends Model implements HasMedia
         }
 
         return $content[$locale] ?? $content[config('app.fallback_locale')] ?? null;
+    }
+
+    /**
+     * The active locales (config keys of laravellocalization.supportedLocales)
+     * whose content payload is absent or empty — pure computation over the
+     * stored content column, shared by the Filament list column and the
+     * edit-page notice so both always agree. Locales with no content are
+     * listed; locales WITH content never appear.
+     *
+     * @return list<string>
+     */
+    public function missingContentLocales(): array
+    {
+        $active = array_keys((array) config('laravellocalization.supportedLocales'));
+        $content = is_array($this->content) ? $this->content : [];
+
+        return array_values(array_filter($active, function (string $locale) use ($content): bool {
+            $payload = $content[$locale] ?? null;
+
+            return ! is_array($payload) || $payload === [];
+        }));
     }
 
     public function registerMediaCollections(): void

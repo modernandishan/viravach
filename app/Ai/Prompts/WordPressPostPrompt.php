@@ -137,6 +137,10 @@ class WordPressPostPrompt
     ): string {
         $settings = app(WordPressContentSettings::class);
 
+        $candidatesBlock = $mode === ContentGenerationMode::Trending && $trendCandidates !== []
+            ? self::candidatesBlock($trendCandidates)
+            : '';
+
         $brief = match ($mode) {
             ContentGenerationMode::Industry => self::fill(
                 (string) ($settings->mode_brief_industry[$locale] ?? self::DEFAULT_INDUSTRY_BRIEF),
@@ -145,12 +149,21 @@ class WordPressPostPrompt
 
             ContentGenerationMode::Trending => self::fill(
                 (string) ($settings->mode_brief_trending[$locale] ?? self::DEFAULT_TRENDING_BRIEF),
-                [
-                    'topic' => $topic,
-                    'candidates' => $trendCandidates === [] ? '' : self::candidatesBlock($trendCandidates),
-                ],
+                ['topic' => $topic, 'candidates' => $candidatesBlock],
             ),
         };
+
+        // The chosen_topic contract is code-owned, exactly like the shortlist
+        // itself: an admin edit that dropped the {candidates} placeholder must
+        // not silently take the rule with it, or every generated article would
+        // be discarded for naming a topic the job never offered.
+        if ($candidatesBlock !== '' && ! str_contains($brief, $candidatesBlock)) {
+            $brief .= "\n\n".$candidatesBlock;
+        }
+
+        if ($candidatesBlock === '') {
+            $brief .= "\n\n".self::soleTopicBlock($topic);
+        }
 
         // Company context goes out ONLY in specialised mode. A standalone
         // trending article carries none, even if a caller passed input —
@@ -181,7 +194,25 @@ class WordPressPostPrompt
             ."\n"
             .'Pick the ONE query above that would make the most engaging, '
             ."informative standalone article, and write about that one instead\n"
-            .'of the fallback topic — still with no company or industry angle.';
+            ."of the fallback topic — still with no company or industry angle.\n"
+            ."\n"
+            .'Whichever you settle on, copy it character for character into the '
+            ."chosen_topic field: either one of the queries listed above or the\n"
+            .'fallback topic, and nothing else. That field is what gets recorded '
+            ."as this article's subject, so an article whose chosen_topic is not\n"
+            .'one of those exact strings is discarded.';
+    }
+
+    /**
+     * Specialised mode, and trend mode when the feed gave nothing: there is
+     * no choice to make, so chosen_topic can only be the topic itself.
+     */
+    private static function soleTopicBlock(string $topic): string
+    {
+        return 'This article is about "'.$topic.'" and nothing else — there is '
+            ."no shortlist to choose from. Copy that string character for\n"
+            .'character into the chosen_topic field. An article whose '
+            .'chosen_topic is anything else is discarded.';
     }
 
     /**

@@ -70,7 +70,10 @@ class LocalizeContentLocale extends AbstractAiContentJob
             $settings = $this->settings();
 
             $contentPayload = $this->completeValidated(
-                CompanyContentLocalizationPrompt::system($this->locale),
+                CompanyContentLocalizationPrompt::system(
+                    $this->locale,
+                    $settings->localization_prompt[$this->locale] ?? null,
+                ),
                 CompanyContentLocalizationPrompt::user($source, $input),
                 $settings->translation_model,
                 fn (array $candidate): array => CompanyContentSchema::validate($candidate),

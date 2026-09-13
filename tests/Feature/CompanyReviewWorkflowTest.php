@@ -16,7 +16,9 @@ use App\Services\CompanyPublicationService;
 use Database\Seeders\PlanSeeder;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -128,6 +130,7 @@ class CompanyReviewWorkflowTest extends TestCase
     public function test_create_wizard_persists_multiple_address_rows_with_a_single_primary(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
 
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
@@ -156,6 +159,7 @@ class CompanyReviewWorkflowTest extends TestCase
                     'is_primary' => true,
                 ],
             ])
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('createCompany')
             ->assertHasNoErrors()
             ->assertRedirect(route('my-companies'));

@@ -7,6 +7,7 @@ use App\Ai\Exceptions\ContentGenerationException;
 use App\Ai\Prompts\CompanyContentPrompt;
 use App\Enums\CompanyContentStatus;
 use App\Events\Ai\ContentGenerationProgressed;
+use App\Jobs\Concerns\HasRequestDeadline;
 use App\Models\Company;
 use App\Models\CompanyContent;
 use App\Models\SeoKeywordReservation;
@@ -35,6 +36,7 @@ use Throwable;
 abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasRequestDeadline;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
@@ -228,9 +230,13 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
     {
         $generator = app(ContentGenerator::class);
 
+        // One deadline for the whole method: the correction retry below is a
+        // SECOND gateway call, and both share the job's single budget.
+        $deadline = $this->deadline();
+
         $lastErrors = [];
 
-        $payload = $this->settle($generator->complete($system, $user, $model), $validate, $repair, $lastErrors);
+        $payload = $this->settle($generator->complete($system, $user, $model, $deadline), $validate, $repair, $lastErrors);
 
         if ($payload === null) {
             $correction = $user."\n\n"
@@ -242,7 +248,7 @@ abstract class AbstractAiContentJob implements ShouldBeUnique, ShouldQueue
                 ))
                 ."\nReturn the complete corrected JSON object under the same contract.";
 
-            $payload = $this->settle($generator->complete($system, $correction, $model), $validate, $repair, $lastErrors);
+            $payload = $this->settle($generator->complete($system, $correction, $model, $deadline), $validate, $repair, $lastErrors);
         }
 
         if ($payload === null) {

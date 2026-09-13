@@ -5,7 +5,6 @@ namespace App\Jobs\WordPress;
 use App\Enums\WordPressPostStatus;
 use App\Models\WordPressContentPost;
 use App\Services\WordPress\WordPressPublishingService;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Step 3: uploads the featured image (if one was generated) and creates the
@@ -26,13 +25,28 @@ class PublishWordPressPost extends AbstractWordPressPostJob
         $post->loadMissing('company');
 
         $imageBytes = null;
+        $imageMimeType = null;
         $media = $post->getFirstMedia('featured_image');
 
         if ($media !== null) {
-            $imageBytes = Http::timeout(30)->get($media->getUrl())->body();
+            // Read the file off its own disk, never over $media->getUrl():
+            // that URL is the public media domain, which the containers
+            // cannot reach (hairpin NAT) — it failed with "cURL error 7:
+            // Failed to connect to media.viravach.com port 443".
+            $stream = $media->stream();
+
+            try {
+                $imageBytes = (string) stream_get_contents($stream);
+            } finally {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
+
+            $imageMimeType = $media->mime_type;
         }
 
-        $result = app(WordPressPublishingService::class)->publish($post, $imageBytes);
+        $result = app(WordPressPublishingService::class)->publish($post, $imageBytes, $imageMimeType);
 
         if (! $result->successful) {
             $this->fail($post, 'wordpress_content.publish_failed_'.$result->reason?->value);

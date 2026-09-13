@@ -19,6 +19,7 @@ class WordPressPostSchema
     {
         return <<<'SPEC'
 {
+  "chosen_topic": "string, the subject this article is actually about, copied character for character from the topic you were given — or, when a list of candidate queries was offered and you picked one from it, from that list. Never a rephrasing, a translation or a topic of your own.",
   "title": "string, 45-70 characters, contains the focus keyword once",
   "excerpt": "string, 120-160 characters, a meta description that reads as a sentence",
   "focus_keyword": "string, 2-5 words, the single term this article targets",
@@ -34,6 +35,7 @@ SPEC;
     public static function rules(): array
     {
         return [
+            'chosen_topic' => ['required', 'string', 'min:1', 'max:255'],
             'title' => ['required', 'string', 'min:10', 'max:200'],
             'excerpt' => ['required', 'string', 'min:40', 'max:400'],
             'focus_keyword' => ['required', 'string', 'min:2', 'max:120'],

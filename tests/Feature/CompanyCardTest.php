@@ -150,64 +150,93 @@ class CompanyCardTest extends TestCase
     }
 
     /**
-     * Regression test for the reported bug: the card's <style> block, as a
-     * literal tag in the .blade.php source, is silently never delivered —
-     * Livewire's SFC compiler statically extracts it into a "styleModule"
-     * asset this app registers no route to serve, so none of these rules
-     * ever reached the page at all (confirmed by inspecting the raw
-     * response: zero bytes of the stylesheet were present). cardStyles()
-     * is assembled as a PHP string and raw-echoed instead, which is
-     * invisible to that static scan.
+     * The card's design rules used to be asserted against the component's own
+     * rendered HTML, because they were emitted inline: a literal <style> tag
+     * in the .blade.php source is silently swallowed by Livewire's SFC
+     * compiler (statically extracted into a "styleModule" asset this app
+     * registers no route to serve), so the workaround at the time was to
+     * assemble the stylesheet as a PHP string and raw-echo it into every card.
+     *
+     * That workaround is gone. The whole block was lifted verbatim into
+     * resources/css/app.css under the "company-elements/⚡company-card"
+     * marker and is now delivered once by the Vite bundle, so the rules are
+     * asserted at their new source. Scoping to that one section matters:
+     * several tokens (--vv-primary-700 above all) also appear in the dark-mode
+     * overrides and in other components' sections, so a file-wide match would
+     * be meaningless.
      */
+    private function cardStyles(): string
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+
+        $this->assertIsString($css, 'resources/css/app.css could not be read.');
+
+        $marker = '/* ===== company-elements/⚡company-card ===== */';
+        $start = strpos($css, $marker);
+
+        $this->assertNotFalse(
+            $start,
+            "The [{$marker}] section is gone from resources/css/app.css — the card stylesheet moved again.",
+        );
+
+        // Up to the next section marker, or EOF if this is the last one.
+        $next = strpos($css, '/* ===== ', $start + strlen($marker));
+
+        return $next === false
+            ? substr($css, $start)
+            : substr($css, $start, $next - $start);
+    }
+
     public function test_the_card_has_a_visible_border_and_shadow_against_the_page(): void
     {
-        $html = $this->render($this->publication());
+        $styles = $this->cardStyles();
 
-        $this->assertStringContainsString('border: 1px solid var(--vv-ink-100)', $html);
-        $this->assertStringContainsString('box-shadow: 0 1px 2px rgba(15, 23, 32, .06)', $html);
-        $this->assertStringContainsString('background: #FFFFFF', $html);
-        $this->assertStringContainsString('overflow: hidden', $html);
+        $this->assertStringContainsString('border: 1px solid var(--vv-ink-100)', $styles);
+        $this->assertStringContainsString('box-shadow: 0 1px 2px rgba(15, 23, 32, .06)', $styles);
+        $this->assertStringContainsString('background: #FFFFFF', $styles);
+        $this->assertStringContainsString('overflow: hidden', $styles);
     }
 
     public function test_hover_raises_the_shadow_and_scales_the_image_while_respecting_reduced_motion(): void
     {
-        $html = $this->render($this->publication());
+        $styles = $this->cardStyles();
 
-        $this->assertStringContainsString('.vv-card:hover {', $html);
-        $this->assertStringContainsString('box-shadow: 0 4px 12px rgba(15, 23, 32, .08)', $html);
-        $this->assertStringContainsString('.vv-card:hover .vv-media img {', $html);
-        $this->assertStringContainsString('transform: scale(1.04)', $html);
-        $this->assertStringContainsString('filter: saturate(.85)', $html);
-        $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $html);
+        $this->assertStringContainsString('.vv-card:hover {', $styles);
+        $this->assertStringContainsString('box-shadow: 0 4px 12px rgba(15, 23, 32, .08)', $styles);
+        $this->assertStringContainsString('.vv-card:hover .vv-media img {', $styles);
+        $this->assertStringContainsString('transform: scale(1.04)', $styles);
+        $this->assertStringContainsString('filter: saturate(.85)', $styles);
+        $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $styles);
 
-        $reducedMotionBlock = substr($html, (int) strpos($html, '@media (prefers-reduced-motion: reduce)'));
+        $reducedMotionBlock = substr($styles, (int) strpos($styles, '@media (prefers-reduced-motion: reduce)'));
         $this->assertStringContainsString('transform: none', $reducedMotionBlock);
         $this->assertStringContainsString('filter: none', $reducedMotionBlock);
     }
 
     public function test_only_the_view_profile_action_uses_the_primary_blue(): void
     {
-        $html = $this->render($this->publication());
+        $styles = $this->cardStyles();
 
         // Every other text rule (eyebrow, title, excerpt, meta) uses an
         // --vv-ink-* neutral; --vv-primary-700 is referenced exactly once,
-        // for .vv-action.
-        $this->assertSame(1, substr_count($html, 'var(--vv-primary-700)'));
-        $this->assertStringContainsString('.vv-action {', $html);
+        // for .vv-action. Counted within the card section only — the token is
+        // declared and re-referenced elsewhere in app.css.
+        $this->assertSame(1, substr_count($styles, 'var(--vv-primary-700)'));
+        $this->assertStringContainsString('.vv-action {', $styles);
 
-        $actionRuleStart = (int) strpos($html, '.vv-action {');
-        $actionRule = substr($html, $actionRuleStart, (int) strpos($html, '}', $actionRuleStart) - $actionRuleStart);
+        $actionRuleStart = (int) strpos($styles, '.vv-action {');
+        $actionRule = substr($styles, $actionRuleStart, (int) strpos($styles, '}', $actionRuleStart) - $actionRuleStart);
         $this->assertStringContainsString('var(--vv-primary-700)', $actionRule);
     }
 
     public function test_the_verified_badge_uses_success_tint_not_accent(): void
     {
-        $html = $this->render($this->publication(['is_verified' => true]));
+        $styles = $this->cardStyles();
 
-        $this->assertStringContainsString('.vv-badge-verified {', $html);
+        $this->assertStringContainsString('.vv-badge-verified {', $styles);
 
-        $badgeRuleStart = (int) strpos($html, '.vv-badge-verified {');
-        $badgeRule = substr($html, $badgeRuleStart, (int) strpos($html, '}', $badgeRuleStart) - $badgeRuleStart);
+        $badgeRuleStart = (int) strpos($styles, '.vv-badge-verified {');
+        $badgeRule = substr($styles, $badgeRuleStart, (int) strpos($styles, '}', $badgeRuleStart) - $badgeRuleStart);
         $this->assertStringContainsString('var(--vv-success-050)', $badgeRule);
         $this->assertStringContainsString('var(--vv-success-700)', $badgeRule);
         $this->assertStringNotContainsString('accent', $badgeRule);
@@ -215,15 +244,12 @@ class CompanyCardTest extends TestCase
 
     public function test_the_logo_plate_sits_on_the_image_offset_from_its_start_and_bottom_edges(): void
     {
-        $publication = $this->publication();
-        $publication->addMediaFromBase64(self::VALID_PNG_BASE64)->toMediaCollection('logo', 's3');
+        $styles = $this->cardStyles();
 
-        $html = $this->render($publication);
+        $this->assertStringContainsString('.vv-logo-plate {', $styles);
 
-        $this->assertStringContainsString('.vv-logo-plate {', $html);
-
-        $plateRuleStart = (int) strpos($html, '.vv-logo-plate {');
-        $plateRule = substr($html, $plateRuleStart, (int) strpos($html, '}', $plateRuleStart) - $plateRuleStart);
+        $plateRuleStart = (int) strpos($styles, '.vv-logo-plate {');
+        $plateRule = substr($styles, $plateRuleStart, (int) strpos($styles, '}', $plateRuleStart) - $plateRuleStart);
         $this->assertStringContainsString('position: absolute', $plateRule);
         $this->assertStringContainsString('inset-inline-start: 12px', $plateRule);
         $this->assertStringContainsString('inset-block-end: 12px', $plateRule);
@@ -231,13 +257,34 @@ class CompanyCardTest extends TestCase
         $this->assertStringContainsString('block-size: 44px', $plateRule);
 
         // The plate markup itself sits inside .vv-media (on the image),
-        // not as a sibling floating outside it.
+        // not as a sibling floating outside it. Still asserted against the
+        // rendered component: this half is markup, not styling.
+        $publication = $this->publication();
+        $publication->addMediaFromBase64(self::VALID_PNG_BASE64)->toMediaCollection('featured_image', 's3');
+        $publication->addMediaFromBase64(self::VALID_PNG_BASE64)->toMediaCollection('logo', 's3');
+
+        $html = $this->render($publication);
+
         $mediaStart = (int) strpos($html, 'class="vv-media"');
         $mediaBlock = substr($html, $mediaStart, (int) strpos($html, '</div>', $mediaStart) + 200 - $mediaStart);
         $this->assertStringContainsString('vv-logo-plate', $mediaBlock);
     }
 
-    public function test_the_stylesheet_renders_exactly_once_per_page_no_matter_how_many_cards(): void
+    /**
+     * Replaces the old "the stylesheet renders exactly once per page no matter
+     * how many cards" test, which the move to app.css made vacuous — inline
+     * copies are now always zero, so the old assertion of "exactly 1" could
+     * only ever fail, and asserting "exactly 0" proves nothing on its own.
+     *
+     * What still means something is the invariant the old test was protecting:
+     * a listing page's weight must not grow by one copy of the stylesheet per
+     * card. So this asserts the page really does render many cards while
+     * inlining the rules zero times — which is what would break the moment
+     * anyone re-inlines a <style> block or a cardStyles() echo into the
+     * component — and that the section in app.css declares the base rule once,
+     * keeping a single source of truth for it.
+     */
+    public function test_the_card_stylesheet_is_never_inlined_per_card(): void
     {
         $category = CompanyCategory::create(['title' => ['en' => 'Many Cards'], 'is_active' => true]);
 
@@ -249,7 +296,38 @@ class CompanyCardTest extends TestCase
         $response = $this->get(route('companies.category', ['slug' => $category->slug]));
 
         $response->assertOk();
-        $this->assertSame(1, substr_count($response->getContent(), '.vv-card {'));
+        $content = $response->getContent();
+
+        // The page genuinely carries four cards...
+        $this->assertSame(4, substr_count($content, 'class="vv-card"'));
+
+        // ...and not one byte of their stylesheet, however many there are.
+        $this->assertSame(0, substr_count($content, '.vv-card {'));
+        $this->assertSame(0, substr_count($content, 'box-shadow: 0 1px 2px rgba(15, 23, 32, .06)'));
+
+        // One base rule in the shared stylesheet, not one per usage.
+        $this->assertSame(1, substr_count($this->cardStyles(), '.vv-card {'));
+    }
+
+    /**
+     * The original bug was that the rules never reached the browser at all.
+     * app.css only fixes that if the compiled bundle actually carries them,
+     * which the PHP suite cannot take for granted: public/build is gitignored,
+     * so it is absent until someone runs `npm run build`.
+     */
+    public function test_the_built_bundle_ships_the_card_rules(): void
+    {
+        $bundles = glob(public_path('build/assets/app-*.css'));
+
+        if ($bundles === false || $bundles === []) {
+            $this->markTestSkipped('No compiled bundle in public/build — run `npm run build` to cover this.');
+        }
+
+        $css = implode('', array_map(file_get_contents(...), $bundles));
+
+        $this->assertStringContainsString('.vv-card{', $css);
+        $this->assertStringContainsString('.vv-logo-plate{', $css);
+        $this->assertStringContainsString('.vv-badge-verified{', $css);
     }
 
     public function test_the_listing_pages_use_a_responsive_equal_height_grid(): void

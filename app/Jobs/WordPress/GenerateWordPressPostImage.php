@@ -2,9 +2,9 @@
 
 namespace App\Jobs\WordPress;
 
-use App\Ai\ImageGenerator;
 use App\Ai\Prompts\WordPressPostImagePrompt;
 use App\Models\WordPressContentPost;
+use App\Support\ImageMimeType;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -35,15 +35,21 @@ class GenerateWordPressPostImage extends AbstractWordPressPostJob
 
         $prompt = WordPressPostImagePrompt::build((string) $post->title, (string) $post->image_alt, $industry);
 
-        $bytes = app(ImageGenerator::class)->generate($prompt);
+        $bytes = $this->generateImage($prompt);
 
-        $tempPath = sys_get_temp_dir().'/wp-post-image-'.Str::uuid()->toString().'.png';
+        // The gateway's format is not fixed — the same model that used to
+        // answer with PNG now answers with WebP — so the extension comes
+        // from the bytes. A wrong one is stored with a wrong mime type and
+        // then published to WordPress as a wrong Content-Type.
+        $extension = ImageMimeType::extensionForBytes($bytes);
+
+        $tempPath = sys_get_temp_dir().'/wp-post-image-'.Str::uuid()->toString().'.'.$extension;
         file_put_contents($tempPath, $bytes);
 
         try {
             $media = $post->addMedia($tempPath)
                 ->preservingOriginal()
-                ->usingFileName('wp-post-'.$post->id.'-featured-image.png')
+                ->usingFileName('wp-post-'.$post->id.'-featured-image.'.$extension)
                 ->toMediaCollection('featured_image', 's3');
 
             $media->setCustomProperty('alt', $post->image_alt);

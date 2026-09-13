@@ -31,9 +31,10 @@ return [
     'export_top_subtitle' => 'کسب و کار ها و شرکت ها با بیشترین امتیاز صادرات',
     'view' => 'مشاهده',
     'tickets' => 'تیکت‌ها',
-    'wordpress_content' => 'ViraWP — تولید خودکار محتوا',
+    'wordpress_content' => 'ViraWP',
 
     'nav_billing' => 'صورتحساب',
     'nav_content' => 'محتوا',
     'nav_account' => 'حساب کاربری',
+    'rfqs' => 'استعلام‌ها',
 ];

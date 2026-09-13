@@ -18,4 +18,6 @@ return [
     'payments' => 'Payment History',
     'company_views' => 'Company Visit Statistics',
     'pricing' => 'Pricing',
-    'home_headline' => 'Viravach | Trade Without Borders', ];
+    'home_headline' => 'Viravach | Trade Without Borders',
+    'rfqs' => 'Requests',
+];

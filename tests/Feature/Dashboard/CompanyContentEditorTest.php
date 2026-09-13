@@ -101,7 +101,15 @@ class CompanyContentEditorTest extends TestCase
     {
         app()->setLocale('ar');
 
-        $company = $this->makeCompany();
+        // Only locales the payload actually carries get a tab now, so the
+        // Arabic payload has to exist for the Arabic tab to be the default.
+        $company = $this->makeCompany([
+            'content' => [
+                'en' => $this->validPayload(),
+                'fa' => $this->validPayload(),
+                'ar' => $this->validPayload(),
+            ],
+        ]);
 
         $html = Livewire::actingAs($company->user)
             ->test('company-content.content-editor', ['company' => $company])
@@ -282,5 +290,82 @@ class CompanyContentEditorTest extends TestCase
         }
 
         $this->assertCount(6, $component->get('content.en.strengths'));
+    }
+
+    /**
+     * Regression test for the broken dashboard bindings: the editor rendered
+     * its full field set for all five supported locales, but mount() only
+     * ever held the locales the payload actually carried, so every input for
+     * a missing locale bound to a path that did not exist in component state
+     * (Livewire: "property does not exist on component"). Every wire:model in
+     * the rendered markup must resolve against the component's own state.
+     */
+    public function test_every_rendered_wire_model_binds_to_a_path_that_exists_in_state(): void
+    {
+        $company = $this->makeCompany(['content' => ['en' => $this->validPayload()]]);
+
+        $component = Livewire::actingAs($company->user)
+            ->test('company-content.content-editor', ['company' => $company]);
+
+        $state = $component->get('content');
+
+        preg_match_all('/wire:model[^=]*="(content\.[^"]+)"/', $component->html(), $matches);
+
+        $this->assertNotEmpty($matches[1], 'The editor rendered no bindings at all.');
+
+        foreach (array_unique($matches[1]) as $binding) {
+            $this->assertNotNull(
+                data_get($state, substr($binding, strlen('content.'))),
+                "wire:model=\"{$binding}\" does not resolve to component state.",
+            );
+        }
+    }
+
+    public function test_a_locale_missing_from_the_payload_gets_no_tab_and_no_bindings(): void
+    {
+        $company = $this->makeCompany(['content' => ['en' => $this->validPayload()]]);
+
+        $html = Livewire::actingAs($company->user)
+            ->test('company-content.content-editor', ['company' => $company])
+            ->html();
+
+        $this->assertStringContainsString('id="kt_content_editor_en"', $html);
+
+        foreach (['fa', 'ar', 'ru', 'tr'] as $missing) {
+            $this->assertStringNotContainsString('id="kt_content_editor_'.$missing.'"', $html);
+            $this->assertStringNotContainsString('wire:model.live.debounce.300ms="content.'.$missing.'.', $html);
+        }
+    }
+
+    /**
+     * A payload that is missing individual leaves — a partially localized
+     * locale — must still render real inputs for them, not dangling ones.
+     */
+    public function test_a_partial_locale_payload_renders_real_but_empty_inputs(): void
+    {
+        $payload = $this->validPayload();
+        unset($payload['hero']['image_alt'], $payload['cta']);
+
+        $company = $this->makeCompany(['content' => ['en' => $payload]]);
+
+        $component = Livewire::actingAs($company->user)
+            ->test('company-content.content-editor', ['company' => $company]);
+
+        $this->assertSame('', $component->get('content.en.hero.image_alt'));
+        $this->assertSame('', $component->get('content.en.cta.heading'));
+        $this->assertSame('', $component->get('content.en.cta.body'));
+
+        // The untouched sibling keys are still carried through verbatim.
+        $this->assertSame(['CN', 'AE'], $component->get('content.en.markets.countries'));
+        $this->assertSame(1, $component->get('content.en.v'));
+    }
+
+    public function test_the_editor_survives_a_payload_with_no_supported_locale(): void
+    {
+        $company = $this->makeCompany(['content' => ['de' => $this->validPayload()]]);
+
+        Livewire::actingAs($company->user)
+            ->test('company-content.content-editor', ['company' => $company])
+            ->assertDontSee(__('companies.content_editor_title'));
     }
 }

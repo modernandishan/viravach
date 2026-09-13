@@ -83,6 +83,12 @@ Route::middleware('auth')->group(function () {
     Route::livewire('/tickets', 'pages::dashboard.tickets')
         ->name('tickets');
 
+    // Named 'rfqs' because App\Models\Rfq::dashboardUrl() looks that name up
+    // (Route::has) to build the link inside the NewRfqReceived notification —
+    // it falls back to the dashboard root while the route is missing.
+    Route::livewire('/rfqs', 'pages::dashboard.rfqs')
+        ->name('rfqs');
+
     Route::livewire('/payments', 'pages::dashboard.payments')
         ->name('payments');
 

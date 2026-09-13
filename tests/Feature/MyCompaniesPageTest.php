@@ -9,10 +9,12 @@ use App\Support\LocalizedDate;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\AssertsFlashMessages;
 use Tests\TestCase;
 
 class MyCompaniesPageTest extends TestCase
 {
+    use AssertsFlashMessages;
     use RefreshDatabase;
 
     public function test_it_lists_only_the_authenticated_users_companies_of_every_status(): void
@@ -46,11 +48,12 @@ class MyCompaniesPageTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->for($user)->create();
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::dashboard.my-companies')
             ->call('confirmDelete', $company->id)
-            ->call('delete')
-            ->assertSeeText(__('companies.deleted_successfully'));
+            ->call('delete');
+
+        $this->assertFlashMessage($component, 'company-status', __('companies.deleted_successfully'), 'success');
 
         $this->assertSoftDeleted($company);
     }

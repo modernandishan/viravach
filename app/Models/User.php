@@ -64,6 +64,18 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
     }
 
     /**
+     * Recipient address for App\Notifications\Channels\IPPanelChannel.
+     *
+     * Returning null (an account with no phone on file) makes the channel a
+     * no-op for that user instead of an error, so a dual-channel notification
+     * still delivers over mail.
+     */
+    public function routeNotificationForIppanel(): ?string
+    {
+        return $this->phone;
+    }
+
+    /**
      * Deactivated users keep full dashboard access; this only excludes them
      * from public site output. Must be applied to every query that feeds
      * publicly visible pages (e.g. company listings joined to their owning

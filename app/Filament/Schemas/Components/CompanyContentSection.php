@@ -33,6 +33,7 @@ class CompanyContentSection extends Section
             ->columnSpanFull()
             ->hiddenOn('create')
             ->schema([
+                self::localeCoveragePlaceholder(),
                 self::statusGrid(),
                 Tabs::make('content_tabs')
                     ->tabs(
@@ -46,6 +47,27 @@ class CompanyContentSection extends Section
             ]);
 
         return $static;
+    }
+
+    /**
+     * Read-only, non-blocking notice of which active locales still have no
+     * content, mirroring the missing_locales column on the companies list
+     * table — both read the same Company::missingContentLocales().
+     */
+    private static function localeCoveragePlaceholder(): Placeholder
+    {
+        return Placeholder::make('content_locale_coverage')
+            ->label('پوشش زبانی محتوا')
+            ->columnSpanFull()
+            ->content(function ($record): Htmlable|string {
+                $missing = $record?->missingContentLocales() ?? [];
+
+                if ($missing === []) {
+                    return 'همهٔ زبان‌های فعال تکمیل است';
+                }
+
+                return new HtmlString('<span class="text-warning-700 fw-bold">بدون محتوا: '.e(implode('، ', $missing)).'</span>');
+            });
     }
 
     private static function statusGrid(): Section

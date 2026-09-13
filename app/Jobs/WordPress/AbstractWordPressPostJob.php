@@ -2,7 +2,10 @@
 
 namespace App\Jobs\WordPress;
 
+use App\Ai\ContentGenerator;
+use App\Ai\ImageGenerator;
 use App\Enums\WordPressPostStatus;
+use App\Jobs\Concerns\HasRequestDeadline;
 use App\Models\WordPressContentPost;
 use App\Settings\ContentSettings;
 use Illuminate\Bus\Queueable;
@@ -29,6 +32,7 @@ use Throwable;
 abstract class AbstractWordPressPostJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
+    use HasRequestDeadline;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
@@ -99,6 +103,24 @@ abstract class AbstractWordPressPostJob implements ShouldBeUnique, ShouldQueue
     protected function settings(): ContentSettings
     {
         return app(ContentSettings::class);
+    }
+
+    /**
+     * The AI clients are reached through these two wrappers so the job's
+     * time budget is attached in ONE place. A step that called
+     * ContentGenerator directly would silently get the un-deadlined
+     * behaviour back.
+     *
+     * @return array<string, mixed>
+     */
+    protected function complete(string $system, string $user, ?string $model = null): array
+    {
+        return app(ContentGenerator::class)->complete($system, $user, $model, $this->deadline());
+    }
+
+    protected function generateImage(string $prompt): string
+    {
+        return app(ImageGenerator::class)->generate($prompt, $this->deadline());
     }
 
     protected function advanceStep(WordPressContentPost $post): void

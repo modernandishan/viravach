@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Enums\RfqStatus;
+use App\Models\Company;
+use App\Models\Rfq;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -108,6 +111,45 @@ class InfobarNavGroupsTest extends TestCase
 
             $this->assertStringContainsString($label, $html);
         }
+    }
+
+    public function test_the_requests_tab_carries_a_badge_counting_pending_requests(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->for($user)->create();
+
+        Rfq::factory()->count(2)->for($company)->create();
+        Rfq::factory()->for($company)->create(['status' => RfqStatus::Closed]);
+
+        // Another owner's pending request must not reach this badge.
+        Rfq::factory()->for(Company::factory()->for(User::factory()))->create();
+
+        $html = Livewire::actingAs($user)
+            ->test('dashboard-elements.infobar')
+            ->html();
+
+        $this->assertStringContainsString(
+            '<span class="badge badge-sm badge-circle badge-light-warning ms-1">2</span>',
+            $html,
+        );
+    }
+
+    /** A standing "0" reads as a broken counter, so nothing renders at all. */
+    public function test_the_requests_tab_has_no_badge_without_pending_requests(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->for($user)->create();
+
+        Rfq::factory()->for($company)->create(['status' => RfqStatus::Closed]);
+
+        $html = Livewire::actingAs($user)
+            ->test('dashboard-elements.infobar')
+            ->html();
+
+        $this->assertStringNotContainsString('badge-light-warning', $html);
+        $this->assertStringNotContainsString('>0</span>', $html);
+        // The tab itself is still there.
+        $this->assertStringContainsString('href="'.route('rfqs').'"', $html);
     }
 
     public function test_strip_has_no_overflow_ancestor_that_would_clip_the_dropdowns(): void

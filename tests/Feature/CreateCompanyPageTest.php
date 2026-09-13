@@ -12,6 +12,8 @@ use App\Models\User;
 use Database\Seeders\PlanSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -55,6 +57,8 @@ class CreateCompanyPageTest extends TestCase
      */
     private function submitWizard(User $user, CompanyCategory $category, State $state): Testable
     {
+        Storage::fake('s3');
+
         return Livewire::actingAs($user)
             ->test('pages::dashboard.create-company')
             ->set('name', 'Second Trading Co')
@@ -65,6 +69,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.state_id', $state->id)
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->call('createCompany');
     }
@@ -72,6 +77,7 @@ class CreateCompanyPageTest extends TestCase
     public function test_it_creates_a_company_and_auto_attaches_the_free_plan(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
 
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
@@ -90,6 +96,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
             ->assertSet('step', 4)
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->assertSet('step', 5)
             ->set('email', 'contact@acme.test')
@@ -110,6 +117,7 @@ class CreateCompanyPageTest extends TestCase
     public function test_the_website_bare_domain_is_normalized_and_stored_with_https(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
         $state = $this->makeState();
@@ -124,6 +132,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.state_id', $state->id)
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->set('website', 'geosaz.com')
             ->call('createCompany')
@@ -137,6 +146,7 @@ class CreateCompanyPageTest extends TestCase
     public function test_the_website_prefixed_domain_is_stored_once_without_a_double_scheme(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
         $state = $this->makeState();
@@ -151,6 +161,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.state_id', $state->id)
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->set('website', 'https://geosaz.com')
             ->call('createCompany')
@@ -164,6 +175,7 @@ class CreateCompanyPageTest extends TestCase
     public function test_the_website_garbage_input_is_rejected_with_the_localized_message(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
         $state = $this->makeState();
@@ -178,6 +190,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.state_id', $state->id)
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->set('website', 'not a url at all')
             ->call('createCompany')
@@ -234,6 +247,7 @@ class CreateCompanyPageTest extends TestCase
     public function test_a_successful_create_stores_the_brief_and_its_locale(): void
     {
         $this->seed(PlanSeeder::class);
+        Storage::fake('s3');
 
         $user = User::factory()->create();
         $category = CompanyCategory::factory()->create();
@@ -253,6 +267,7 @@ class CreateCompanyPageTest extends TestCase
             ->set('addresses.0.address_line', '123 Example Street')
             ->call('nextStep')
             ->assertSet('step', 4)
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
             ->call('nextStep')
             ->assertSet('step', 5)
             ->call('createCompany')

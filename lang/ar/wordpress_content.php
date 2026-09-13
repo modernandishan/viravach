@@ -2,7 +2,7 @@
 
 return [
 
-    'page_title' => 'ViraWP — إنشاء المحتوى تلقائيًا',
+    'page_title' => 'ViraWP',
 
     'schedule_section_title' => 'المقالات التلقائية',
 

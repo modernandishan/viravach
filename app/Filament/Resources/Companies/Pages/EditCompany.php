@@ -103,7 +103,11 @@ class EditCompany extends EditRecord
 
             $merged[$locale] = array_replace($original[$locale] ?? [], $payload);
 
-            foreach (CompanyContentSchema::validate($merged[$locale]) as $field => $message) {
+            // content_mode = 'manual' relaxes the schema's minimums; every
+            // other mode (including null) validates strict.
+            $lenient = $this->record->content_mode === 'manual';
+
+            foreach (CompanyContentSchema::validate($merged[$locale], $lenient) as $field => $message) {
                 $validationErrors["data.content.{$locale}.{$field}"] = "محتوای زبان «{$locale}» نامعتبر است — {$field}: {$message}";
             }
         }

@@ -2,7 +2,6 @@
 
 namespace App\Jobs\WordPress;
 
-use App\Ai\ContentGenerator;
 use App\Ai\Exceptions\ContentGenerationException;
 use App\Ai\Input\CompanyInputCollector;
 use App\Ai\Prompts\WordPressPostPrompt;
@@ -33,16 +32,18 @@ class GenerateWordPressPostContent extends AbstractWordPressPostJob
             ? app(CompanyInputCollector::class)->collect($company)
             : [];
 
+        $candidates = $this->trendCandidates($post);
+
         $system = WordPressPostPrompt::system($post->locale);
         $user = WordPressPostPrompt::user(
             $input,
             $post->topic,
             $post->mode,
             $post->locale,
-            $this->trendCandidates($post),
+            $candidates,
         );
 
-        $payload = app(ContentGenerator::class)->complete($system, $user, $this->settings()->translation_model);
+        $payload = $this->complete($system, $user, $this->settings()->translation_model);
 
         $errors = WordPressPostSchema::validate($payload);
 
@@ -55,13 +56,74 @@ class GenerateWordPressPostContent extends AbstractWordPressPostJob
             throw new ContentGenerationException('The generated article did not match the required shape: '.implode(' ', $errors));
         }
 
+        $chosenTopic = $this->resolveChosenTopic($post, (string) $payload['chosen_topic'], $candidates);
+
+        if ($chosenTopic === null) {
+            Log::warning('WordPress post generation returned an invalid payload.', [
+                'post_id' => $post->id,
+                'errors' => ['chosen_topic' => 'Not one of the offered candidates or the given topic.'],
+                'chosen_topic' => $payload['chosen_topic'],
+                'topic' => $post->topic,
+                'candidates' => $candidates,
+            ]);
+
+            throw new ContentGenerationException(
+                'The generated article did not match the required shape: chosen_topic "'
+                .$payload['chosen_topic'].'" is not one of the offered candidates or the given topic.',
+            );
+        }
+
         $post->forceFill([
+            // The prompt lets the model pick its subject from the shortlist on
+            // merit, so the topic the row was CREATED with is only a proposal.
+            // Recording what the model actually wrote about is what keeps
+            // GoogleTrendsService's per-company repeat-avoidance honest — and
+            // stops rows like topic "کافه ازمیر بروجن" holding an article about
+            // something else entirely.
+            'topic' => $chosenTopic,
+            'topic_normalized' => WordPressContentPost::normalizeTopic($chosenTopic),
             'title' => $payload['title'],
             'excerpt' => $payload['excerpt'],
             'focus_keyword' => $payload['focus_keyword'],
             'body' => $payload['body'],
             'image_alt' => $payload['image_alt'],
         ])->save();
+    }
+
+    /**
+     * The subject the model committed to, canonicalised back to the exact
+     * string that was offered — or null when it named something that was
+     * never on offer, which the caller treats as an invalid payload.
+     *
+     * Matching is done on WordPressContentPost::normalizeTopic() forms, the
+     * same comparison the repeat-avoidance ledger uses: a candidate echoed
+     * back with a different letter form or a trailing full stop is the same
+     * topic, and must not cost an otherwise good article.
+     *
+     * In specialised mode, and in trend mode when the feed gave nothing,
+     * the only permitted answer is the topic the post was created with —
+     * there was no shortlist to choose from.
+     *
+     * @param  list<string>  $candidates
+     */
+    protected function resolveChosenTopic(WordPressContentPost $post, string $chosen, array $candidates): ?string
+    {
+        $offered = $post->mode === ContentGenerationMode::Trending ? $candidates : [];
+        $offered[] = $post->topic;
+
+        $normalizedChoice = WordPressContentPost::normalizeTopic($chosen);
+
+        if ($normalizedChoice === '') {
+            return null;
+        }
+
+        foreach ($offered as $candidate) {
+            if (WordPressContentPost::normalizeTopic($candidate) === $normalizedChoice) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

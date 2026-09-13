@@ -71,9 +71,9 @@ class FeaturedImageGeneratorTest extends TestCase
     {
         Http::fake([
             'https://ai.example/api/v1/images/generations*' => Http::response([
-                'data' => [['url' => 'https://cdn.example/generated.png']],
+                'data' => [['url' => 'https://ai.example/generated.png']],
             ]),
-            'https://cdn.example/generated.png' => Http::response(
+            'https://ai.example/generated.png' => Http::response(
                 $this->pngBytes(),
                 200,
                 ['Content-Type' => 'image/png'],
@@ -107,6 +107,30 @@ class FeaturedImageGeneratorTest extends TestCase
         $this->expectException(ContentGenerationException::class);
 
         app(ImageGenerator::class)->generate('a prompt');
+    }
+
+    /**
+     * The gateway is the only host the API key may reach: an absolute url
+     * pointing anywhere else must be refused BEFORE the fetch, so the
+     * bearer token is never handed to a third party. Only the generations
+     * POST may appear in the recorded requests — nothing at all is sent for
+     * the fetch step.
+     */
+    public function test_an_absolute_url_on_a_different_host_is_refused_without_sending_the_bearer_token(): void
+    {
+        Http::fake([
+            'https://ai.example/api/v1/images/generations*' => Http::response([
+                'data' => [['url' => 'https://attacker.example/generated.png']],
+            ]),
+        ]);
+
+        $this->expectException(ContentGenerationException::class);
+
+        try {
+            app(ImageGenerator::class)->generate('a prompt');
+        } finally {
+            Http::assertNotSent(fn (Request $request): bool => parse_url($request->url(), PHP_URL_HOST) !== 'ai.example');
+        }
     }
 
     public function test_a_file_fetch_returning_html_instead_of_an_image_throws(): void

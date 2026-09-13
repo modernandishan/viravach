@@ -63,6 +63,14 @@ class CompaniesTable
                     ->badge()
                     ->state(fn (Company $record) => $record->contentRecord?->status?->getLabel() ?? 'بدون محتوا')
                     ->color(fn (Company $record) => $record->contentRecord?->status?->getColor() ?? 'gray'),
+                TextColumn::make('missing_locales')
+                    ->label('زبان‌های بدون محتوا')
+                    ->badge()
+                    ->state(fn (Company $record): string => $record->missingContentLocales() === []
+                        ? 'همهٔ زبان‌های فعال تکمیل است'
+                        : implode('، ', $record->missingContentLocales()))
+                    ->color(fn (Company $record): string => $record->missingContentLocales() === [] ? 'success' : 'warning')
+                    ->toggleable(),
                 TextColumn::make('plan')
                     ->label('پلن')
                     ->state(fn (Company $record) => $record->activeSubscription()?->plan?->name ?? '—'),

@@ -395,20 +395,27 @@ class extends Component {
                     @push('styles')
                         @vite(['resources/js/video-player.js'])
                     @endpush
-                    <div class="card mb-6">
+                    <div class="card mb-6 overflow-hidden">
                         <div class="card-header border-0 pt-6">
                             <div class="card-title">
                                 <h2>{{ __('companies.profile_intro_video') }}</h2>
                             </div>
                         </div>
-                        <div class="card-body pt-0">
+                        {{-- px-0 pb-0 on the body only, so the player spans the
+                             card edge to edge: the theme's card-body carries
+                             2.25rem of horizontal padding, which in a
+                             300-350px sidebar column left the player boxed in
+                             by ~72px of empty gutter. overflow-hidden sits on
+                             the card, not here — the radius being clipped
+                             against is the card's, and card-body has none. --}}
+                        <div class="card-body pt-0 px-0 pb-0">
                             {{-- aria-label, not title: media-player declares the
                                  former and not the latter. crossorigin is left
                                  off deliberately — the MinIO bucket serves no
                                  CORS headers for this origin, and requesting a
                                  CORS fetch would break playback outright. --}}
                             <media-player
-                                class="w-100"
+                                class="w-100 vv-intro-video"
                                 aria-label="{{ $introVideoTitle }}"
                                 src="{{ $introVideoUrl }}"
                                 playsinline
@@ -428,7 +435,7 @@ class extends Component {
                     </div>
                 @endif
 
-                <div class="card">
+                <div class="card mb-6">
                     <div class="card-header border-0 pt-6">
                         <div class="card-title">
                             <h2>{{ __('companies.profile_contact_info') }}</h2>
@@ -510,6 +517,23 @@ class extends Component {
                         @endif
                     </div>
                 </div>
+
+                {{-- RFQ form, directly under the contact box: it is the same
+                     "get in touch" intent, one step further along.
+
+                     Guarded on the company existing at all, exactly as the
+                     intro video above is, and for the same reason — the
+                     relation is a belongsTo onto the draft, which a snapshot
+                     outlives (see loadIntroVideo()'s note). ⚡rfq-form types
+                     the prop as a non-nullable Company, so an unguarded mount
+                     would fatal on a publication whose draft is gone.
+
+                     The component renders nothing at all when the company's
+                     plan excludes the RFQ feature, so no plan check belongs
+                     here. It brings its own card in the sidebar pattern. --}}
+                @if ($publication->company)
+                    <livewire:rfq-form :company="$publication->company" />
+                @endif
             </div>
             <!--end::Sidebar-->
 

@@ -14,6 +14,11 @@ use Livewire\Component;
  * markets.countries, neither of which has an input here), so a leaf edit
  * never loses a sibling key — no separate "merge over the original" step
  * is needed, the working copy already IS the merge.
+ *
+ * Only locales the payload actually carries get a tab, and each one is
+ * normalized against CompanyContentSchema first, so every wire:model the
+ * template renders resolves to a path that really exists in component
+ * state — see mount() and prepare().
  */
 new class extends Component
 {
@@ -51,23 +56,86 @@ new class extends Component
         $this->company = $company;
 
         $stored = is_array($company->content) ? $company->content : [];
-        $this->hasContent = $stored !== [];
 
-        if (! $this->hasContent) {
-            return;
+        // ONLY locales the payload actually carries become tabs. Seeding a
+        // locale the generator never produced left $content[$code] === [],
+        // while the template still rendered its full field set — so every
+        // input for that locale carried a wire:model pointing at a path that
+        // did not exist in component state, which is exactly what Livewire
+        // warns about ("property does not exist on component") and what made
+        // those fields silently un-editable.
+        foreach (array_keys($this->locales()) as $code) {
+            $payload = $stored[$code] ?? null;
+
+            if (! is_array($payload) || $payload === []) {
+                continue;
+            }
+
+            $this->content[$code] = $this->prepare($payload);
         }
 
-        foreach (array_keys($this->locales()) as $code) {
-            $payload = $stored[$code] ?? [];
+        $this->hasContent = $this->content !== [];
+    }
 
-            foreach (self::REPEATER_KEYS as $key) {
-                if (isset($payload[$key]) && is_array($payload[$key])) {
-                    $payload[$key] = $this->withRowIds($payload[$key]);
+    /**
+     * Turns one stored locale payload into the working copy the template
+     * binds to: every scalar path CompanyContentSchema defines is present
+     * (empty string when the payload omitted it), and every repeater row
+     * carries its __rowId. A partially-generated payload therefore renders
+     * as empty-but-real inputs instead of dangling bindings.
+     *
+     * Values are never invented beyond that empty string — 'v' and
+     * markets.countries, which have no input here, are passed through
+     * exactly as stored so a leaf edit still cannot lose them.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function prepare(array $payload): array
+    {
+        foreach (CompanyContentSchema::definition() as $key => $spec) {
+            if (($spec['type'] ?? null) !== 'object') {
+                continue;
+            }
+
+            $section = is_array($payload[$key] ?? null) ? $payload[$key] : [];
+
+            foreach ($spec['fields'] as $field => $fieldSpec) {
+                if (($fieldSpec['type'] ?? null) === 'string' && ! is_string($section[$field] ?? null)) {
+                    $section[$field] = '';
                 }
             }
 
-            $this->content[$code] = $payload;
+            $payload[$key] = $section;
         }
+
+        // Repeater keys are normalized only where the payload already has
+        // them: an absent one renders no rows and therefore no bindings, and
+        // adding it here would show up as a content change on save.
+        foreach (self::REPEATER_KEYS as $key) {
+            if (! is_array($payload[$key] ?? null)) {
+                continue;
+            }
+
+            $payload[$key] = $this->withRowIds($payload[$key], (array) data_get(
+                CompanyContentSchema::definition(),
+                "{$key}.item",
+                [],
+            ));
+        }
+
+        return $payload;
+    }
+
+    /**
+     * The locale tabs to render: the payload's own locales, in the site's
+     * supported-locale order. Never the full supported set — see mount().
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function editableLocales(): array
+    {
+        return array_intersect_key($this->locales(), $this->content);
     }
 
     /**
@@ -101,7 +169,7 @@ new class extends Component
      */
     public function defaultLocale(): string
     {
-        $codes = array_keys($this->locales());
+        $codes = array_keys($this->editableLocales());
 
         if (in_array(app()->getLocale(), $codes, true)) {
             return app()->getLocale();
@@ -221,16 +289,33 @@ new class extends Component
      * would otherwise make Livewire's DOM morph reuse a row's old node
      * (and its stale value) for whatever row now sits at that index.
      *
-     * @param  list<array<string, mixed>>  $items
+     * @param  array<int, mixed>  $items
+     * @param  array<string, array<string, mixed>>  $itemSpec  CompanyContentSchema's
+     *                                                         item definition, so a row missing one of its fields still
+     *                                                         renders a real (empty) input rather than a dangling binding.
      * @return list<array<string, mixed>>
      */
-    private function withRowIds(array $items): array
+    private function withRowIds(array $items, array $itemSpec = []): array
     {
-        return array_map(function (array $item): array {
+        $rows = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue; // not a renderable row; nothing here could bind
+            }
+
+            foreach ($itemSpec as $field => $fieldSpec) {
+                if (($fieldSpec['type'] ?? null) === 'string' && ! is_string($item[$field] ?? null)) {
+                    $item[$field] = '';
+                }
+            }
+
             $item['__rowId'] = $this->nextRowId++;
 
-            return $item;
-        }, array_values($items));
+            $rows[] = $item;
+        }
+
+        return $rows;
     }
 
     /**
@@ -329,13 +414,16 @@ new class extends Component
         $errors = [];
 
         foreach (array_keys($this->touchedLocales) as $code) {
-            if (! array_key_exists($code, $this->locales())) {
+            if (! array_key_exists($code, $this->editableLocales())) {
                 continue;
             }
 
             $candidate = $this->stripRowIds($this->content[$code] ?? []);
 
-            foreach (CompanyContentSchema::validate($candidate) as $field => $message) {
+            // content_mode = 'manual' relaxes the schema's minimums.
+            $lenient = $this->company->content_mode === 'manual';
+
+            foreach (CompanyContentSchema::validate($candidate, $lenient) as $field => $message) {
                 $errors["content.{$code}.{$field}"] = $message;
             }
 
@@ -371,6 +459,10 @@ new class extends Component
 };
 ?>
 
+{{-- A Livewire component must always render a root element: the payload
+     can carry no locale this site supports, in which case there is nothing
+     to edit but still something to return. --}}
+<div>
 @if ($hasContent)
     <div class="card mb-5 mb-xl-10">
         <div class="card-header border-0 pt-6">
@@ -393,7 +485,7 @@ new class extends Component
             <form wire:submit.prevent="save">
                 <fieldset {{ $this->company->contentRecord?->status?->isProcessing() ? 'disabled' : '' }}>
                     <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
-                        @foreach ($this->locales() as $code => $localeProps)
+                        @foreach ($this->editableLocales() as $code => $localeProps)
                             <li class="nav-item">
                                 <a class="nav-link {{ $code === $defaultLocale ? 'active' : '' }}" data-bs-toggle="tab" href="#kt_content_editor_{{ $code }}">
                                     {{ $localeProps['native'] }}
@@ -403,7 +495,7 @@ new class extends Component
                     </ul>
 
                     <div class="tab-content">
-                        @foreach ($this->locales() as $code => $localeProps)
+                        @foreach ($this->editableLocales() as $code => $localeProps)
                             <div class="tab-pane fade {{ $code === $defaultLocale ? 'show active' : '' }}" id="kt_content_editor_{{ $code }}" dir="{{ $this->directionFor($code) }}">
                                 @foreach ($this->blocks() as $block)
                                     @if ($block['heading'] !== null)
@@ -510,3 +602,4 @@ new class extends Component
         </div>
     </div>
 @endif
+</div>

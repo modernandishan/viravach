@@ -2,7 +2,7 @@
 
 return [
 
-    'page_title' => 'ViraWP — автоматическая генерация контента',
+    'page_title' => 'ViraWP',
 
     'schedule_section_title' => 'Автоматические статьи',
 

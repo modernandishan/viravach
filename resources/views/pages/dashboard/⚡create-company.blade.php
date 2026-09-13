@@ -184,7 +184,7 @@ class extends Component
                 'addresses.*.postal_code' => ['nullable', 'string', 'max:10'],
             ],
             4 => [
-                'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+                'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             ],
             5 => [
                 'website' => ['nullable', 'url', 'max:255'],
@@ -299,7 +299,7 @@ class extends Component
 
         $this->normalizeWebsite();
 
-        $this->validate($this->rulesForStep(5));
+        $this->validate(array_merge($this->rulesForStep(4), $this->rulesForStep(5)));
 
         $company = Company::create([
             'user_id' => auth()->id(),

@@ -4,10 +4,13 @@ namespace App\Filament\Pages;
 
 use App\Settings\ContentSettings;
 use BackedEnum;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Pages\SettingsPage;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use UnitEnum;
@@ -27,6 +30,41 @@ class ManageContentSettings extends SettingsPage
     public static function canAccess(): bool
     {
         return auth()->user()?->hasAnyRole(['super_admin', 'admin']) ?? false;
+    }
+
+    /**
+     * The stored api_key is never sent to the browser. Filament hydrates the
+     * form state into the Livewire component's client-side snapshot whatever
+     * the input type is, so ->password()->revealable() hides the key from
+     * the screen but NOT from dev tools on an authenticated admin session.
+     * Blanking it here means there is nothing to leak; a blank submission is
+     * then treated as "keep the current key" by mutateFormDataBeforeSave().
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['api_key'] = '';
+
+        return $data;
+    }
+
+    /**
+     * Dropping the key from the payload entirely (rather than writing '')
+     * leaves $settings->fill() with nothing to say about api_key, so the
+     * previously stored value survives the save untouched.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (blank($data['api_key'] ?? null)) {
+            unset($data['api_key']);
+        }
+
+        return $data;
     }
 
     public function form(Schema $schema): Schema
@@ -56,7 +94,16 @@ class ManageContentSettings extends SettingsPage
                             ->label('کلید API')
                             ->password()
                             ->revealable()
-                            ->required(),
+                            /*
+                             * Only required when nothing is stored yet: the
+                             * field always renders blank (see
+                             * mutateFormDataBeforeFill), so an unconditional
+                             * ->required() would fail validation on every
+                             * save that does not retype the key — before
+                             * mutateFormDataBeforeSave ever runs.
+                             */
+                            ->required(fn (): bool => blank(app(ContentSettings::class)->api_key))
+                            ->helperText('برای حفظ کلید فعلی، این فیلد را خالی بگذارید. کلید ذخیره‌شده هرگز در فرم نمایش داده نمی‌شود و فقط در صورت وارد کردن مقدار جدید جایگزین می‌شود.'),
                         TextInput::make('model')
                             ->label('مدل تولید محتوا')
                             ->required()
@@ -67,6 +114,23 @@ class ManageContentSettings extends SettingsPage
                             ->helperText('شناسه مدلی که نسخه‌های زبان‌های دیگر (فارسی، عربی و…) از روی متن انگلیسی بومی‌سازی می‌شوند.'),
                     ])
                     ->columns(2),
+
+                Section::make('راهنمای اضافهٔ بومی‌سازی')
+                    ->schema([
+                        Tabs::make('localization_prompt_tabs')->tabs(
+                            collect(config('laravellocalization.supportedLocales'))->map(
+                                fn ($data, string $code) => Tab::make("localization_prompt_{$code}")
+                                    ->label($data['native'])
+                                    ->schema([
+                                        Textarea::make("localization_prompt.{$code}")
+                                            ->label('راهنمای اضافهٔ بومی‌سازی')
+                                            ->rows(10)
+                                            ->helperText('اختیاری. در صورت وارد کردن متن، به انتهای پرامپت ثابت بومی‌سازی برای این زبان اضافه می‌شود (بعد از همه قوانین ثابت). اگر خالی بماند، هیچ متن اضافه‌ای پرامپت افزوده نمی‌شود.')
+                                            ->columnSpanFull(),
+                                    ])
+                            )->values()->all()
+                        ),
+                    ]),
 
                 Section::make('پارامترهای عددی')
                     ->schema([
